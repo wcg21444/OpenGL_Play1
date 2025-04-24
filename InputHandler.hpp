@@ -137,25 +137,24 @@ public:
     static void processInput(GLFWwindow *window, Camera &cam)
     {
         static int movement;
-        if (currentMode == APP_CONTROL)
-        {
-            // cam.genPositionfrom(window);
+        if (currentMode != APP_CONTROL)
+            return;
 
-            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-                movement |= Camera::Movement::forward;
-            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-                movement |= Camera::Movement::backward;
-            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-                movement |= Camera::Movement::left;
-            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-                movement |= Camera::Movement::right;
-            cam.genPositionfrom(window, movement);
-            movement = Camera::Movement::none;
+        // cam.genPositionfrom(window);
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            movement |= Camera::Movement::forward;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            movement |= Camera::Movement::backward;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            movement |= Camera::Movement::left;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            movement |= Camera::Movement::right;
+        cam.genPositionfrom(window, movement);
+        movement = Camera::Movement::none;
 
-            cam.genDirectionfrom(mouseState.appX, mouseState.appY);
-            cam.genZoomfrom(scrollState.yoffset);
-            scrollState = {0, 0};
-        }
+        cam.genDirectionfrom(mouseState.appX, mouseState.appY);
+        cam.genZoomfrom(scrollState.yoffset);
+        scrollState = {0, 0};
     }
     static void bindWindow(GLFWwindow *window)
     {
