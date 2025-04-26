@@ -65,6 +65,7 @@ private:
             glfwSetCursorPos(window, mouseState.appX, mouseState.appY);
             // ImGui忽略输入
             ImGuiIO &io = ImGui::GetIO();
+            io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
             currentMode = APP_CONTROL;
         }
     }

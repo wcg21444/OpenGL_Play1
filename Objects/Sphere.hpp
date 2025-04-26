@@ -1,6 +1,7 @@
-#include "Shader.hpp"
+#pragma once
+#include "Object.hpp"
 
-class Sphere
+class Sphere : public Object
 {
 private:
     std::vector<float> vertices;
@@ -90,8 +91,9 @@ private:
 public:
     Sphere(float radius,
            int sectorCount = 36,
-           int stackCount = 18)
+           int stackCount = 18, const std::string _name = "Sphere")
     {
+        setName(_name);
         vertices = generateSphereVertices(radius, sectorCount, stackCount);
         glGenVertexArrays(1, &vao);
         glGenBuffers(1, &vbo);
@@ -121,4 +123,5 @@ public:
         shaders.setMat4("model", modelMatrix);
         glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 8); // 顶点数 = 数据长度 / 8
     }
+    ~Sphere() {}
 };

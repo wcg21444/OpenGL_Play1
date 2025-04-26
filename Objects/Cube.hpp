@@ -1,6 +1,9 @@
-#include "Shader.hpp"
+#pragma once
+#include "Object.hpp"
+#include <vector>
+#include <glm/glm.hpp>
 
-class Cube
+class Cube : public Object
 {
 private:
     std::vector<float> vertices;
@@ -8,9 +11,6 @@ private:
     GLuint vbo;
 
 public:
-#include <vector>
-#include <glm/glm.hpp>
-
     // 生成立方体顶点数据（位置 + 法线 + 纹理坐标）
     // 参数: size (长, 宽, 高), 默认1x1x1的正方体
     // 返回: 顶点数据数组（交错存储：position, normal, texCoord）
@@ -89,8 +89,9 @@ public:
 
         return vertexData;
     }
-    Cube(const glm::vec3 &size)
+    Cube(const glm::vec3 &size, const std::string _name = "Cube")
     {
+        setName(_name);
         vertices = generateCubeVertices(size);
 
         glGenVertexArrays(1, &vao);
@@ -118,4 +119,5 @@ public:
         shaders.setMat4("model", modelMatrix);
         glDrawArrays(GL_TRIANGLES, 0, 36); // 36 vertices (6 faces * 2 triangles * 3 vertices)
     }
+    ~Cube() {}
 };

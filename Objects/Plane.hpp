@@ -1,93 +1,100 @@
-#include "Shader.hpp"
-
-class Plane
+#pragma once
+#include "Object.hpp"
+class Plane : public Object
 {
 private:
     std::vector<float> vertices;
     std::vector<float> indices;
-    GLuint vao;
-    GLuint vbo;
-    GLuint ebo;
+    GLuint VAO, VBO, EBO;
+    // 顶点数据结构
+    struct Vertex
+    {
+        glm::vec3 position;
+        glm::vec3 normal;
+        glm::vec2 texCoord;
+    };
+
+    // 网格数据结构
+    struct Mesh
+    {
+        std::vector<Vertex> vertices;
+        std::vector<unsigned int> indices;
+    };
+
+    Mesh mesh;
 
 private:
-    void createPlaneVertices(float size, int divisions, int subdivisions)
+    Mesh createPlane(float width, float depth)
     {
-        float halfSize = size / 2.0f;
-        float step = size / divisions;
+        Mesh mesh;
 
-        // 计算每个顶点的属性数量
-        int attribCount = 3 + 3 + 2; // 位置(x,y,z) 法线, UV
+        // 计算半宽和半深
+        float halfWidth = width * 0.5f;
+        float halfDepth = depth * 0.5f;
 
-        // 生成顶点数据
-        for (int z = 0; z <= divisions; z++)
-        {
-            for (int x = 0; x <= divisions; x++)
-            {
-                // 位置
-                vertices.push_back(-halfSize + x * step); // x
-                vertices.push_back(0.0f);                 // y
-                vertices.push_back(-halfSize + z * step); // z
+        // 定义4个顶点
+        mesh.vertices = {
+            // 位置              法线           纹理坐标
+            {{-halfWidth, 0.0f, -halfDepth}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}, // 左下
+            {{halfWidth, 0.0f, -halfDepth}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},  // 右下
+            {{halfWidth, 0.0f, halfDepth}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},   // 右上
+            {{-halfWidth, 0.0f, halfDepth}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}   // 左上
+        };
 
-                vertices.push_back(0.0f); // nx
-                vertices.push_back(1.0f); // ny
-                vertices.push_back(0.0f); // nz
+        // 定义2个三角形（顺时针 winding order）
+        mesh.indices = {
+            0, 1, 2, // 第一个三角形
+            0, 2, 3  // 第二个三角形
+        };
 
-                vertices.push_back(static_cast<float>(x) / divisions); // u
-                vertices.push_back(static_cast<float>(z) / divisions); // v
-            }
-        }
-
-        // 生成索引数据
-        for (int z = 0; z < divisions; z++)
-        {
-            for (int x = 0; x < divisions; x++)
-            {
-                int topLeft = z * (divisions + 1) + x;
-                int topRight = topLeft + 1;
-                int bottomLeft = (z + 1) * (divisions + 1) + x;
-                int bottomRight = bottomLeft + 1;
-
-                // 第一个三角形
-                indices.push_back(topLeft);
-                indices.push_back(bottomLeft);
-                indices.push_back(topRight);
-
-                // 第二个三角形
-                indices.push_back(topRight);
-                indices.push_back(bottomLeft);
-                indices.push_back(bottomRight);
-            }
-        }
+        return mesh;
     }
 
 public:
-    Plane(float size, int divisions, int subdivisions)
+    Plane(float width, float depth, const std::string _name = "Plane")
     {
-        createPlaneVertices(size, divisions, subdivisions);
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-        glGenBuffers(1, &vbo);
-        glGenBuffers(1, &ebo);
+        setName(_name);
+        mesh = createPlane(width, depth);
+        // 创建并绑定VAO
+        glGenVertexArrays(1, &VAO);
+        glBindVertexArray(VAO);
 
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+        // 创建并绑定顶点缓冲
+        glGenBuffers(1, &VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Vertex),
+                     mesh.vertices.data(), GL_STATIC_DRAW);
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+        // 创建并绑定索引缓冲
+        glGenBuffers(1, &EBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int),
+                     mesh.indices.data(), GL_STATIC_DRAW);
 
-        int stride = (3 + 3 + 2) * sizeof(float); // 位置
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void *)(3 * sizeof(float)));
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void *)(6 * sizeof(float)));
-
+        // 设置顶点属性指针
+        // 位置属性
         glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)0);
+
+        // 法线属性
         glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              (void *)offsetof(Vertex, normal));
+
+        // 纹理坐标属性
         glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              (void *)offsetof(Vertex, texCoord));
+
+        // 解绑VAO
+        glBindVertexArray(0);
     }
     void draw(glm::mat4 modelMatrix, Shader &shaders)
     {
-        glBindVertexArray(vao);
         shaders.setMat4("model", modelMatrix);
-        glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(VAO);
+
+        glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, 0);
     }
+    ~Plane() {}
 };

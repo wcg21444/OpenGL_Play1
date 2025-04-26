@@ -4,10 +4,13 @@
 #include "Shader.hpp"
 #include "Camera.hpp"
 #include "InputHandler.hpp"
+#include "Objects/Object.hpp"
 #include "Objects/Grid.hpp"
 #include "Objects/Cube.hpp"
 #include "Objects/Sphere.hpp"
 #include "Objects/Plane.hpp"
+#include "LightSource.hpp"
+#include "Renderer.hpp"
 
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_glfw.h"
@@ -16,117 +19,147 @@
 const int width = 1600;
 const int height = 900;
 
-void renderShadow()
+namespace GUI
 {
-    unsigned int depthMapFBO;
-    glGenFramebuffers(1, &depthMapFBO);
-
-    const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
-
-    unsigned int depthMap;
-    glGenTextures(1, &depthMap);
-    glBindTexture(GL_TEXTURE_2D, depthMap);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-                 SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-    glDrawBuffer(GL_NONE); // avoid rendering color
-    glReadBuffer(GL_NONE);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    // 配置光源空间的投影 视图 矩阵
-    float near_plane = 1.0f, far_plane = 7.5f;
-    glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-    glm::mat4 lightView = glm::lookAt(glm::vec3(-2.0f, 4.0f, -1.0f),
-                                      glm::vec3(0.0f, 0.0f, 0.0f),
-                                      glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
-    Shader shadowShader("Shadow.vs", "Shadow.fs");
-    shadowShader.use();
-    shadowShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-
-    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    glClear(GL_DEPTH_BUFFER_BIT);
-    // RenderScene(shadowShader);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-void lightHandle(Shader &normal_shaders)
-{
-    static glm::vec3 lightIntensity(100.f);
-    static glm::vec3 lightPosition(10.f);
-    ImGui::DragFloat("LightIntensitiy.X", &lightIntensity.x, 1.f);
-    ImGui::DragFloat("LightIntensitiy.Y", &lightIntensity.y, 1.f);
-    ImGui::DragFloat("LightIntensitiy.Z", &lightIntensity.z, 1.f);
-    normal_shaders.setUniform3fv("light_intensity", lightIntensity);
-
-    ImGui::DragFloat("LightPosition.X", &lightPosition.x, 0.1f);
-    ImGui::DragFloat("LightPosition.Y", &lightPosition.y, 0.1f);
-    ImGui::DragFloat("LightPosition.Z", &lightPosition.z, 0.1f);
-    normal_shaders.setUniform3fv("light_pos", lightPosition);
-}
-
-glm::mat4 MatrixInputWithImGui(const char *label, const glm::mat4 &initial)
-{
-    // TODO : 将矩阵转置
-    //  将GLM矩阵转换为ImGui可编辑的格式
-    std::array<std::array<float, 4>, 4> matrix;
-    for (int i = 0; i < 4; ++i)
+    void lightHandle(LightSource &light_source)
     {
-        for (int j = 0; j < 4; ++j)
-        {
-            matrix[i][j] = initial[i][j];
-        }
+        static glm::vec3 lightIntensity = light_source.intensity;
+        static glm::vec3 lightPosition = light_source.position;
+        ImGui::DragFloat("LightIntensitiy.X", &lightIntensity.x, 1.f);
+        ImGui::DragFloat("LightIntensitiy.Y", &lightIntensity.y, 1.f);
+        ImGui::DragFloat("LightIntensitiy.Z", &lightIntensity.z, 1.f);
+
+        ImGui::DragFloat("LightPosition.X", &lightPosition.x, 0.1f);
+        ImGui::DragFloat("LightPosition.Y", &lightPosition.y, 0.1f);
+        ImGui::DragFloat("LightPosition.Z", &lightPosition.z, 0.1f);
+        light_source.intensity = lightIntensity;
+        light_source.position = lightPosition;
     }
 
-    // ImGui矩阵编辑器
-    if (ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_DefaultOpen))
+    glm::mat4 MatrixInputWithImGui(const char *label, const glm::mat4 &initial)
     {
-
-        // 逐行编辑
-        for (int row = 0; row < 4; ++row)
+        // TODO : 将矩阵转置
+        //  将GLM矩阵转换为ImGui可编辑的格式
+        std::array<std::array<float, 4>, 4> matrix;
+        for (int i = 0; i < 4; ++i)
         {
-            ImGui::PushID(row);
-            if (ImGui::DragFloat4("", matrix[row].data(), 0.01f))
+            for (int j = 0; j < 4; ++j)
             {
-                ///
-            }
-            ImGui::PopID();
-        }
-
-        // 重置按钮
-        if (ImGui::Button("Reset to Identity"))
-        {
-            for (auto &row : matrix)
-            {
-                std::fill(row.begin(), row.end(), 0.0f);
-            }
-            for (int i = 0; i < 4; ++i)
-            {
-                matrix[i][i] = 1.0f;
+                matrix[i][j] = initial[i][j];
             }
         }
 
-        ImGui::TreePop();
+        // ImGui矩阵编辑器
+        if (ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_DefaultOpen))
+        {
+
+            // 逐行编辑
+            for (int row = 0; row < 4; ++row)
+            {
+                ImGui::PushID(row);
+                if (ImGui::DragFloat4("", matrix[row].data(), 0.01f))
+                {
+                    ///
+                }
+                ImGui::PopID();
+            }
+
+            // 重置按钮
+            if (ImGui::Button("Reset to Identity"))
+            {
+                for (auto &row : matrix)
+                {
+                    std::fill(row.begin(), row.end(), 0.0f);
+                }
+                for (int i = 0; i < 4; ++i)
+                {
+                    matrix[i][i] = 1.0f;
+                }
+            }
+
+            ImGui::TreePop();
+        }
+
+        // 转换回GLM矩阵
+        glm::mat4 result;
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                result[i][j] = matrix[i][j];
+            }
+        }
+        return result;
     }
 
-    // 转换回GLM矩阵
-    glm::mat4 result;
-    for (int i = 0; i < 4; ++i)
+    void RenderSwitchCombo(RenderManager &renderManager)
     {
-        for (int j = 0; j < 4; ++j)
+        static const char *modes[] = {"Normal", "Debug_Depth", "Texture"};
+        static int current_mode = 0;
+        static int prev_mode = current_mode;
+        ImGui::Combo("Mode", &current_mode, modes, IM_ARRAYSIZE(modes));
+
+        if (current_mode != prev_mode)
         {
-            result[i][j] = matrix[i][j];
+            prev_mode = current_mode;
+            switch (current_mode)
+            {
+            case 0:
+                renderManager.switchMode(RenderManager::Mode::normal);
+                break;
+            case 1:
+                renderManager.switchMode(RenderManager::Mode::debug_depth);
+
+                break;
+            case 2:
+                renderManager.switchMode(RenderManager::Mode::simple_texture);
+                break;
+            }
         }
     }
-    return result;
+
+    void displaySceneHierarchy(std::vector<std::unique_ptr<Object>> &scene, int &selectedIndex)
+    {
+        ImGui::Begin("Scene Hierarchy");
+
+        // 列表显示所有对象
+        for (int i = 0; i < scene.size(); ++i)
+        {
+            bool isSelected = (selectedIndex == i);
+            if (ImGui::Selectable(scene[i]->name.c_str(), isSelected))
+            {
+                selectedIndex = i;
+            }
+
+            // 右键菜单
+            if (ImGui::BeginPopupContextItem())
+            {
+                if (ImGui::MenuItem("Delete"))
+                {
+                    if (selectedIndex == i)
+                        selectedIndex = -1;
+                    scene.erase(scene.begin() + i);
+                    ImGui::EndPopup();
+                    break;
+                }
+                ImGui::EndPopup();
+            }
+        }
+
+        // ImGui::End();
+
+        // // 属性面板
+        // ImGui::Begin("Inspector");
+        // if (selectedIndex >= 0 && selectedIndex < scene.size())
+        // {
+        //     scene[selectedIndex]->displayInInspector();
+        // }
+        // else
+        // {
+        //     ImGui::Text("No object selected");
+        // }
+        ImGui::End();
+    }
 }
 
 int main()
@@ -147,10 +180,8 @@ int main()
     }
     InputHandler::bindWindow(window);
 
-    // 初始为程序控制模式
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    // initalize GLAD , which manages all of the func ptr of OpenGL
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -168,24 +199,25 @@ int main()
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     // 场景布置
+    glm::mat4 model = glm::mat4(1.0f);
     Camera cam(width, height, 14.f, 0.05f);
 
-    glm::mat4 model = glm::mat4(1.0f);
+    std::vector<std::unique_ptr<Object>> scene;
+    scene.push_back(std::make_unique<Grid>());
+    scene.push_back(std::make_unique<Cube>(glm::vec3(1.f, 1.f, 1.f)));
+    scene.push_back(std::make_unique<Sphere>(1.f));
+    scene.push_back(std::make_unique<Plane>(200.f, 200.f));
 
-    Grid grid;
-    Cube cube(glm::vec3(1.f, 1.f, 1.f));
-    Sphere sphere(1.f);
-    Plane plane(10.f, 1, 1);
+    LightSource light(glm::vec3(200.f), glm::vec3(0.f, 0.f, 40.f));
 
-    // set viewport
-    glViewport(0, 0, width, height);
-    Shader shaders("VertShader.vs", "FragmShader.fs");
-    shaders.use();
+    RenderManager renderManager;
+
+    int selectedIndex = -1;
     //  main render loop
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
-
+        InputHandler::processInput(window, cam);
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -195,44 +227,15 @@ int main()
 
         // 草草抽离出了IMGUI逻辑
 
-        lightHandle(shaders);
+        GUI::lightHandle(light);
 
-        model = MatrixInputWithImGui("Model Matrix", model);
-
+        model = GUI::MatrixInputWithImGui("Model Matrix", model);
+        GUI::RenderSwitchCombo(renderManager);
+        GUI::displaySceneHierarchy(scene, selectedIndex);
         ImGui::End();
-
-        InputHandler::processInput(window, cam);
-
-        // camera/view transformation
-        cam.setViewMatrix(shaders);
-        cam.setPerspectiveMatrix(shaders, width, height);
-
-        glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 深度缓冲和Color缓冲一样需要交换链,清理他
-
-        // doing render thing
-
-        {
-            grid.draw(model, shaders);
-
-            plane.draw(model, shaders);
-
-            cube.draw(model, shaders);
-
-            glm::mat4 sphere_model = glm::translate(model, glm::vec3(2.f, 0.f, 0.f));
-            sphere.draw(sphere_model,
-                        shaders);
-
-            sphere_model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-            sphere_model = glm::translate(sphere_model, glm::vec3(0.f, 0.f, 2.f));
-            sphere.draw(sphere_model,
-                        shaders);
-        }
-        glEnable(GL_DEPTH_TEST); // 深度缓冲
         ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        glfwSwapBuffers(window);
+        renderManager.render(light, cam, scene, model, window);
     }
 
     // Cleanup

@@ -33,7 +33,7 @@ class Shader
 
 public:
     unsigned int progrm_ID;
-    bool used;
+    bool used = false;
 
 public:
     Shader() {}
@@ -143,6 +143,30 @@ public:
         else
         {
             throw std::runtime_error("Set Matrix4 while Shader is not used.");
+        }
+    }
+    void setFloat(const std::string &name, float f)
+    {
+        if (used)
+        {
+            GLuint location = glGetUniformLocation(progrm_ID, name.c_str());
+            glUniform1f(location, f);
+        }
+        else
+        {
+            throw std::runtime_error("Set Float while Shader is not used.");
+        }
+    }
+    void setInt(const std::string &name, int i)
+    {
+        if (used)
+        {
+            GLuint location = glGetUniformLocation(progrm_ID, name.c_str());
+            glUniform1i(location, i);
+        }
+        else
+        {
+            throw std::runtime_error("Set Int while Shader is not used.");
         }
     }
 };

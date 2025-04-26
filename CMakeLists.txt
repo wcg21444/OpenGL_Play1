@@ -10,12 +10,15 @@ set(IMGUI
 imgui
 imgui/backends
 )
+set (INCLUDES includes)
+
 file(GLOB_RECURSE IMGUI_SRC 
 imgui/*.cpp
 )
 
 include_directories(${IMGUI})
 include_directories("Objects")
+include_directories(${INCLUDES})
 
 add_executable(${PROJECT_NAME} "main.cpp" "Shader.hpp" "Camera.hpp" ${IMGUI_SRC})
 

@@ -1,6 +1,7 @@
-#include "Shader.hpp"
+#pragma once
+#include "Object.hpp"
 
-class Grid
+class Grid : public Object
 {
 private:
     std::vector<float> vertices;
@@ -54,8 +55,9 @@ private:
     }
 
 public:
-    Grid()
+    Grid(const std::string _name = "Grid")
     {
+        setName(_name);
         this->vertices = generateGridVertices(300.f, 30);
         glGenVertexArrays(1, &vao);
         glBindVertexArray(vao);
@@ -71,4 +73,5 @@ public:
         shaders.setMat4("model", modelMatrix);
         glDrawArrays(GL_LINES, 0, vertices.size() / 3); // 顶点数 = 总数据量 / 3（x,y,z）
     }
+    ~Grid() {}
 };
