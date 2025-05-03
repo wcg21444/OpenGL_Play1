@@ -37,7 +37,7 @@ public:
 
 public:
     Shader() {}
-    Shader(const char *vs_path, const char *fs_path)
+    Shader(const char *vs_path, const char *fs_path, const char *gs_path = nullptr)
     {
         // Config Vertex Shader
         std::string shader_buf = loadShaderFile(vs_path);
@@ -74,11 +74,31 @@ public:
                       << infoLog << std::endl;
         }
 
+        unsigned int geometryShader;
+        if (gs_path)
+        { // Config Geometry Shader
+            shader_buf = loadShaderFile(gs_path);
+            const char *geometryShadersource = shader_buf.c_str();
+
+            geometryShader = glCreateShader(GL_GEOMETRY_SHADER);
+            glShaderSource(geometryShader, 1, &geometryShadersource, NULL);
+            glCompileShader(geometryShader);
+
+            glGetShaderiv(geometryShader, GL_COMPILE_STATUS, &success);
+            if (!success)
+            {
+                glGetShaderInfoLog(geometryShader, 512, NULL, infoLog);
+                std::cout << "ERROR::SHADER::GEOMETRY::COMPILATION_FAILED\n"
+                          << infoLog << std::endl;
+            }
+        }
         // Cofig Shader Program
         progrm_ID = glCreateProgram();
 
         glAttachShader(progrm_ID, vertexShader);
         glAttachShader(progrm_ID, fragmentShader);
+        if (gs_path)
+            glAttachShader(progrm_ID, geometryShader);
         glLinkProgram(progrm_ID);
 
         glGetProgramiv(progrm_ID, GL_LINK_STATUS, &success);
@@ -91,6 +111,8 @@ public:
         // Delete our used Shaders
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
+        if (gs_path)
+            glDeleteShader(geometryShader);
     }
     void use()
     {

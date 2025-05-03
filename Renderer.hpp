@@ -223,7 +223,90 @@ class NormalRenderer : public Renderer
         }
     };
 
+    class PointShadowPass
+    {
+        Shader depthShader = Shader("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs");
+
+        int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+        int SCR_WIDTH = 1600, SCR_HEIGHT = 900;
+        unsigned int depthMapFBO;
+
+        float aspect = (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT;
+        float near = 1.0f;
+
+        glm::mat4 shadowProj;
+        std::vector<glm::mat4> shadowTransforms;
+
+    public:
+        unsigned int depthCubemap;
+        float far = 250.0f;
+
+    public:
+        PointShadowPass()
+        {
+            glEnable(GL_DEPTH_TEST);
+            glGenFramebuffers(1, &depthMapFBO);
+            // create depth Cubemap
+            glGenTextures(1, &depthCubemap);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+            for (unsigned int i = 0; i < 6; ++i)
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
+                             SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+            // attach depth cubemap as FBO's depth buffer
+            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+            glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
+            glDrawBuffer(GL_NONE);
+            glReadBuffer(GL_NONE);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            // config light space transformation
+            shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
+        }
+        void render(LightSource &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
+        {
+            // 视图变换需要知道光源位置
+            shadowTransforms.clear();
+            shadowTransforms.push_back(shadowProj *
+                                       glm::lookAt(light.position, light.position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+            shadowTransforms.push_back(shadowProj *
+                                       glm::lookAt(light.position, light.position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+            shadowTransforms.push_back(shadowProj *
+                                       glm::lookAt(light.position, light.position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+            shadowTransforms.push_back(shadowProj *
+                                       glm::lookAt(light.position, light.position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+            shadowTransforms.push_back(shadowProj *
+                                       glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+            shadowTransforms.push_back(shadowProj * glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+
+            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+            glClear(GL_DEPTH_BUFFER_BIT);
+
+            depthShader.use();
+            if (!depthShader.used)
+                throw(std::exception("Shader failed to setup."));
+            for (unsigned int i = 0; i < 6; ++i)
+                depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+            depthShader.setFloat("far_plane", far);
+            depthShader.setUniform3fv("lightPos", light.position);
+
+            renderScene(scene, model, depthShader);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+    };
+
+private:
     Shader shaders = Shader("Shaders/VertShader.vs", "Shaders/FragmShader.fs");
+    Shader ps_shaders = Shader("Shaders/PointShadow/point_shadow.vs", "Shaders/PointShadow/point_shadow.fs");
     int width = 1600;
     int height = 900;
 
@@ -233,6 +316,31 @@ public:
         glEnable(GL_DEPTH_TEST); // 深度缓冲
         glViewport(0, 0, width, height);
         shaders.use();
+    }
+    void renderPointShadow(LightSource &light, Camera &cam, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, GLFWwindow *window)
+    {
+
+        static PointShadowPass pointShadowPass;
+        pointShadowPass.render(light, scene, model);
+
+        glEnable(GL_DEPTH_TEST); // 深度缓冲
+        glViewport(0, 0, width, height);
+        ps_shaders.use();
+        ps_shaders.setInt("depthMap", 0);
+        ps_shaders.setFloat("far_plane", pointShadowPass.far);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, pointShadowPass.depthCubemap);
+        glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 深度缓冲和Color缓冲一样需要交换链,清理他
+
+        light.set(ps_shaders);
+
+        // camera/view transformation
+        cam.setViewMatrix(ps_shaders);
+        cam.setPerspectiveMatrix(ps_shaders, width, height);
+
+        renderScene(scene, model, ps_shaders);
     }
     void render(LightSource &light, Camera &cam, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, GLFWwindow *window)
     {
@@ -265,22 +373,6 @@ public:
         cam.setPerspectiveMatrix(shaders, width, height);
 
         renderScene(scene, model, shaders);
-
-        // 问题:这样做就没法一个Object 的数据 由model matrix 不同而 复制物体
-        //  相同的物体重复占用显存
-        //  grid.draw(model, shaders);
-
-        // plane.draw(model, shaders);
-
-        // cube.draw(model, shaders);
-
-        // glm::mat4 sphere_model = glm::translate(model, glm::vec3(2.f, 0.f, 0.f));
-        // sphere.draw(sphere_model,
-        //             shaders);
-
-        // sphere_model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-        // sphere_model = glm::translate(sphere_model, glm::vec3(0.f, 0.f, 2.f));
-        // sphere.draw(sphere_model, shaders);
     }
 };
 class SimpleTextureRenderer : public Renderer
@@ -485,7 +577,8 @@ public:
         switch (render_mode)
         {
         case normal:
-            normalRenderer.render(light, cam, scene, model, window);
+            // normalRenderer.render(light, cam, scene, model, window);
+            normalRenderer.renderPointShadow(light, cam, scene, model, window);
             break;
         case debug_depth:
             debugDepthRenderer.render(light, cam, scene, model, window);
