@@ -10,7 +10,9 @@ public:
     std::string name;
 
 public:
-    Object() {}
+    Object()
+    {
+    }
     virtual void draw(glm::mat4 modelMatrix, Shader &shaders) = 0;
     virtual ~Object() {}
     void setName(const std::string &_name) { name = _name; }

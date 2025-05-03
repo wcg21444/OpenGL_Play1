@@ -21,7 +21,7 @@ const int height = 900;
 
 namespace GUI
 {
-    void lightHandle(LightSource &light_source)
+    void LightHandle(LightSource &light_source)
     {
         static glm::vec3 lightIntensity = light_source.intensity;
         static glm::vec3 lightPosition = light_source.position;
@@ -208,7 +208,7 @@ int main()
     scene.push_back(std::make_unique<Sphere>(1.f));
     scene.push_back(std::make_unique<Plane>(200.f, 200.f));
 
-    LightSource light(glm::vec3(200.f), glm::vec3(0.f, 0.f, 40.f));
+    LightSource light(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
 
     RenderManager renderManager;
 
@@ -225,17 +225,19 @@ int main()
 
         ImGui::Begin("UI");
 
-        // 草草抽离出了IMGUI逻辑
-
-        GUI::lightHandle(light);
+        GUI::LightHandle(light);
 
         model = GUI::MatrixInputWithImGui("Model Matrix", model);
         GUI::RenderSwitchCombo(renderManager);
         GUI::displaySceneHierarchy(scene, selectedIndex);
-        ImGui::End();
-        ImGui::Render();
 
         renderManager.render(light, cam, scene, model, window);
+
+        ImGui::End();
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(window);
     }
 
     // Cleanup

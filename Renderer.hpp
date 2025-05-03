@@ -16,6 +16,41 @@
 #include "Objects/Sphere.hpp"
 #include "Objects/Plane.hpp"
 
+void ShowGLMMatrixAsTable(const glm::mat4 &matrix, const char *name = "Matrix")
+{
+    if (ImGui::BeginTable(name, 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+    {
+        for (int row = 0; row < 4; ++row)
+        {
+            ImGui::TableNextRow();
+            for (int col = 0; col < 4; ++col)
+            {
+                ImGui::TableSetColumnIndex(col);
+                ImGui::Text("%.3f", matrix[col][row]);
+            }
+        }
+        ImGui::EndTable();
+    }
+}
+
+void renderScene(std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, Shader &shaders)
+{
+    glm::mat4 sphere_model = glm::translate(model, glm::vec3(6.f, 0.f, 0.f));
+    glm::mat4 plane_model = glm::translate(model, glm::vec3(0.f, -1.f, 0.f));
+    for (auto &&object : scene)
+    {
+
+        if (object->name == "Sphere")
+            object->draw(sphere_model, shaders);
+        else if (object->name == "Plane")
+            object->draw(plane_model, shaders);
+        else if (object->name == "Grid")
+            continue;
+        else
+            object->draw(model, shaders);
+    }
+}
+
 class Renderer
 {
 public:
@@ -49,13 +84,14 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         // attach depth texture as FBO's depth buffer
+        // Shadow Pass render settings
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        // set up VAO
+        // set up VAO of Demo Quad Plane
         if (quadVAO == 0)
         {
             static float quadVertices[] =
@@ -99,7 +135,7 @@ public:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // 配置光源空间的投影 视图 矩阵
-        float near_plane = 1.0f, far_plane = 7.5f;
+        float near_plane = 0.1f, far_plane = 70.f;
         glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
         glm::mat4 lightView = glm::lookAt(light.position,
                                           glm::vec3(0.0f, 0.0f, 0.0f),
@@ -115,16 +151,7 @@ public:
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        glm::mat4 sphere_model = glm::translate(model, glm::vec3(2.f, 0.f, 0.f));
-        for (auto &&object : scene)
-        {
-            if (object->name == "Grid")
-                continue;
-            if (object->name == "Sphere")
-                object->draw(sphere_model, depthShader);
-            else
-                object->draw(model, depthShader);
-        }
+        renderScene(scene, model, depthShader);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -140,12 +167,62 @@ public:
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glBindVertexArray(0);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        glfwSwapBuffers(window);
     }
 };
+
 class NormalRenderer : public Renderer
 {
+    class ShadowPass
+    {
+        Shader depthShader = Shader("Shaders/shadow_depth.vs", "Shaders/shadow_depth.fs");
+        int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+        int SCR_WIDTH = 1600, SCR_HEIGHT = 900;
+        unsigned int depthMapFBO;
+
+    public:
+        unsigned int depthMap;
+
+    public:
+        ShadowPass()
+        {
+            glEnable(GL_DEPTH_TEST);
+            glGenFramebuffers(1, &depthMapFBO);
+            // create depth texture
+            glGenTextures(1, &depthMap);
+            glBindTexture(GL_TEXTURE_2D, depthMap);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            // attach depth texture as FBO's depth buffer
+            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0); // 将FBO输出到Texture
+            glDrawBuffer(GL_NONE);
+            glReadBuffer(GL_NONE);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+        void render(LightSource &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix)
+        {
+            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            depthShader.use();
+            depthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+            glClear(GL_DEPTH_BUFFER_BIT);
+
+            renderScene(scene, model, depthShader);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            // quadShader.use();
+            // quadShader.setFloat("near_plane", near_plane);
+            // quadShader.setFloat("far_plane", far_plane);
+        }
+    };
+
     Shader shaders = Shader("Shaders/VertShader.vs", "Shaders/FragmShader.fs");
     int width = 1600;
     int height = 900;
@@ -159,6 +236,25 @@ public:
     }
     void render(LightSource &light, Camera &cam, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, GLFWwindow *window)
     {
+        static float near_plane = 1.f, far_plane = 700.f;
+        glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+        glm::mat4 lightView = glm::lookAt(light.position,
+                                          glm::vec3(0.0f, 0.0f, 0.0f),
+                                          glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+
+        ShowGLMMatrixAsTable(lightSpaceMatrix);
+        static ShadowPass shadowPass;
+        shadowPass.render(light, scene, model, lightSpaceMatrix);
+
+        glEnable(GL_DEPTH_TEST); // 深度缓冲
+        glViewport(0, 0, width, height);
+        shaders.use();
+        shaders.setInt("shdaowDepthMap", 0);
+        shaders.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, shadowPass.depthMap);
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 深度缓冲和Color缓冲一样需要交换链,清理他
 
@@ -168,14 +264,8 @@ public:
         cam.setViewMatrix(shaders);
         cam.setPerspectiveMatrix(shaders, width, height);
 
-        glm::mat4 sphere_model = glm::translate(model, glm::vec3(2.f, 0.f, 0.f));
-        for (auto &&object : scene)
-        {
-            if (object->name == "Sphere")
-                object->draw(sphere_model, shaders);
-            else
-                object->draw(model, shaders);
-        }
+        renderScene(scene, model, shaders);
+
         // 问题:这样做就没法一个Object 的数据 由model matrix 不同而 复制物体
         //  相同的物体重复占用显存
         //  grid.draw(model, shaders);
@@ -191,10 +281,6 @@ public:
         // sphere_model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
         // sphere_model = glm::translate(sphere_model, glm::vec3(0.f, 0.f, 2.f));
         // sphere.draw(sphere_model, shaders);
-
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        glfwSwapBuffers(window);
     }
 };
 class SimpleTextureRenderer : public Renderer
@@ -320,14 +406,11 @@ public:
         //     if (object->name == "Sphere")
         //         object->draw(sphere_model, shaders);
         // }
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        glfwSwapBuffers(window);
     }
 };
 
 class RenderManager
 {
-    // As you can see , we dont have a unifrom regulation of funcs , we are easily forgetting implement some process , maybe abstract it into a class is a good choice?
 private:
     DebugDepthRenderer debugDepthRenderer;
     NormalRenderer normalRenderer;
