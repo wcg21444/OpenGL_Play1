@@ -15,7 +15,11 @@
 #include "Objects/Cube.hpp"
 #include "Objects/Sphere.hpp"
 #include "Objects/Plane.hpp"
-
+class RenderManager;
+namespace GUI
+{
+    void NormalRendererShaderManager(RenderManager &renderMnager);
+}
 void ShowGLMMatrixAsTable(const glm::mat4 &matrix, const char *name = "Matrix")
 {
     if (ImGui::BeginTable(name, 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
@@ -37,6 +41,9 @@ void renderScene(std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, 
 {
     glm::mat4 sphere_model = glm::translate(model, glm::vec3(6.f, 0.f, 0.f));
     glm::mat4 plane_model = glm::translate(model, glm::vec3(0.f, -1.f, 0.f));
+    glm::mat4 backPack_model = glm::translate(model, glm::vec3(0.f, 2.f, 4.f));
+    glm::mat4 bass_model = glm::translate(model, glm::vec3(0.f, 4.f, 4.f));
+    bass_model = glm::scale(bass_model, glm::vec3(4.f, 4.f, 4.f));
     for (auto &&object : scene)
     {
 
@@ -44,6 +51,14 @@ void renderScene(std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, 
             object->draw(sphere_model, shaders);
         else if (object->name == "Plane")
             object->draw(plane_model, shaders);
+        else if (object->name == "Backpack")
+        {
+            object->draw(backPack_model, shaders);
+        }
+        else if (object->name == "Bass")
+        {
+            object->draw(bass_model, shaders);
+        }
         else if (object->name == "Grid")
             continue;
         else
@@ -311,6 +326,12 @@ private:
     int height = 900;
 
 public:
+    void reloadShaders(Shader &&_shaders, Shader &&_ps_shaders)
+    {
+        shaders = std::move(_shaders);
+        ps_shaders = std::move(_ps_shaders);
+        contextSetup(); // 更新上下文
+    }
     void contextSetup()
     {
         glEnable(GL_DEPTH_TEST); // 深度缓冲
@@ -546,6 +567,7 @@ private:
     Mode render_mode;
 
 public:
+    friend void GUI::NormalRendererShaderManager(RenderManager &renderMnager);
     RenderManager()
     {
         switchMode(normal); // default

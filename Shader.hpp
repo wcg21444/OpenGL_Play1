@@ -10,8 +10,17 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+
+#include "DebugOutput.hpp"
+
 class Shader
 {
+
+public:
+    unsigned int progrm_ID;
+    bool used = false;
+
+private:
     std::string loadShaderFile(const char *shader_path)
     {
         // if success , return true
@@ -30,10 +39,6 @@ class Shader
         shader_file.close();
         return shader_buffer.str();
     }
-
-public:
-    unsigned int progrm_ID;
-    bool used = false;
 
 public:
     Shader() {}
@@ -113,6 +118,29 @@ public:
         glDeleteShader(fragmentShader);
         if (gs_path)
             glDeleteShader(geometryShader);
+    }
+    ~Shader()
+    {
+        if (progrm_ID)
+        {
+            DebugOutput::AddLog("Shader Program ID:{} Was Deleted~\n", progrm_ID);
+            glDeleteProgram(progrm_ID);
+        }
+    }
+    Shader &operator=(Shader &&other) noexcept
+    {
+        if (this != &other)
+        {
+            if (progrm_ID)
+            {
+                DebugOutput::AddLog("Shader Program ID:{} Was Deleted\n", progrm_ID);
+                glDeleteProgram(progrm_ID);
+            }
+            this->progrm_ID = other.progrm_ID;
+            this->used = other.used;
+            other.progrm_ID = 0; // 释放源对象资源
+        }
+        return *this;
     }
     void use()
     {

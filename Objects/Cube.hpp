@@ -118,6 +118,7 @@ public:
         glBindVertexArray(vao);
         shaders.setMat4("model", modelMatrix);
         glDrawArrays(GL_TRIANGLES, 0, 36); // 36 vertices (6 faces * 2 triangles * 3 vertices)
+        glBindVertexArray(0);
     }
     ~Cube() {}
 };

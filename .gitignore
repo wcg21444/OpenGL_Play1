@@ -1,12 +1,7 @@
 imgui.ini
 build/
 imgui/
-.vs/ProjectSettings.json
-.vs/slnx.sqlite
-.vs/VSWorkspaceState.json
-.vs/OpenGL_Play1/FileContentIndex/c48cb395-7635-4379-9b34-a91a9965a213.vsidx
-.vs/OpenGL_Play1/v17/.wsuo
-.vs/OpenGL_Play1/v17/Browse.VC.db
-.vs/OpenGL_Play1/v17/ipch/AutoPCH/3f66f45816e3aa5f/MAIN.ipch
-.vs/OpenGL_Play1/v17/ipch/AutoPCH/65747194b71c235c/RENDERER.ipch
-.vs/OpenGL_Play1/v17/ipch/AutoPCH/fb7effd69ed10317/MAIN.ipch
+**/.vs/**
+doxy/**
+Resource/LiveHouse
+Resource/

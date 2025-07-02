@@ -122,6 +122,7 @@ public:
         glBindVertexArray(vao);
         shaders.setMat4("model", modelMatrix);
         glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 8); // 顶点数 = 数据长度 / 8
+        glBindVertexArray(0);
     }
     ~Sphere() {}
 };

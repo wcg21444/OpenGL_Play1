@@ -79,7 +79,9 @@
         "xtree": "cpp",
         "xutility": "cpp",
         "fstream": "cpp",
-        "cstdarg": "cpp"
+        "cstdarg": "cpp",
+        "unordered_set": "cpp",
+        "filesystem": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

@@ -72,6 +72,7 @@ public:
         glBindVertexArray(vao);
         shaders.setMat4("model", modelMatrix);
         glDrawArrays(GL_LINES, 0, vertices.size() / 3); // 顶点数 = 总数据量 / 3（x,y,z）
+        glBindVertexArray(0);
     }
     ~Grid() {}
 };
