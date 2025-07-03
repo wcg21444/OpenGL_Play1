@@ -47,13 +47,13 @@ int main()
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
-
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
     (void)io;
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -72,7 +72,6 @@ int main()
 
     RenderManager renderManager;
 
-    int selectedIndex = -1;
     //  main render loop
     while (!glfwWindowShouldClose(window))
     {
@@ -83,21 +82,28 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("UI");
+        {
+            ImGui::BeginMainMenuBar();
+            if (ImGui::BeginMenu("File"))
+            {
+                if (ImGui::MenuItem("Import"))
+                {
+                    GUI::modelLoadView = true;
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMainMenuBar();
+        }
 
-        GUI::LightHandle(light);
+        GUI::ShowSidebarToolbar(scene, renderManager, light, model);
 
-        model = GUI::MatrixInputWithImGui("Model Matrix", model);
-        GUI::RenderSwitchCombo(renderManager);
-        GUI::displaySceneHierarchy(scene, selectedIndex);
-        GUI::loadModel(scene);
-        GUI::NormalRendererShaderManager(renderManager);
-        GUI::ShowFileBrowserExample();
+        if (GUI::modelLoadView)
+        {
+            GUI::ModelLoadView(scene);
+        }
 
+        // 保证渲染顺序
         renderManager.render(light, cam, scene, model, window);
-
-        DebugOutput::Draw();
-        ImGui::End();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

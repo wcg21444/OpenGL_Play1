@@ -16,10 +16,7 @@
 #include "Objects/Sphere.hpp"
 #include "Objects/Plane.hpp"
 class RenderManager;
-namespace GUI
-{
-    void NormalRendererShaderManager(RenderManager &renderMnager);
-}
+
 void ShowGLMMatrixAsTable(const glm::mat4 &matrix, const char *name = "Matrix")
 {
     if (ImGui::BeginTable(name, 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
@@ -567,7 +564,13 @@ private:
     Mode render_mode;
 
 public:
-    friend void GUI::NormalRendererShaderManager(RenderManager &renderMnager);
+    void reloadNormalShaders(Shader &&mainShader, Shader &&pointShadowShader)
+    {
+        normalRenderer.reloadShaders(
+            std::move(mainShader),
+            std::move(pointShadowShader));
+    }
+
     RenderManager()
     {
         switchMode(normal); // default

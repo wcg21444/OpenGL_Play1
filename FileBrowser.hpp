@@ -24,13 +24,8 @@ public:
     }
 
     // 显示文件选择器窗口
-    inline static bool Show(const char *windowTitle = "File Selector", bool *p_open = nullptr)
+    inline static void Show()
     {
-        if (!ImGui::Begin(windowTitle, p_open))
-        {
-            ImGui::End();
-            return false;
-        }
 
         // 显示当前选择的文件路径
         ImGui::Text("Selected Files (%zu):", s_SelectedPaths.size());
@@ -58,9 +53,6 @@ public:
         {
             ClearPaths();
         }
-
-        ImGui::End();
-        return !s_SelectedPaths.empty();
     }
 
     // 获取最新选择的文件路径列表

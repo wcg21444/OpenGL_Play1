@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <array>
+#include <future>
+#include <thread>
 
 #include "Shader.hpp"
 #include "Camera.hpp"
@@ -19,6 +21,11 @@
 
 namespace GUI
 {
+    using Scene = std::vector<std::unique_ptr<Object>>;
+    // 状态管理变量
+    static bool modelLoadView = false; // 控制显示状态
+    int selectedIndex = -1;
+
     void NormalRendererShaderManager(RenderManager &renderMnager)
     {
         static char path_buf1[256]{"Shaders/VertShader.vs"};
@@ -40,7 +47,7 @@ namespace GUI
 
         if (ImGui::Button("Reload Shaders"))
         {
-            renderMnager.normalRenderer.reloadShaders(
+            renderMnager.reloadNormalShaders(
                 Shader(path_buf1, path_buf2),
                 Shader(path_buf3, path_buf4));
             DebugOutput::AddLog("Execute Shaders Reload\n");
@@ -143,9 +150,8 @@ namespace GUI
         }
     }
 
-    void displaySceneHierarchy(std::vector<std::unique_ptr<Object>> &scene, int &selectedIndex)
+    void displaySceneHierarchy(Scene &scene, int &selectedIndex)
     {
-        ImGui::Begin("Scene Hierarchy");
 
         // 列表显示所有对象
         for (int i = 0; i < scene.size(); ++i)
@@ -170,24 +176,22 @@ namespace GUI
                 ImGui::EndPopup();
             }
         }
-
-        ImGui::End();
     }
 
     void loadModel(std::vector<std::unique_ptr<Object>> &scene)
     {
         static char textBuffer[256] = "Resource/LiveHouse/Studio/Bass.obj";
         ImGui::InputText("Files Path", textBuffer, IM_ARRAYSIZE(textBuffer));
-        if (ImGui::Button("Load Files"))
+        if (ImGui::Button("Import Models"))
         {
             auto &&model = ModelLoader::loadFile(std::string(textBuffer));
             // auto &&model = ModelLoader::loadFile("Resource/LiveHouse/Marshall Half Stack/stack.obj");
-            model->setName("Bass");
+            // model->setName("Bass");
             scene.push_back(std::move(model));
         }
     }
 
-    void ShowFileBrowserExample()
+    void ShowFileBrowser()
     {
         static bool init = false;
         if (!init)
@@ -196,10 +200,112 @@ namespace GUI
             init = true;
         }
 
-        // 显示文件选择器窗口
-        static bool showWindow = true;
-        if (ImGuiMultiFileSelector::Show("File Selector", &showWindow))
+        ImGuiMultiFileSelector::Show();
+    }
+
+    void ModelLoadView(Scene &scene)
+    {
+        ImGui::Begin("ModelLoadView", &modelLoadView);
         {
+            ShowFileBrowser();
+            loadModel(scene);
+        }
+        ImGui::End();
+    }
+    void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, LightSource &light, glm::mat4 &model)
+    {
+        static float sidebar_width = 300.0f;
+        static bool is_resizing = false;
+
+        const ImGuiViewport *viewport = ImGui::GetMainViewport();
+
+        auto side_bar_x = viewport->WorkPos.x + viewport->WorkSize.x - sidebar_width;
+        auto side_bar_y = viewport->WorkPos.y;
+
+        // 设置侧边栏位置和大小
+        ImGui::SetNextWindowPos(ImVec2(side_bar_x, side_bar_y));
+        ImGui::SetNextWindowSize(ImVec2(sidebar_width, viewport->WorkSize.y));
+        // 设置窗口样式
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);   // 直角窗口
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f); // 无边框
+        // 开始侧边栏窗口
+        ImGui::Begin("Sidebar", nullptr,
+                     ImGuiWindowFlags_NoMove |
+                         ImGuiWindowFlags_NoResize |
+                         ImGuiWindowFlags_NoCollapse |
+                         ImGuiWindowFlags_NoTitleBar);
+        // 恢复样式
+        ImGui::PopStyleVar(2);
+        // 1. 灯光控制部分
+        if (ImGui::CollapsingHeader("Light Settings", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            GUI::LightHandle(light);
+        }
+
+        // 2. 模型矩阵控制
+        if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            model = GUI::MatrixInputWithImGui("Model Matrix", model);
+        }
+
+        // 3. 渲染选项
+        if (ImGui::CollapsingHeader("Render Options"))
+        {
+            GUI::RenderSwitchCombo(renderManager);
+        }
+
+        // 4. 场景层次结构
+        if (ImGui::CollapsingHeader("Scene Hierarchy", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            GUI::displaySceneHierarchy(scene, GUI::selectedIndex);
+        }
+
+        // 5. 着色器管理
+        if (ImGui::CollapsingHeader("Shader Settings"))
+        {
+            GUI::NormalRendererShaderManager(renderManager);
+        }
+
+        // 6. 调试输出
+        if (ImGui::CollapsingHeader("Debug Output"))
+        {
+            DebugOutput::Draw();
+        }
+
+        ImGui::End();
+        // 绘制可拖动的分隔条
+        ImGui::SetNextWindowPos(ImVec2(side_bar_x, side_bar_y));
+        ImGui::SetNextWindowSize(ImVec2(5, viewport->WorkSize.y));
+
+        ImGui::Begin("Sidebar Resizer", nullptr,
+                     ImGuiWindowFlags_NoMove |
+                         ImGuiWindowFlags_NoResize |
+                         ImGuiWindowFlags_NoCollapse |
+                         ImGuiWindowFlags_NoTitleBar |
+                         ImGuiWindowFlags_NoBackground |
+                         ImGuiWindowFlags_NoScrollbar |
+                         ImGuiWindowFlags_NoInputs);
+
+        // 设置鼠标光标样式
+        ImGui::End();
+
+        // 处理拖动逻辑
+        ImVec2 mouse_pos = ImGui::GetMousePos();
+        bool is_hovering = mouse_pos.x >= side_bar_x - 5 &&
+                           mouse_pos.x <= side_bar_x + 5 &&
+                           mouse_pos.y >= side_bar_y &&
+                           mouse_pos.y <= side_bar_y + viewport->WorkSize.y;
+
+        (is_hovering || is_resizing) ? ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW) : ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && (is_hovering || is_resizing))
+        {
+            is_resizing = true;
+            sidebar_width = std::abs(mouse_pos.x - viewport->WorkPos.x - viewport->WorkSize.x);
+        }
+        else
+        {
+            is_resizing = false;
         }
     }
 }
