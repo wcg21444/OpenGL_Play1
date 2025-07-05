@@ -99,9 +99,9 @@ int main()
 
         if (GUI::modelLoadView)
         {
-            GUI::ModelLoadView(scene);
+            GUI::ModelLoadView();
         }
-
+        ModelLoader::run(scene);
         // 保证渲染顺序
         renderManager.render(light, cam, scene, model, window);
         ImGui::Render();

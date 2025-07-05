@@ -21,7 +21,7 @@
 
 namespace GUI
 {
-    using Scene = std::vector<std::unique_ptr<Object>>;
+
     // 状态管理变量
     static bool modelLoadView = false; // 控制显示状态
     int selectedIndex = -1;
@@ -178,16 +178,13 @@ namespace GUI
         }
     }
 
-    void loadModel(std::vector<std::unique_ptr<Object>> &scene)
+    void loadModel()
     {
         static char textBuffer[256] = "Resource/LiveHouse/Studio/Bass.obj";
         ImGui::InputText("Files Path", textBuffer, IM_ARRAYSIZE(textBuffer));
         if (ImGui::Button("Import Models"))
         {
-            auto &&model = ModelLoader::loadFile(std::string(textBuffer));
-            // auto &&model = ModelLoader::loadFile("Resource/LiveHouse/Marshall Half Stack/stack.obj");
-            // model->setName("Bass");
-            scene.push_back(std::move(model));
+            ModelLoader::loadFile(std::string(textBuffer)); // UI只负责触发信号
         }
     }
 
@@ -203,12 +200,12 @@ namespace GUI
         ImGuiMultiFileSelector::Show();
     }
 
-    void ModelLoadView(Scene &scene)
+    void ModelLoadView()
     {
         ImGui::Begin("ModelLoadView", &modelLoadView);
         {
             ShowFileBrowser();
-            loadModel(scene);
+            loadModel();
         }
         ImGui::End();
     }
