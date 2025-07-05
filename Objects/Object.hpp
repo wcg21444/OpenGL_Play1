@@ -17,3 +17,4 @@ public:
     virtual ~Object() {}
     void setName(const std::string &_name) { name = _name; }
 };
+using Scene = std::vector<std::unique_ptr<Object>>;

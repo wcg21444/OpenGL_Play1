@@ -6,6 +6,9 @@
 #include <unordered_map>
 #include <string>
 #include <filesystem>
+#include <future>
+#include <thread>
+#include <atomic>
 
 #include "DebugOutput.hpp"
 #include "Model.hpp"
@@ -118,6 +121,11 @@ private:
         DebugOutput::AddLog("Successfully ProcessMesh vertices:{},indices:{},textures:{}\n", vertices.size(), indices.size(), textures.size());
         return Mesh(vertices, indices, textures);
     }
+
+    /* [in]: scene : Obj file imported in memory
+     *  [out]: ptr Model : Model object, which is loaded to OpenGL context
+     *  [process]: OpenGL Object Binding needs synchrours operation
+     */
     inline static std::unique_ptr<Model> postProcess(const aiScene &scene)
     {
         DebugOutput::AddLog("nums of Children of Root Node:{}\n", scene.mRootNode->mNumChildren);
@@ -147,37 +155,82 @@ private:
 public:
     inline static std::unordered_map<std::string, GLuint> tex_file_id;
     inline static std::filesystem::path file_path;
+    inline static std::future<std::pair<const aiScene *, std::unique_ptr<Assimp::Importer>>> model_future;
+    inline static std::atomic_bool importing = false;
 
 public:
     ModelLoader()
     {
     }
-    inline static std::unique_ptr<Model> loadFile(const std::string &pFile)
+    inline static std::future<std::pair<const aiScene *, std::unique_ptr<Assimp::Importer>>>
+    LoadModelAsync(const std::string &path)
     {
-        Assimp::Importer importer;
-        const aiScene *scene = importer.ReadFile(pFile,
-                                                 aiProcess_CalcTangentSpace |
-                                                     aiProcess_Triangulate |
-                                                     aiProcess_JoinIdenticalVertices |
-                                                     aiProcess_SortByPType);
-
-        if (nullptr == scene)
-        {
-            // DoTheErrorLogging(importer.GetErrorString());
-            DebugOutput::AddLog(importer.GetErrorString());
-            return std::make_unique<Model>();
+        // aiScene 必须在 Importer 上下文环境才有效
+        // aiScene 生命周期必须与 Importer 一致
+        return std::async(std::launch::async, [path]
+                          {
+        auto importer = std::make_unique<Assimp::Importer>();
+        const aiScene* scene = importer->ReadFile(
+            path,
+            aiProcess_CalcTangentSpace |
+            aiProcess_Triangulate |
+            aiProcess_JoinIdenticalVertices |
+            aiProcess_SortByPType);
+        
+        if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
+            throw std::runtime_error("加载失败: " + std::string(importer->GetErrorString()));
         }
-        if (scene->HasTextures())
-            DebugOutput::AddLog("Scene has Textures\n");
-        if (scene->HasMaterials())
-            DebugOutput::AddLog("Scene has Materials\n");
-        if (scene->HasMeshes())
-            DebugOutput::AddLog("Scene has Meshes\n");
-        if (scene->HasCameras())
-            DebugOutput::AddLog("Scene has Cameras\n");
-        if (scene->HasLights())
-            DebugOutput::AddLog("Scene has Lights\n");
-        file_path = std::filesystem::path(pFile);
-        return postProcess(*scene); // TODO make it run concurrently
+        return std::make_pair(scene, std::move(importer)); });
+    }
+    inline static void loadFile(const std::string &pFile)
+    {
+
+        if (!importing)
+        {
+            ModelLoader::importing = true;
+            model_future = LoadModelAsync(pFile);
+        }
+        // if (nullptr == scene)
+        // {
+        //     // DoTheErrorLogging(importer.GetErrorString());
+        //     DebugOutput::AddLog(importer.GetErrorString());
+        //     return std::make_unique<Model>();
+        // }
+        // if (scene->HasTextures())
+        //     DebugOutput::AddLog("Scene has Textures\n");
+        // if (scene->HasMaterials())
+        //     DebugOutput::AddLog("Scene has Materials\n");
+        // if (scene->HasMeshes())
+        //     DebugOutput::AddLog("Scene has Meshes\n");
+        // if (scene->HasCameras())
+        //     DebugOutput::AddLog("Scene has Cameras\n");
+        // if (scene->HasLights())
+        //     DebugOutput::AddLog("Scene has Lights\n");
+        // file_path = std::filesystem::path(pFile);
+        // return postProcess(*scene); // TODO make it run concurrently
+    }
+
+    /*
+    [in]: scene 场景对象
+    将模型加载器加载好的文件 处理 并 加入到 scene 中
+    */
+    inline static void run(Scene &scene)
+    {
+        if (!model_future.valid())
+            return;
+        if (model_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+        {
+            try
+            {
+                auto [raw_model, importer] = model_future.get();
+                auto &&model = postProcess(*raw_model);
+                scene.push_back(std::move(model));
+            }
+            catch (std::exception &e)
+            {
+                std::cout << e.what() << std::endl;
+            }
+            importing = false;
+        }
     }
 };
