@@ -102,7 +102,7 @@ int main()
             GUI::ModelLoadView();
         }
         ModelLoader::run(scene);
-        // 保证渲染顺序
+        // 渲染顺序
         renderManager.render(light, cam, scene, model, window);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

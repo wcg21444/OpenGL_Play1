@@ -21,7 +21,6 @@
 
 namespace GUI
 {
-
     // 状态管理变量
     static bool modelLoadView = false; // 控制显示状态
     int selectedIndex = -1;
@@ -126,7 +125,7 @@ namespace GUI
 
     void RenderSwitchCombo(RenderManager &renderManager)
     {
-        static const char *modes[] = {"Normal", "Debug_Depth", "Texture"};
+        static const char *modes[] = {"PointShadow", "DebugDepth", "Texture", "DepthPass"};
         static int current_mode = 0;
         static int prev_mode = current_mode;
         ImGui::Combo("Mode", &current_mode, modes, IM_ARRAYSIZE(modes));
@@ -137,7 +136,7 @@ namespace GUI
             switch (current_mode)
             {
             case 0:
-                renderManager.switchMode(RenderManager::Mode::normal);
+                renderManager.switchMode(RenderManager::Mode::point_shadow);
                 break;
             case 1:
                 renderManager.switchMode(RenderManager::Mode::debug_depth);
@@ -145,6 +144,9 @@ namespace GUI
                 break;
             case 2:
                 renderManager.switchMode(RenderManager::Mode::simple_texture);
+                break;
+            case 3:
+                renderManager.switchMode(RenderManager::Mode::depth_pass);
                 break;
             }
         }
@@ -180,34 +182,28 @@ namespace GUI
 
     void loadModel()
     {
-        static char textBuffer[256] = "Resource/LiveHouse/Studio/Bass.obj";
-        ImGui::InputText("Files Path", textBuffer, IM_ARRAYSIZE(textBuffer));
-        if (ImGui::Button("Import Models"))
-        {
-            ModelLoader::loadFile(std::string(textBuffer)); // UI只负责触发信号
-        }
     }
 
     void ShowFileBrowser()
     {
-        static bool init = false;
-        if (!init)
-        {
-            ImGuiMultiFileSelector::Initialize();
-            init = true;
-        }
-
-        ImGuiMultiFileSelector::Show();
     }
 
     void ModelLoadView()
     {
+        static FileSelector fileSelector;
         ImGui::Begin("ModelLoadView", &modelLoadView);
         {
-            ShowFileBrowser();
-            loadModel();
+            fileSelector.Show();
+            if (ImGui::Button("Import Models"))
+            {
+                // 加载所有选中路径
+                for (auto &path : fileSelector.GetAllPaths())
+                {
+                    ModelLoader::loadFile(std::string(path)); // UI只负责触发信号
+                }
+            }
+            ImGui::End();
         }
-        ImGui::End();
     }
     void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, LightSource &light, glm::mat4 &model)
     {

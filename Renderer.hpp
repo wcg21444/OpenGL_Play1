@@ -153,9 +153,6 @@ public:
                                           glm::vec3(0.0f, 0.0f, 0.0f),
                                           glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-        quadShader.use();
-        quadShader.setInt("depthMap", 0);
-
         depthShader.use();
         depthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
@@ -170,6 +167,7 @@ public:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         quadShader.use();
+        quadShader.setInt("depthMap", 0);
         quadShader.setFloat("near_plane", near_plane);
         quadShader.setFloat("far_plane", far_plane);
 
@@ -182,7 +180,7 @@ public:
     }
 };
 
-class NormalRenderer : public Renderer
+class PointShadowRenderer : public Renderer
 {
     class ShadowPass
     {
@@ -393,6 +391,7 @@ public:
         renderScene(scene, model, shaders);
     }
 };
+
 class SimpleTextureRenderer : public Renderer
 {
     Shader shaders = Shader("Shaders/texture.vs", "Shaders/texture.fs");
@@ -451,7 +450,6 @@ public:
 
         int width, height, nrChannels;
         stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-        // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
         unsigned char *data = stbi_load("textures/container.jpg", &width, &height, &nrChannels, 0);
         if (data)
         {
@@ -519,12 +517,20 @@ public:
     }
 };
 
+class DepthPassRenderer : public Renderer
+{
+    Shader shaders = Shader("Shaders/DepthPass/depth_pass.vs", "Shaders/DepthPass/depth_pass.fs");
+    int width = 1600;
+    int height = 900;
+};
+
 class RenderManager
 {
 private:
     DebugDepthRenderer debugDepthRenderer;
-    NormalRenderer normalRenderer;
+    PointShadowRenderer pointShadowRenderer;
     SimpleTextureRenderer simpleTextureRenderer;
+    DepthPassRenderer depthPassRenderer;
 
 private:
     void clearContext()
@@ -555,7 +561,7 @@ private:
 public:
     enum Mode
     {
-        normal,
+        point_shadow,
         debug_depth,
         simple_texture
     };
@@ -566,14 +572,14 @@ private:
 public:
     void reloadNormalShaders(Shader &&mainShader, Shader &&pointShadowShader)
     {
-        normalRenderer.reloadShaders(
+        pointShadowRenderer.reloadShaders(
             std::move(mainShader),
             std::move(pointShadowShader));
     }
 
     RenderManager()
     {
-        switchMode(normal); // default
+        switchMode(point_shadow); // default
     }
     void switchMode(Mode _mode)
     {
@@ -581,14 +587,17 @@ public:
         render_mode = _mode;
         switch (_mode)
         {
-        case normal:
-            normalRenderer.contextSetup();
+        case point_shadow:
+            pointShadowRenderer.contextSetup();
             break;
         case debug_depth:
             debugDepthRenderer.contextSetup();
             break;
         case simple_texture:
             simpleTextureRenderer.contextSetup();
+            break;
+        case depth_pass:
+            depthPassRenderer.contextSetup();
             break;
         default:
             throw(std::exception("No Selected Render Mode."));
@@ -601,15 +610,19 @@ public:
         // Need a lighter way
         switch (render_mode)
         {
-        case normal:
-            // normalRenderer.render(light, cam, scene, model, window);
-            normalRenderer.renderPointShadow(light, cam, scene, model, window);
+        case point_shadow:
+            // pointShadowRenderer.render(light, cam, scene, model, window);
+            pointShadowRenderer.renderPointShadow(light, cam, scene, model, window);
             break;
         case debug_depth:
             debugDepthRenderer.render(light, cam, scene, model, window);
             break;
         case simple_texture:
             simpleTextureRenderer.render(light, cam, scene, model, window);
+            break;
+        case depth_pass:
+            depthPassRenderer.render(light, cam, scene, model, window);
+            break;
         default:
             break;
         }

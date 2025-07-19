@@ -9,6 +9,7 @@
 #include <future>
 #include <thread>
 #include <atomic>
+#include <vector>
 
 #include "DebugOutput.hpp"
 #include "Model.hpp"
@@ -153,10 +154,12 @@ private:
     }
 
 public:
+    using ModelLoadFuture = std::future<std::pair<const aiScene *, std::unique_ptr<Assimp::Importer>>>;
     inline static std::unordered_map<std::string, GLuint> tex_file_id;
     inline static std::filesystem::path file_path;
-    inline static std::future<std::pair<const aiScene *, std::unique_ptr<Assimp::Importer>>> model_future;
     inline static std::atomic_bool importing = false;
+    inline static std::vector<ModelLoadFuture> importing_vec;
+    inline static std::mutex import_mtx;
 
 public:
     ModelLoader()
@@ -182,55 +185,59 @@ public:
         }
         return std::make_pair(scene, std::move(importer)); });
     }
+
+    // 发送加载模型请求
     inline static void loadFile(const std::string &pFile)
     {
-
-        if (!importing)
-        {
-            ModelLoader::importing = true;
-            model_future = LoadModelAsync(pFile);
-        }
-        // if (nullptr == scene)
-        // {
-        //     // DoTheErrorLogging(importer.GetErrorString());
-        //     DebugOutput::AddLog(importer.GetErrorString());
-        //     return std::make_unique<Model>();
-        // }
-        // if (scene->HasTextures())
-        //     DebugOutput::AddLog("Scene has Textures\n");
-        // if (scene->HasMaterials())
-        //     DebugOutput::AddLog("Scene has Materials\n");
-        // if (scene->HasMeshes())
-        //     DebugOutput::AddLog("Scene has Meshes\n");
-        // if (scene->HasCameras())
-        //     DebugOutput::AddLog("Scene has Cameras\n");
-        // if (scene->HasLights())
-        //     DebugOutput::AddLog("Scene has Lights\n");
-        // file_path = std::filesystem::path(pFile);
-        // return postProcess(*scene); // TODO make it run concurrently
+        importing_vec.emplace_back(LoadModelAsync(pFile));
     }
 
+    // TODO 异常处理优化 ; 进度输出;
     /*
     [in]: scene 场景对象
-    将模型加载器加载好的文件 处理 并 加入到 scene 中
+    importing_vec 中将模型加载器加载好的文件 处理 并 加入到 scene 中
     */
     inline static void run(Scene &scene)
     {
-        if (!model_future.valid())
-            return;
-        if (model_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+        auto it = importing_vec.begin();
+        while (it != importing_vec.end())
         {
-            try
+            if (it->wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
             {
-                auto [raw_model, importer] = model_future.get();
-                auto &&model = postProcess(*raw_model);
-                scene.push_back(std::move(model));
+                LoadAndProcessModel(scene, *it);
+                it = importing_vec.erase(it);
             }
-            catch (std::exception &e)
+            else
             {
-                std::cout << e.what() << std::endl;
+                ++it;
             }
-            importing = false;
         }
+    }
+    inline static void LoadAndProcessModel(Scene &scene, ModelLoadFuture &model_future)
+    {
+        try
+        {
+            auto [raw_model, importer] = model_future.get();
+            outputRawModelDebugInfos(raw_model);
+            auto &&model = postProcess(*raw_model);
+            scene.push_back(std::move(model));
+        }
+        catch (std::exception &e)
+        {
+            std::cout << e.what() << std::endl;
+        }
+    }
+    inline static void outputRawModelDebugInfos(const aiScene *raw_model)
+    {
+        if (raw_model->HasTextures())
+            DebugOutput::AddLog("Raw Model has Textures\n");
+        if (raw_model->HasMaterials())
+            DebugOutput::AddLog("Raw Model has Materials\n");
+        if (raw_model->HasMeshes())
+            DebugOutput::AddLog("Raw Model has Meshes\n");
+        if (raw_model->HasCameras())
+            DebugOutput::AddLog("Raw Model has Cameras\n");
+        if (raw_model->HasLights())
+            DebugOutput::AddLog("Raw Model has Lights\n");
     }
 };

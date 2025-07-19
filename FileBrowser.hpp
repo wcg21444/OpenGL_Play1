@@ -13,24 +13,18 @@
 #include <unistd.h>
 #endif
 
-class ImGuiMultiFileSelector
+class FileSelector
 {
 public:
-    // 初始化文件选择器
-    inline static void Initialize()
-    {
-        s_SelectedPaths.clear();
-        s_CurrentPaths.clear();
-    }
+    FileSelector() = default;
 
     // 显示文件选择器窗口
-    inline static void Show()
+    void Show()
     {
-
         // 显示当前选择的文件路径
-        ImGui::Text("Selected Files (%zu):", s_SelectedPaths.size());
+        ImGui::Text("Selected Files (%zu):", m_selectedPaths.size());
         ImGui::BeginChild("SelectedFiles", ImVec2(0, 150), true);
-        for (const auto &path : s_SelectedPaths)
+        for (const auto &path : m_selectedPaths)
         {
             ImGui::Text("%s", path.c_str());
         }
@@ -39,10 +33,11 @@ public:
         // 选择文件按钮
         if (ImGui::Button("Select Files"))
         {
-            s_CurrentPaths = OpenSystemFileDialog(true);
-            if (!s_CurrentPaths.empty())
+            auto paths = OpenSystemFileDialog(true);
+            if (!paths.empty())
             {
-                s_SelectedPaths.insert(s_SelectedPaths.end(), s_CurrentPaths.begin(), s_CurrentPaths.end());
+                m_selectedPaths.insert(m_selectedPaths.end(), paths.begin(), paths.end());
+                m_currentPaths = std::move(paths);
             }
         }
 
@@ -56,36 +51,36 @@ public:
     }
 
     // 获取最新选择的文件路径列表
-    inline static const std::vector<std::string> &GetCurrentPaths()
+    const std::vector<std::string> &GetCurrentPaths() const
     {
-        return s_CurrentPaths;
+        return m_currentPaths;
     }
 
     // 获取所有选择的文件路径
-    inline static const std::vector<std::string> &GetAllPaths()
+    const std::vector<std::string> &GetAllPaths() const
     {
-        return s_SelectedPaths;
+        return m_selectedPaths;
     }
 
     // 清除所有选择的路径
-    inline static void ClearPaths()
+    void ClearPaths()
     {
-        s_SelectedPaths.clear();
-        s_CurrentPaths.clear();
+        m_selectedPaths.clear();
+        m_currentPaths.clear();
     }
 
 private:
-    inline static std::vector<std::string> s_SelectedPaths;
-    inline static std::vector<std::string> s_CurrentPaths;
+    std::vector<std::string> m_selectedPaths;
+    std::vector<std::string> m_currentPaths;
 
     // 打开系统文件对话框 (支持多选)
-    inline static std::vector<std::string> OpenSystemFileDialog(bool multiSelect)
+    std::vector<std::string> OpenSystemFileDialog(bool multiSelect)
     {
         std::vector<std::string> result;
 
 #ifdef _WIN32
         OPENFILENAMEA ofn;
-        CHAR szFile[1024 * 16] = {0}; // 足够大的缓冲区存储多个文件路径
+        CHAR szFile[1024 * 16] = {0};
 
         ZeroMemory(&ofn, sizeof(OPENFILENAME));
         ofn.lStructSize = sizeof(OPENFILENAME);
@@ -106,13 +101,12 @@ private:
 
         if (GetOpenFileNameA(&ofn) == TRUE)
         {
-            // 处理多选结果
             char *p = szFile;
             std::string directory = p;
             p += directory.size() + 1;
 
             if (*p)
-            { // 多选情况
+            {
                 while (*p)
                 {
                     std::string filename = p;
@@ -121,21 +115,21 @@ private:
                 }
             }
             else
-            { // 单选情况
+            {
                 result.push_back(directory);
             }
         }
 #else
-        // Linux/macOS 使用 zenity 或 kdialog
         const char *cmd = nullptr;
-
         if (access("/usr/bin/zenity", X_OK) == 0)
         {
-            cmd = multiSelect ? "zenity --file-selection --multiple" : "zenity --file-selection";
+            cmd = multiSelect ? "zenity --file-selection --multiple --separator='\n'"
+                              : "zenity --file-selection";
         }
         else if (access("/usr/bin/kdialog", X_OK) == 0)
         {
-            cmd = multiSelect ? "kdialog --getopenfilename --multiple" : "kdialog --getopenfilename";
+            cmd = multiSelect ? "kdialog --getopenfilename --multiple"
+                              : "kdialog --getopenfilename";
         }
 
         if (cmd)
@@ -146,18 +140,23 @@ private:
                 char path[1024];
                 while (fgets(path, sizeof(path), f))
                 {
-                    // 移除末尾的换行符
                     size_t len = strlen(path);
                     if (len > 0 && path[len - 1] == '\n')
                     {
                         path[len - 1] = '\0';
                     }
-                    result.push_back(path);
+                    if (path[0] != '\0')
+                    {
+                        result.push_back(path);
+                    }
                 }
                 pclose(f);
             }
         }
 #endif
+
+        // 移除重复路径
+        result.erase(std::unique(result.begin(), result.end()), result.end());
         return result;
     }
 };
