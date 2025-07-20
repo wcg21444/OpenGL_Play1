@@ -70,6 +70,8 @@ int main()
 
     LightSource light(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
 
+    RenderParameters renderParameters{light, cam, scene, model, window};
+
     RenderManager renderManager;
 
     //  main render loop
@@ -103,7 +105,7 @@ int main()
         }
         ModelLoader::run(scene);
         // 渲染顺序
-        renderManager.render(light, cam, scene, model, window);
+        renderManager.render(renderParameters);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

@@ -25,7 +25,16 @@ namespace GUI
     static bool modelLoadView = false; // 控制显示状态
     int selectedIndex = -1;
 
-    void NormalRendererShaderManager(RenderManager &renderMnager)
+    void RendererShaderManager(RenderManager &renderManager)
+    {
+        if (ImGui::Button("Reload Current Shaders"))
+        {
+            renderManager.reloadCurrentShaders();
+            DebugOutput::AddLog("Execute Current Shaders Reload\n");
+        }
+    }
+
+    void ShadowRendererShaderManager(RenderManager &renderManager)
     {
         static char path_buf1[256]{"Shaders/VertShader.vs"};
         static char path_buf2[256]{"Shaders/FragmShader.fs"};
@@ -46,7 +55,7 @@ namespace GUI
 
         if (ImGui::Button("Reload Shaders"))
         {
-            renderMnager.reloadNormalShaders(
+            renderManager.reloadShadowShaders(
                 Shader(path_buf1, path_buf2),
                 Shader(path_buf3, path_buf4));
             DebugOutput::AddLog("Execute Shaders Reload\n");
@@ -125,7 +134,7 @@ namespace GUI
 
     void RenderSwitchCombo(RenderManager &renderManager)
     {
-        static const char *modes[] = {"PointShadow", "DebugDepth", "Texture", "DepthPass"};
+        static const char *modes[] = {"PointShadow", "ParrllelShadow", "DebugDepth", "Texture", "DepthPass"};
         static int current_mode = 0;
         static int prev_mode = current_mode;
         ImGui::Combo("Mode", &current_mode, modes, IM_ARRAYSIZE(modes));
@@ -139,13 +148,15 @@ namespace GUI
                 renderManager.switchMode(RenderManager::Mode::point_shadow);
                 break;
             case 1:
-                renderManager.switchMode(RenderManager::Mode::debug_depth);
-
+                renderManager.switchMode(RenderManager::Mode::parallel_shadow);
                 break;
             case 2:
-                renderManager.switchMode(RenderManager::Mode::simple_texture);
+                renderManager.switchMode(RenderManager::Mode::debug_depth);
                 break;
             case 3:
+                renderManager.switchMode(RenderManager::Mode::simple_texture);
+                break;
+            case 4:
                 renderManager.switchMode(RenderManager::Mode::depth_pass);
                 break;
             }
@@ -256,7 +267,8 @@ namespace GUI
         // 5. 着色器管理
         if (ImGui::CollapsingHeader("Shader Settings"))
         {
-            GUI::NormalRendererShaderManager(renderManager);
+            // GUI::ShadowRendererShaderManager(renderManager);
+            GUI::RendererShaderManager(renderManager);
         }
 
         // 6. 调试输出

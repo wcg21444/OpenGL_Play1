@@ -13,7 +13,7 @@ public:
         : intensity(_intensity), position(_position)
     {
     }
-    void set(Shader &shaders) // 不同于object,不受model变换影响
+    void setToShader(Shader &shaders) // 不同于object,不受model变换影响
     {
         shaders.setUniform3fv("light_intensity", intensity);
         shaders.setUniform3fv("light_pos", position);

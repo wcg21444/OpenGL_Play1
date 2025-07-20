@@ -63,11 +63,21 @@ void renderScene(std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, 
     }
 }
 
+struct RenderParameters
+{
+    LightSource &light;
+    Camera &cam;
+    std::vector<std::unique_ptr<Object>> &scene;
+    glm::mat4 &model;
+    GLFWwindow *window;
+};
+
 class Renderer
 {
 public:
     virtual void contextSetup() = 0;
-    virtual void render(LightSource &light, Camera &cam, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, GLFWwindow *window) = 0;
+    virtual void render(RenderParameters &renderParameters) = 0;
+    virtual void reloadCurrentShaders() = 0;
     virtual ~Renderer() {}
 };
 
@@ -83,6 +93,12 @@ class DebugDepthRenderer : public Renderer
     unsigned int quadVBO;
 
 public:
+    void reloadCurrentShaders()
+    {
+        depthShader = std::move(Shader("Shaders/shadow_depth.vs", "Shaders/shadow_depth.fs"));
+        quadShader = std::move(Shader("Shaders/debug_quad.vs", "Shaders/debug_quad.fs"));
+        contextSetup();
+    }
     void contextSetup()
     {
         glEnable(GL_DEPTH_TEST);
@@ -141,8 +157,9 @@ public:
             glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
         }
     }
-    void render(LightSource &light, Camera &cam, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, GLFWwindow *window)
+    void render(RenderParameters &renderParameters)
     {
+        auto &[light, cam, scene, model, window] = renderParameters;
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -180,9 +197,9 @@ public:
     }
 };
 
-class PointShadowRenderer : public Renderer
+class ShadowRenderer : public Renderer
 {
-    class ShadowPass
+    class ParrllelShadowPass
     {
         Shader depthShader = Shader("Shaders/shadow_depth.vs", "Shaders/shadow_depth.fs");
         int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
@@ -193,7 +210,7 @@ class PointShadowRenderer : public Renderer
         unsigned int depthMap;
 
     public:
-        ShadowPass()
+        ParrllelShadowPass()
         {
             glEnable(GL_DEPTH_TEST);
             glGenFramebuffers(1, &depthMapFBO);
@@ -214,7 +231,7 @@ class PointShadowRenderer : public Renderer
         }
         void render(LightSource &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix)
         {
-            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            glClearColor(0.f, 0.f, 0.f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             depthShader.use();
@@ -226,10 +243,6 @@ class PointShadowRenderer : public Renderer
 
             renderScene(scene, model, depthShader);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-            // quadShader.use();
-            // quadShader.setFloat("near_plane", near_plane);
-            // quadShader.setFloat("far_plane", far_plane);
         }
     };
 
@@ -293,7 +306,7 @@ class PointShadowRenderer : public Renderer
                                        glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
             shadowTransforms.push_back(shadowProj * glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
 
-            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            glClearColor(0.f, 0.f, 0.f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
@@ -314,28 +327,59 @@ class PointShadowRenderer : public Renderer
         }
     };
 
+public:
+    enum class ShadowMode
+    {
+        parallel_shadow,
+        point_shadow
+    };
+
 private:
-    Shader shaders = Shader("Shaders/VertShader.vs", "Shaders/FragmShader.fs");
+    Shader pls_shaders = Shader("Shaders/VertShader.vs", "Shaders/FragmShader.fs");
     Shader ps_shaders = Shader("Shaders/PointShadow/point_shadow.vs", "Shaders/PointShadow/point_shadow.fs");
     int width = 1600;
     int height = 900;
 
 public:
+    ShadowMode render_mode;
+    void reloadCurrentShaders()
+    {
+        pls_shaders = std::move(Shader("Shaders/VertShader.vs", "Shaders/FragmShader.fs"));
+        ps_shaders = std::move(Shader("Shaders/PointShadow/point_shadow.vs", "Shaders/PointShadow/point_shadow.fs"));
+        contextSetup();
+    }
     void reloadShaders(Shader &&_shaders, Shader &&_ps_shaders)
     {
-        shaders = std::move(_shaders);
+        pls_shaders = std::move(_shaders);
         ps_shaders = std::move(_ps_shaders);
-        contextSetup(); // 更新上下文
+        contextSetup();
     }
     void contextSetup()
     {
         glEnable(GL_DEPTH_TEST); // 深度缓冲
         glViewport(0, 0, width, height);
-        shaders.use();
     }
-    void renderPointShadow(LightSource &light, Camera &cam, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, GLFWwindow *window)
-    {
 
+    void render(RenderParameters &renderParameters)
+    {
+        if (render_mode == ShadowMode::point_shadow)
+        {
+            renderPointShadow(renderParameters);
+        }
+        else if (render_mode == ShadowMode::parallel_shadow)
+        {
+            renderParallelShadow(renderParameters);
+        }
+        else
+        {
+            throw(std::exception("Unknown shadow mode."));
+        }
+    }
+
+private:
+    void renderPointShadow(RenderParameters &renderParameters)
+    {
+        auto &[light, cam, scene, model, window] = renderParameters;
         static PointShadowPass pointShadowPass;
         pointShadowPass.render(light, scene, model);
 
@@ -350,7 +394,7 @@ public:
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 深度缓冲和Color缓冲一样需要交换链,清理他
 
-        light.set(ps_shaders);
+        light.setToShader(ps_shaders);
 
         // camera/view transformation
         cam.setViewMatrix(ps_shaders);
@@ -358,8 +402,10 @@ public:
 
         renderScene(scene, model, ps_shaders);
     }
-    void render(LightSource &light, Camera &cam, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, GLFWwindow *window)
+    void renderParallelShadow(RenderParameters &renderParameters)
     {
+        // BUG: 没有画面, 怀疑是着色器没有正常渲染,因为只有clear屏幕的颜色显示,更改着色器无效
+        auto &[light, cam, scene, model, window] = renderParameters;
         static float near_plane = 1.f, far_plane = 700.f;
         glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
         glm::mat4 lightView = glm::lookAt(light.position,
@@ -368,27 +414,27 @@ public:
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
         ShowGLMMatrixAsTable(lightSpaceMatrix);
-        static ShadowPass shadowPass;
-        shadowPass.render(light, scene, model, lightSpaceMatrix);
+        static ParrllelShadowPass parrllelShadowPass;
+        parrllelShadowPass.render(light, scene, model, lightSpaceMatrix);
 
         glEnable(GL_DEPTH_TEST); // 深度缓冲
         glViewport(0, 0, width, height);
-        shaders.use();
-        shaders.setInt("shdaowDepthMap", 0);
-        shaders.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+        pls_shaders.use();
+        pls_shaders.setInt("shdaowDepthMap", 0);
+        pls_shaders.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, shadowPass.depthMap);
-        glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+        glBindTexture(GL_TEXTURE_2D, parrllelShadowPass.depthMap);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 深度缓冲和Color缓冲一样需要交换链,清理他
 
-        light.set(shaders);
+        light.setToShader(pls_shaders);
 
         // camera/view transformation
-        cam.setViewMatrix(shaders);
-        cam.setPerspectiveMatrix(shaders, width, height);
+        cam.setViewMatrix(pls_shaders);
+        cam.setPerspectiveMatrix(pls_shaders, width, height);
 
-        renderScene(scene, model, shaders);
+        renderScene(scene, model, pls_shaders);
     }
 };
 
@@ -401,6 +447,11 @@ class SimpleTextureRenderer : public Renderer
     unsigned int texture1, texture2;
 
 public:
+    void reloadCurrentShaders()
+    {
+        shaders = std::move(Shader("Shaders/texture.vs", "Shaders/texture.fs"));
+        contextSetup();
+    }
     void contextSetup()
     {
         static float vertices[] = {
@@ -490,8 +541,9 @@ public:
         shaders.setInt("texture1", 0);
         shaders.setInt("texture2", 1);
     }
-    void render(LightSource &light, Camera &cam, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, GLFWwindow *window)
+    void render(RenderParameters &renderParameters)
     {
+        auto &[light, cam, scene, model, window] = renderParameters;
         // render
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -522,15 +574,49 @@ class DepthPassRenderer : public Renderer
     Shader shaders = Shader("Shaders/DepthPass/depth_pass.vs", "Shaders/DepthPass/depth_pass.fs");
     int width = 1600;
     int height = 900;
+
+public:
+    void reloadCurrentShaders()
+    {
+        shaders = std::move(Shader("Shaders/DepthPass/depth_pass.vs", "Shaders/DepthPass/depth_pass.fs"));
+        contextSetup();
+    }
+    void contextSetup()
+    {
+        glEnable(GL_DEPTH_TEST); // 深度缓冲
+        glViewport(0, 0, width, height);
+    }
+    void render(RenderParameters &renderParameters)
+    {
+        auto &[light, cam, scene, model, window] = renderParameters;
+
+        glEnable(GL_DEPTH_TEST); // 深度缓冲
+        glViewport(0, 0, width, height);
+        shaders.use();
+        shaders.setFloat("far_plane", cam.far);
+        shaders.setUniform3fv("camPos", cam.getPosition());
+
+        glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 深度缓冲和Color缓冲一样需要交换链,清理他
+
+        light.setToShader(shaders);
+
+        // camera/view transformation
+        cam.setViewMatrix(shaders);
+        cam.setPerspectiveMatrix(shaders, width, height);
+
+        renderScene(scene, model, shaders);
+    }
 };
 
 class RenderManager
 {
 private:
     DebugDepthRenderer debugDepthRenderer;
-    PointShadowRenderer pointShadowRenderer;
+    ShadowRenderer shadowRenderer;
     SimpleTextureRenderer simpleTextureRenderer;
     DepthPassRenderer depthPassRenderer;
+    Renderer *currentRenderer = nullptr;
 
 private:
     void clearContext()
@@ -562,24 +648,38 @@ public:
     enum Mode
     {
         point_shadow,
+        parallel_shadow,
         debug_depth,
-        simple_texture
+        simple_texture,
+        depth_pass
     };
 
 private:
     Mode render_mode;
 
 public:
-    void reloadNormalShaders(Shader &&mainShader, Shader &&pointShadowShader)
+    void reloadShadowShaders(Shader &&mainShader, Shader &&pointShadowShader)
     {
-        pointShadowRenderer.reloadShaders(
-            std::move(mainShader),
-            std::move(pointShadowShader));
+        if (currentRenderer == &shadowRenderer)
+        {
+            shadowRenderer.reloadShaders(std::move(mainShader), std::move(pointShadowShader));
+        }
+        else
+        {
+            throw(std::exception("ShadowRenderer is not the current renderer."));
+        }
+    }
+    void reloadCurrentShaders()
+    {
+        if (currentRenderer)
+        {
+            currentRenderer->reloadCurrentShaders();
+        }
     }
 
     RenderManager()
     {
-        switchMode(point_shadow); // default
+        switchMode(parallel_shadow); // default
     }
     void switchMode(Mode _mode)
     {
@@ -588,43 +688,44 @@ public:
         switch (_mode)
         {
         case point_shadow:
-            pointShadowRenderer.contextSetup();
+            currentRenderer = &shadowRenderer;
+            shadowRenderer.render_mode = ShadowRenderer::ShadowMode::point_shadow;
+            break;
+        case parallel_shadow:
+            currentRenderer = &shadowRenderer;
+            shadowRenderer.render_mode = ShadowRenderer::ShadowMode::parallel_shadow;
             break;
         case debug_depth:
-            debugDepthRenderer.contextSetup();
+            currentRenderer = &debugDepthRenderer;
             break;
         case simple_texture:
-            simpleTextureRenderer.contextSetup();
+            currentRenderer = &simpleTextureRenderer;
             break;
         case depth_pass:
-            depthPassRenderer.contextSetup();
+            currentRenderer = &depthPassRenderer;
             break;
         default:
             throw(std::exception("No Selected Render Mode."));
             break;
         }
-    }
-    void render(LightSource &light, Camera &cam, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, GLFWwindow *window)
-    {
-        // using parameter list is so tedious
-        // Need a lighter way
-        switch (render_mode)
+        if (currentRenderer)
         {
-        case point_shadow:
-            // pointShadowRenderer.render(light, cam, scene, model, window);
-            pointShadowRenderer.renderPointShadow(light, cam, scene, model, window);
-            break;
-        case debug_depth:
-            debugDepthRenderer.render(light, cam, scene, model, window);
-            break;
-        case simple_texture:
-            simpleTextureRenderer.render(light, cam, scene, model, window);
-            break;
-        case depth_pass:
-            depthPassRenderer.render(light, cam, scene, model, window);
-            break;
-        default:
-            break;
+            currentRenderer->contextSetup();
+        }
+        else
+        {
+            throw(std::exception("No Renderer Selected."));
+        }
+    }
+    void render(RenderParameters &renderParameters)
+    {
+        if (currentRenderer)
+        {
+            currentRenderer->render(renderParameters);
+        }
+        else
+        {
+            throw(std::exception("No Renderer Selected."));
         }
     }
 };
