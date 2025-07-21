@@ -62,7 +62,7 @@ private:
             mat->GetTexture(type, i, &str);
             Mesh::Texture texture;
             DebugOutput::AddLog("texture:{}", str.C_Str());
-            std::string direction = file_path.parent_path().string() + "/";
+            std::string direction = current_file_path.parent_path().string() + "/";
             texture.id = TextureFromFile(str.C_Str(), direction.c_str());
             texture.type = typeName;
             texture.path = str.C_Str();
@@ -155,11 +155,15 @@ private:
 
 public:
     using ModelLoadFuture = std::future<std::pair<const aiScene *, std::unique_ptr<Assimp::Importer>>>;
+    struct ImportingContext
+    {
+        ModelLoadFuture model_future;
+        std::string file_path;
+    };
     inline static std::unordered_map<std::string, GLuint> tex_file_id;
-    inline static std::filesystem::path file_path;
+    inline static std::filesystem::path current_file_path;
     inline static std::atomic_bool importing = false;
-    inline static std::vector<ModelLoadFuture> importing_vec;
-    inline static std::mutex import_mtx;
+    inline static std::vector<ImportingContext> importing_vec;
 
 public:
     ModelLoader()
@@ -170,26 +174,27 @@ public:
     {
         // aiScene 必须在 Importer 上下文环境才有效
         // aiScene 生命周期必须与 Importer 一致
-        return std::async(std::launch::async, [path]
-                          {
-        auto importer = std::make_unique<Assimp::Importer>();
-        const aiScene* scene = importer->ReadFile(
-            path,
-            aiProcess_CalcTangentSpace |
-            aiProcess_Triangulate |
-            aiProcess_JoinIdenticalVertices |
-            aiProcess_SortByPType);
-        
-        if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
-            throw std::runtime_error("加载失败: " + std::string(importer->GetErrorString()));
-        }
-        return std::make_pair(scene, std::move(importer)); });
+        return std::async(
+            std::launch::async, [path]
+            {   
+                auto importer = std::make_unique<Assimp::Importer>();
+                const aiScene* scene = importer->ReadFile(
+                    path,
+                    aiProcess_CalcTangentSpace |
+                    aiProcess_Triangulate |
+                    aiProcess_JoinIdenticalVertices |
+                    aiProcess_SortByPType);
+                
+                if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
+                    throw std::runtime_error("Load Failed: " + std::string(importer->GetErrorString()));
+                }
+                return std::make_pair(scene, std::move(importer)); });
     }
 
     // 发送加载模型请求
     inline static void loadFile(const std::string &pFile)
     {
-        importing_vec.emplace_back(LoadModelAsync(pFile));
+        importing_vec.emplace_back(ImportingContext{LoadModelAsync(pFile), pFile});
     }
 
     // TODO 异常处理优化 ; 进度输出;
@@ -202,9 +207,10 @@ public:
         auto it = importing_vec.begin();
         while (it != importing_vec.end())
         {
-            if (it->wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+            if (it->model_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
             {
-                LoadAndProcessModel(scene, *it);
+                current_file_path = std::filesystem::path(it->file_path);
+                LoadAndProcessModel(scene, it->model_future);
                 it = importing_vec.erase(it);
             }
             else

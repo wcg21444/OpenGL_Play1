@@ -67,6 +67,7 @@ int main()
     scene.push_back(std::make_unique<Cube>(glm::vec3(1.f, 1.f, 1.f)));
     scene.push_back(std::make_unique<Sphere>(1.f));
     scene.push_back(std::make_unique<Plane>(200.f, 200.f));
+    ModelLoader::loadFile("Resource/backpack.obj");
 
     LightSource light(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
 

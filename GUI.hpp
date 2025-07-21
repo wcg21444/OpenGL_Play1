@@ -134,7 +134,7 @@ namespace GUI
 
     void RenderSwitchCombo(RenderManager &renderManager)
     {
-        static const char *modes[] = {"PointShadow", "ParrllelShadow", "DebugDepth", "Texture", "DepthPass"};
+        static const char *modes[] = {"PointShadow", "ParrllelShadow", "DebugDepth", "Texture", "DepthPass", "GBuffer"};
         static int current_mode = 0;
         static int prev_mode = current_mode;
         ImGui::Combo("Mode", &current_mode, modes, IM_ARRAYSIZE(modes));
@@ -142,24 +142,7 @@ namespace GUI
         if (current_mode != prev_mode)
         {
             prev_mode = current_mode;
-            switch (current_mode)
-            {
-            case 0:
-                renderManager.switchMode(RenderManager::Mode::point_shadow);
-                break;
-            case 1:
-                renderManager.switchMode(RenderManager::Mode::parallel_shadow);
-                break;
-            case 2:
-                renderManager.switchMode(RenderManager::Mode::debug_depth);
-                break;
-            case 3:
-                renderManager.switchMode(RenderManager::Mode::simple_texture);
-                break;
-            case 4:
-                renderManager.switchMode(RenderManager::Mode::depth_pass);
-                break;
-            }
+            renderManager.switchMode(static_cast<RenderManager::Mode>(current_mode));
         }
     }
 
@@ -189,14 +172,6 @@ namespace GUI
                 ImGui::EndPopup();
             }
         }
-    }
-
-    void loadModel()
-    {
-    }
-
-    void ShowFileBrowser()
-    {
     }
 
     void ModelLoadView()

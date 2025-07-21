@@ -17,35 +17,60 @@ class Shader
 {
 
 public:
+    std::string vs_path;
+    std::string fs_path;
+    std::string gs_path;
     unsigned int progrm_ID;
     bool used = false;
 
 private:
     std::string loadShaderFile(const char *shader_path)
     {
-        // if success , return true
-        std::fstream shader_file(shader_path);
+        std::fstream shader_file(shader_path, std::ios::in);
         if (!shader_file.is_open()) // 文件可能因为各种原因(不存在,权限,打开方式等) 打不开
         {
+            std::cerr << "(errno " << errno << "): " << strerror(errno) << std::endl;
             throw std::runtime_error("Failed to open shader file: " + std::string(shader_path));
         }
         std::stringstream shader_buffer;
         shader_buffer << shader_file.rdbuf();         // 将文件内容读入stringstream
         if (shader_file.fail() && !shader_file.eof()) // 文件可能因为各种原因读取不了
         {
+            std::cerr << "(errno " << errno << "): " << strerror(errno) << std::endl;
             throw std::runtime_error("Failed to read shader file: " + std::string(shader_path));
         }
-
-        shader_file.close();
         return shader_buffer.str();
+    }
+    GLint getUniformLocationSafe(const std::string &name)
+    {
+        if (!used)
+        {
+            throw std::runtime_error("Attempted to set uniform '" + name + "' while shader is not active (glUseProgram was not called).");
+        }
+
+        GLint location = glGetUniformLocation(progrm_ID, name.c_str());
+
+        return location;
     }
 
 public:
     Shader() {}
     Shader(const char *vs_path, const char *fs_path, const char *gs_path = nullptr)
     {
+        this->vs_path = vs_path;
+        this->fs_path = fs_path;
+        this->gs_path = gs_path ? gs_path : "";
+        std::string shader_buf;
         // Config Vertex Shader
-        std::string shader_buf = loadShaderFile(vs_path);
+        try
+        {
+            shader_buf = loadShaderFile(vs_path);
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Shader Load Error: " << e.what() << std::endl;
+            throw;
+        }
 
         const char *vertexShaderSource = shader_buf.c_str();
         unsigned int vertexShader;
@@ -61,10 +86,19 @@ public:
             glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
             std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
                       << infoLog << std::endl;
+            throw std::runtime_error("Failed to setup shader : " + std::string(vs_path));
         }
 
         // Config Fragment Shader
-        shader_buf = loadShaderFile(fs_path);
+        try
+        {
+            shader_buf = loadShaderFile(fs_path);
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Shader Load Error: " << e.what() << std::endl;
+            throw;
+        }
         const char *fragmentShaderSource = shader_buf.c_str();
         unsigned int fragmentShader;
         fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -77,12 +111,21 @@ public:
             glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
             std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n"
                       << infoLog << std::endl;
+            throw std::runtime_error("Failed to setup shader : " + std::string(fs_path));
         }
 
         unsigned int geometryShader;
         if (gs_path)
         { // Config Geometry Shader
-            shader_buf = loadShaderFile(gs_path);
+            try
+            {
+                shader_buf = loadShaderFile(gs_path);
+            }
+            catch (const std::exception &e)
+            {
+                std::cerr << "Shader Load Error: " << e.what() << std::endl;
+                throw;
+            }
             const char *geometryShadersource = shader_buf.c_str();
 
             geometryShader = glCreateShader(GL_GEOMETRY_SHADER);
@@ -95,6 +138,7 @@ public:
                 glGetShaderInfoLog(geometryShader, 512, NULL, infoLog);
                 std::cout << "ERROR::SHADER::GEOMETRY::COMPILATION_FAILED\n"
                           << infoLog << std::endl;
+                throw std::runtime_error("Failed to setup shader : " + std::string(gs_path));
             }
         }
         // Cofig Shader Program
@@ -142,81 +186,51 @@ public:
         }
         return *this;
     }
+
+    bool hasUniform(const std::string &name)
+    {
+        GLint location = glGetUniformLocation(progrm_ID, name.c_str());
+        return location != -1; // 返回是否找到该 uniform
+    }
+
     void use()
     {
         glUseProgram(progrm_ID);
         used = true;
     }
-    void setUniform4fv(const std::string &name, GLsizei count, float *value)
-    {
-        if (used)
-        {
-            GLuint location = glGetUniformLocation(progrm_ID, name.c_str());
-            glUniform4fv(location, count, value);
-        }
-        else
-        {
-            throw std::runtime_error("Set Uniform while Shader is not used.");
-        }
+    void setUniform4fv(const std::string &name, GLsizei count, const float *value)
+    { // Changed float* to const float*
+        GLint location = getUniformLocationSafe(name);
+        glUniform4fv(location, count, value);
     }
-    void setUniform4fv(const std::string &name, glm::vec4 vec4)
-    {
-        if (used)
-        {
-            GLuint location = glGetUniformLocation(progrm_ID, name.c_str());
-            glUniform4fv(location, 1, glm::value_ptr(vec4));
-        }
-        else
-        {
-            throw std::runtime_error("Set Uniform while Shader is not used.");
-        }
+
+    void setUniform4fv(const std::string &name, const glm::vec4 &vec4)
+    { // Changed to const reference
+        GLint location = getUniformLocationSafe(name);
+        glUniform4fv(location, 1, glm::value_ptr(vec4));
     }
-    void setUniform3fv(const std::string &name, glm::vec3 vec3)
-    {
-        if (used)
-        {
-            GLuint location = glGetUniformLocation(progrm_ID, name.c_str());
-            glUniform3fv(location, 1, glm::value_ptr(vec3));
-        }
-        else
-        {
-            throw std::runtime_error("Set Uniform while Shader is not used.");
-        }
+
+    void setUniform3fv(const std::string &name, const glm::vec3 &vec3)
+    { // Changed to const reference
+        GLint location = getUniformLocationSafe(name);
+        glUniform3fv(location, 1, glm::value_ptr(vec3));
     }
-    void setMat4(const std::string &name, glm::mat4 mat)
-    {
-        if (used)
-        {
-            GLuint location = glGetUniformLocation(progrm_ID, name.c_str());
-            glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(mat));
-        }
-        else
-        {
-            throw std::runtime_error("Set Matrix4 while Shader is not used.");
-        }
+
+    void setMat4(const std::string &name, const glm::mat4 &mat)
+    { // Changed to const reference
+        GLint location = getUniformLocationSafe(name);
+        glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(mat));
     }
+
     void setFloat(const std::string &name, float f)
     {
-        if (used)
-        {
-            GLuint location = glGetUniformLocation(progrm_ID, name.c_str());
-            glUniform1f(location, f);
-        }
-        else
-        {
-            throw std::runtime_error("Set Float while Shader is not used.");
-        }
+        GLint location = getUniformLocationSafe(name);
+        glUniform1f(location, f);
     }
+
     void setInt(const std::string &name, int i)
     {
-        if (used)
-        {
-            GLuint location = glGetUniformLocation(progrm_ID, name.c_str());
-            glUniform1i(location, i);
-        }
-        else
-        {
-            throw std::runtime_error("Set Int while Shader is not used.");
-        }
+        GLint location = getUniformLocationSafe(name);
+        glUniform1i(location, i);
     }
 };

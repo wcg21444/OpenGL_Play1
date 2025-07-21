@@ -33,7 +33,6 @@ public:
     }
     void draw(glm::mat4 modelMatrix, Shader &shaders)
     {
-        // TODO: setup shaders to render Material
         //  draw mesh
         glBindVertexArray(VAO);
         // Easy texture vector protect

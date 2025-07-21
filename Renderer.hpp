@@ -43,23 +43,29 @@ void renderScene(std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, 
     bass_model = glm::scale(bass_model, glm::vec3(4.f, 4.f, 4.f));
     for (auto &&object : scene)
     {
-
-        if (object->name == "Sphere")
-            object->draw(sphere_model, shaders);
-        else if (object->name == "Plane")
-            object->draw(plane_model, shaders);
-        else if (object->name == "Backpack")
+        try
         {
-            object->draw(backPack_model, shaders);
+            if (object->name == "Sphere")
+                object->draw(sphere_model, shaders);
+            else if (object->name == "Plane")
+                object->draw(plane_model, shaders);
+            else if (object->name == "Backpack")
+            {
+                object->draw(backPack_model, shaders);
+            }
+            else if (object->name == "Bass")
+            {
+                object->draw(bass_model, shaders);
+            }
+            else if (object->name == "Grid")
+                continue;
+            else
+                object->draw(model, shaders);
         }
-        else if (object->name == "Bass")
+        catch (const std::exception &e)
         {
-            object->draw(bass_model, shaders);
+            std::cerr << "Error rendering object '" << object->name << "': " << e.what() << std::endl;
         }
-        else if (object->name == "Grid")
-            continue;
-        else
-            object->draw(model, shaders);
     }
 }
 
@@ -344,14 +350,18 @@ public:
     ShadowMode render_mode;
     void reloadCurrentShaders()
     {
-        pls_shaders = std::move(Shader("Shaders/VertShader.vs", "Shaders/FragmShader.fs"));
-        ps_shaders = std::move(Shader("Shaders/PointShadow/point_shadow.vs", "Shaders/PointShadow/point_shadow.fs"));
+        if (render_mode == ShadowMode::parallel_shadow)
+            pls_shaders = std::move(Shader("Shaders/VertShader.vs", "Shaders/FragmShader.fs"));
+        else if (render_mode == ShadowMode::point_shadow)
+            ps_shaders = std::move(Shader("Shaders/PointShadow/point_shadow.vs", "Shaders/PointShadow/point_shadow.fs"));
         contextSetup();
     }
     void reloadShaders(Shader &&_shaders, Shader &&_ps_shaders)
     {
-        pls_shaders = std::move(_shaders);
-        ps_shaders = std::move(_ps_shaders);
+        if (render_mode == ShadowMode::parallel_shadow)
+            pls_shaders = std::move(_shaders);
+        else if (render_mode == ShadowMode::point_shadow)
+            ps_shaders = std::move(_ps_shaders);
         contextSetup();
     }
     void contextSetup()
@@ -404,7 +414,6 @@ private:
     }
     void renderParallelShadow(RenderParameters &renderParameters)
     {
-        // BUG: 没有画面, 怀疑是着色器没有正常渲染,因为只有clear屏幕的颜色显示,更改着色器无效
         auto &[light, cam, scene, model, window] = renderParameters;
         static float near_plane = 1.f, far_plane = 700.f;
         glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
@@ -609,6 +618,166 @@ public:
     }
 };
 
+class GBufferRenderer : public Renderer
+{
+private:
+    Shader gShaders = Shader("Shaders/GBuffer/gbuffer.vs", "Shaders/GBuffer/gbuffer.fs");
+    Shader quadShader = Shader("Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs");
+    int width = 1600;
+    int height = 900;
+
+    unsigned int quadVAO = 0;
+    unsigned int quadVBO;
+
+    unsigned int gBuffer;
+    unsigned int gPosition, gNormal, gAlbedoSpec;
+
+public:
+    void reloadCurrentShaders()
+    {
+        gShaders = Shader("Shaders/GBuffer/gbuffer.vs", "Shaders/GBuffer/gbuffer.fs");
+        quadShader = Shader("Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs");
+        contextSetup();
+    }
+    void contextSetup()
+    {
+        glEnable(GL_DEPTH_TEST); // 深度缓冲
+
+        glGenFramebuffers(1, &gBuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+        // create depth texture
+        // - position color buffer
+        glGenTextures(1, &gPosition);
+        glBindTexture(GL_TEXTURE_2D, gPosition);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
+
+        // - normal color buffer
+        glGenTextures(1, &gNormal);
+        glBindTexture(GL_TEXTURE_2D, gNormal);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
+
+        // - color + specular color buffer
+        glGenTextures(1, &gAlbedoSpec);
+        glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
+
+        // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering
+        unsigned int attachments[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
+        glDrawBuffers(3, attachments);
+
+        // set up VAO of Demo Quad Plane
+        if (quadVAO == 0)
+        {
+            static float quadVertices[] =
+                {
+                    -1.0f,
+                    1.0f,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    -1.0f,
+                    -1.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    1.0f,
+                    0.0f,
+                    1.0f,
+                    1.0f,
+                    1.0f,
+                    -1.0f,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                };
+            // setup plane VAO
+            glGenVertexArrays(1, &quadVAO);
+            glGenBuffers(1, &quadVBO);
+            glBindVertexArray(quadVAO);
+            glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+        }
+    }
+
+    void render(RenderParameters &renderParameters)
+    {
+
+#define DEBUG_GBUFFER
+        // #define RENDER_GBUFFER
+
+#ifdef DEBUG_GBUFFER
+        renderDebug(renderParameters);
+#endif
+#ifdef RENDER_GBUFFER
+        renderLight(renderParameters)
+#endif
+    }
+
+private:
+    void renderGBuffer(RenderParameters &renderParameters)
+    {
+        auto &[light, cam, scene, model, window] = renderParameters;
+        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+        {
+            glEnable(GL_DEPTH_TEST); // 深度缓冲
+            gShaders.use();
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            cam.setViewMatrix(gShaders);
+            cam.setPerspectiveMatrix(gShaders, width, height);
+            renderScene(scene, model, gShaders);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void renderDebug(RenderParameters &renderParameters)
+    {
+
+        renderGBuffer(renderParameters);
+        // 绑定 GBuffer Texture 到Quad
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gPosition);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, gNormal);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+        quadShader.use();
+        quadShader.setInt("tex_sampler", 0); // gPosition
+        // quadShader.setInt("tex_sampler", 1); // gNormal
+        // quadShader.setInt("tex_sampler", 2); // gAlbedoSpec
+
+        // 绘制Quad
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 深度缓冲
+        glBindVertexArray(quadVAO);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glBindVertexArray(0);
+    }
+
+    void renderLight(RenderParameters &renderParameters)
+    {
+        renderGBuffer(renderParameters);
+        // 绑定 GBuffer Texture 到Quad
+
+        // 绘制Quad
+    }
+};
+
 class RenderManager
 {
 private:
@@ -616,6 +785,7 @@ private:
     ShadowRenderer shadowRenderer;
     SimpleTextureRenderer simpleTextureRenderer;
     DepthPassRenderer depthPassRenderer;
+    GBufferRenderer gbufferRenderer;
     Renderer *currentRenderer = nullptr;
 
 private:
@@ -651,11 +821,9 @@ public:
         parallel_shadow,
         debug_depth,
         simple_texture,
-        depth_pass
+        depth_pass,
+        gbuffer
     };
-
-private:
-    Mode render_mode;
 
 public:
     void reloadShadowShaders(Shader &&mainShader, Shader &&pointShadowShader)
@@ -679,12 +847,11 @@ public:
 
     RenderManager()
     {
-        switchMode(parallel_shadow); // default
+        switchMode(point_shadow); // default
     }
     void switchMode(Mode _mode)
     {
         clearContext();
-        render_mode = _mode;
         switch (_mode)
         {
         case point_shadow:
@@ -703,6 +870,9 @@ public:
             break;
         case depth_pass:
             currentRenderer = &depthPassRenderer;
+            break;
+        case gbuffer:
+            currentRenderer = &gbufferRenderer;
             break;
         default:
             throw(std::exception("No Selected Render Mode."));

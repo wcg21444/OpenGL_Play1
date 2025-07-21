@@ -4,7 +4,12 @@ out vec4 FragColor;
 in vec3 Normal; 
 in vec3 FragPos;
 in vec4 FragPosLightSpace;
+in vec2 TexCoord;
 
+uniform sampler2D texture_diff;  //diff纹理单元句柄
+uniform sampler2D texture_spec;  //spec纹理单元句柄
+
+uniform int enable_tex = 0;
 uniform sampler2D shdaowDepthMap;
 
 uniform vec3 ambient_light = {
@@ -42,7 +47,7 @@ void main() {
     l = normalize(l);
     vec3 diffuse = 
     ShadowCalculation(FragPosLightSpace) == 0.0?
-    light_intensity*max(0.f,dot(n,l)):vec3(0.f,0.f,0.f);
+    light_intensity/rr*max(0.f,dot(n,l)):vec3(0.f,0.f,0.f);
 
     //Specular Caculation
     float specularStrength = 0.01f;
@@ -51,7 +56,14 @@ void main() {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 64);
     vec3 specular = specularStrength * spec * light_intensity;  
 
-    FragColor = vec4(ambient_light+specular+diffuse,1.f);
+    if(enable_tex == 1) {
+        FragColor =  vec4(ambient_light+diffuse,1.f)*texture(texture_diff,TexCoord);
+        FragColor += vec4(specular,1.0f)*texture(texture_spec,TexCoord)*1.f;
+    }
+    else {
+        FragColor = vec4(ambient_light+diffuse,1.f);
+        FragColor += vec4(specular,1.0f);
+    }
 
     // vec3 projCoords = FragPosLightSpace.xyz / FragPosLightSpace.w;
     // // transform to [0,1] range
