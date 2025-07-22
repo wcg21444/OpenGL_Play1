@@ -7,15 +7,14 @@ in vec2 TexCoord;
 in vec3 FragPos;
 in vec3 Normal;
 
-uniform int enable_tex = 1;
+uniform int enable_tex = 0;
 uniform sampler2D texture_diff;  //diff纹理单元句柄
 uniform sampler2D texture_spec;  //spec纹理单元句柄
 // out vec4 FragColor;
 
-void main()
-{    
+void main() {
     // store the fragment position vector in the first gbuffer texture
-    gPosition = FragPos;
+    gPosition = (enable_tex==1)? vec3(texture(texture_diff, TexCoord).rgb) : vec3(0.5f); // Use FragPos if texture_diff is available, else default to zero
     // gPosition = vec3(0.7f,0.7f,0.7f); // Placeholder value for demonstration
     // also store the per-fragment normals into the gbuffer
     gNormal = normalize(Normal);

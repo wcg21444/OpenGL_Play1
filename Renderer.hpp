@@ -631,6 +631,7 @@ private:
 
     unsigned int gBuffer;
     unsigned int gPosition, gNormal, gAlbedoSpec;
+    unsigned int depthMap;
 
 public:
     void reloadCurrentShaders()
@@ -673,6 +674,11 @@ public:
         // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering
         unsigned int attachments[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
         glDrawBuffers(3, attachments);
+
+        glGenRenderbuffers(1, &depthMap);
+        glBindRenderbuffer(GL_RENDERBUFFER, depthMap);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthMap);
 
         // set up VAO of Demo Quad Plane
         if (quadVAO == 0)
@@ -733,10 +739,9 @@ private:
         auto &[light, cam, scene, model, window] = renderParameters;
         glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
         {
-            glEnable(GL_DEPTH_TEST); // 深度缓冲
             gShaders.use();
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
             cam.setViewMatrix(gShaders);
             cam.setPerspectiveMatrix(gShaders, width, height);
@@ -747,7 +752,8 @@ private:
 
     void renderDebug(RenderParameters &renderParameters)
     {
-
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         renderGBuffer(renderParameters);
         // 绑定 GBuffer Texture 到Quad
         glActiveTexture(GL_TEXTURE0);
@@ -763,7 +769,7 @@ private:
 
         // 绘制Quad
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 深度缓冲
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glBindVertexArray(0);
@@ -847,7 +853,7 @@ public:
 
     RenderManager()
     {
-        switchMode(point_shadow); // default
+        switchMode(gbuffer); // default
     }
     void switchMode(Mode _mode)
     {

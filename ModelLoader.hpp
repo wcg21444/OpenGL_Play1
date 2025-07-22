@@ -20,7 +20,7 @@ private:
     inline static GLuint TextureFromFile(const char *file, const char *directory)
     {
         std::string texture_path = std::string(directory) + std::string(file);
-        if (ModelLoader::tex_file_id.find(texture_path) != ModelLoader::tex_file_id.end())
+        if (tex_file_id.find(texture_path) != tex_file_id.end())
         {
             return tex_file_id[texture_path];
         }
@@ -47,7 +47,7 @@ private:
 
         stbi_image_free(data);
 
-        ModelLoader::tex_file_id.insert(std::pair<std::string, GLuint>(texture_path, texture));
+        tex_file_id.insert(std::pair<std::string, GLuint>(texture_path, texture));
         return texture;
     }
     inline static std::vector<Mesh::Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName)
@@ -154,7 +154,8 @@ private:
     }
 
 public:
-    using ModelLoadFuture = std::future<std::pair<const aiScene *, std::unique_ptr<Assimp::Importer>>>;
+    using PtrImporter = std::unique_ptr<Assimp::Importer>;
+    using ModelLoadFuture = std::future<std::pair<const aiScene *, PtrImporter>>;
     struct ImportingContext
     {
         ModelLoadFuture model_future;
@@ -162,15 +163,13 @@ public:
     };
     inline static std::unordered_map<std::string, GLuint> tex_file_id;
     inline static std::filesystem::path current_file_path;
-    inline static std::atomic_bool importing = false;
     inline static std::vector<ImportingContext> importing_vec;
 
 public:
     ModelLoader()
     {
     }
-    inline static std::future<std::pair<const aiScene *, std::unique_ptr<Assimp::Importer>>>
-    LoadModelAsync(const std::string &path)
+    ModelLoadFuture inline static LoadModelAsync(const std::string &path)
     {
         // aiScene 必须在 Importer 上下文环境才有效
         // aiScene 生命周期必须与 Importer 一致

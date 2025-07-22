@@ -33,7 +33,15 @@ public:
     float far = 1000.f;
 
 public:
-    Camera(int width, int height, float _cameraSpeed, float _sensitivity) : lastX((float)width / 2), lastY((float)height / 2), cameraSpeed(_cameraSpeed), sensitivity(_sensitivity) {}
+    Camera(int width,
+           int height,
+           float _cameraSpeed,
+           float _sensitivity) : lastX((float)width / 2),
+                                 lastY((float)height / 2),
+                                 cameraSpeed(_cameraSpeed),
+                                 sensitivity(_sensitivity)
+    {
+    }
 
 public:
     void genDirectionfrom(double xpos, double ypos)
@@ -110,7 +118,10 @@ public:
     }
     void setPerspectiveMatrix(Shader &shaders, int width, int height)
     {
-        glm::mat4 projection = glm::perspective(glm::radians(fov), (float)width / (float)height, near, far);
+        glm::mat4 projection = glm::perspective(glm::radians(fov),
+                                                (float)width / (float)height,
+                                                near,
+                                                far);
         shaders.setMat4("projection", projection);
     }
     glm::vec3 getPosition() const

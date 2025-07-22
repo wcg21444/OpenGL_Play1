@@ -53,6 +53,26 @@ private:
         return location;
     }
 
+    //[in] shader_source , shader_type
+    // [out] shader_id
+    void compileShader(const char *shader_source, GLenum shader_type, unsigned int &shader_id)
+    {
+        shader_id = glCreateShader(shader_type);
+        glShaderSource(shader_id, 1, &shader_source, NULL);
+        glCompileShader(shader_id);
+
+        int success;
+        char infoLog[512];
+        glGetShaderiv(shader_id, GL_COMPILE_STATUS, &success);
+        if (!success)
+        {
+            glGetShaderInfoLog(shader_id, 512, NULL, infoLog);
+            std::cout << "ERROR::SHADER::COMPILATION_FAILED\n"
+                      << infoLog << std::endl;
+            throw std::runtime_error("Failed to compile shader");
+        }
+    }
+
 public:
     Shader() {}
     Shader(const char *vs_path, const char *fs_path, const char *gs_path = nullptr)
@@ -74,20 +94,7 @@ public:
 
         const char *vertexShaderSource = shader_buf.c_str();
         unsigned int vertexShader;
-        vertexShader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-        glCompileShader(vertexShader);
-
-        int success;
-        char infoLog[512];
-        glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-        if (!success)
-        {
-            glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-            std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
-                      << infoLog << std::endl;
-            throw std::runtime_error("Failed to setup shader : " + std::string(vs_path));
-        }
+        compileShader(vertexShaderSource, GL_VERTEX_SHADER, vertexShader);
 
         // Config Fragment Shader
         try
@@ -101,18 +108,7 @@ public:
         }
         const char *fragmentShaderSource = shader_buf.c_str();
         unsigned int fragmentShader;
-        fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-        glCompileShader(fragmentShader);
-
-        glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-        if (!success)
-        {
-            glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-            std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n"
-                      << infoLog << std::endl;
-            throw std::runtime_error("Failed to setup shader : " + std::string(fs_path));
-        }
+        compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER, fragmentShader);
 
         unsigned int geometryShader;
         if (gs_path)
@@ -127,21 +123,11 @@ public:
                 throw;
             }
             const char *geometryShadersource = shader_buf.c_str();
-
-            geometryShader = glCreateShader(GL_GEOMETRY_SHADER);
-            glShaderSource(geometryShader, 1, &geometryShadersource, NULL);
-            glCompileShader(geometryShader);
-
-            glGetShaderiv(geometryShader, GL_COMPILE_STATUS, &success);
-            if (!success)
-            {
-                glGetShaderInfoLog(geometryShader, 512, NULL, infoLog);
-                std::cout << "ERROR::SHADER::GEOMETRY::COMPILATION_FAILED\n"
-                          << infoLog << std::endl;
-                throw std::runtime_error("Failed to setup shader : " + std::string(gs_path));
-            }
+            compileShader(geometryShadersource, GL_GEOMETRY_SHADER, geometryShader);
         }
         // Cofig Shader Program
+        int success;
+        char infoLog[512];
         progrm_ID = glCreateProgram();
 
         glAttachShader(progrm_ID, vertexShader);
