@@ -14,13 +14,13 @@ uniform sampler2D texture_spec;  //spec纹理单元句柄
 
 void main() {
     // store the fragment position vector in the first gbuffer texture
-    gPosition = (enable_tex==1)? vec3(texture(texture_diff, TexCoord).rgb) : vec3(0.5f); // Use FragPos if texture_diff is available, else default to zero
+    gPosition = FragPos;
     // gPosition = vec3(0.7f,0.7f,0.7f); // Placeholder value for demonstration
     // also store the per-fragment normals into the gbuffer
     gNormal = normalize(Normal);
     // gNormal = vec3(0.7f,0.7f,0.7f); // Placeholder value for demonstration
     // and the diffuse per-fragment color
-    gAlbedoSpec.rgb = texture(texture_diff, TexCoord).rgb;
+    gAlbedoSpec.rgb = (enable_tex==1)? vec3(texture(texture_diff, TexCoord).rgb) : vec3(0.5f);
     // store specular intensity in gAlbedoSpec's alpha component
     gAlbedoSpec.a = texture(texture_spec, TexCoord).r;
 

@@ -13,9 +13,10 @@
 
 #include "DebugOutput.hpp"
 
+static GLint s_maxTextureUnits = -1;
+
 class Shader
 {
-
 public:
     std::string vs_path;
     std::string fs_path;
@@ -218,5 +219,52 @@ public:
     {
         GLint location = getUniformLocationSafe(name);
         glUniform1i(location, i);
+    }
+
+    void setTexture(GLuint textureID, GLenum textureTarget, int shaderTextureLocation, const std::string &samplerUniformName)
+    {
+        GLenum activeTextureUnit = getTextureUnitEnum(shaderTextureLocation);
+
+        // 激活纹理单元
+        glActiveTexture(activeTextureUnit);
+        // 绑定纹理
+        glBindTexture(textureTarget, textureID);
+
+        // 获取 uniform 位置并设置
+        GLint samplerLoc = getUniformLocationSafe(samplerUniformName);
+        if (samplerLoc == -1)
+        {
+            std::cerr << "Warning: Uniform '" << samplerUniformName << "' not found in shader program " << progrm_ID << std::endl;
+        }
+        else
+        {
+            glUniform1i(samplerLoc, shaderTextureLocation);
+        }
+    }
+    inline static GLenum getTextureUnitEnum(int textureLocation)
+    {
+        if (s_maxTextureUnits == -1)
+        {
+            // 如果没有初始化，则尝试初始化或抛出错误
+            throw std::runtime_error("OpenGL texture limits not initialized. Call initializeTextureLimits() first.");
+        }
+
+        if (textureLocation < 0 || textureLocation >= s_maxTextureUnits)
+        {
+            std::string errorMsg = "Texture location " + std::to_string(textureLocation) +
+                                   " out of bounds. Max texture units: " + std::to_string(s_maxTextureUnits) + ".";
+            throw std::out_of_range(errorMsg);
+        }
+        return GL_TEXTURE0 + textureLocation;
+    }
+    inline static void initializeTextureLimits()
+    {
+        glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &s_maxTextureUnits);
+        if (s_maxTextureUnits == -1)
+        {
+            // 处理错误或设置默认值
+            std::cerr << "Warning: Could not query GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS. Setting to default 32." << std::endl;
+            s_maxTextureUnits = 32; // 安全回退
+        }
     }
 };

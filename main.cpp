@@ -10,7 +10,7 @@
 #include "Objects/Sphere.hpp"
 #include "Objects/Plane.hpp"
 #include "LightSource.hpp"
-#include "Renderer.hpp"
+#include "Renderers/RendererManager.hpp"
 #include "DebugOutput.hpp"
 #include "ModelLoader.hpp"
 #include "GUI.hpp"
@@ -69,11 +69,17 @@ int main()
     scene.push_back(std::make_unique<Plane>(200.f, 200.f));
     // ModelLoader::loadFile("Resource/backpack.obj");
 
-    LightSource light(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
+    Lights lights;
+    lights.emplace_back(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
 
-    RenderParameters renderParameters{light, cam, scene, model, window};
+    // temporary light source variable
+    LightSource &light = lights[0]; // Assuming the first light is the one we want to use for shadow
+
+    RenderParameters renderParameters{lights, cam, scene, model, window};
 
     RenderManager renderManager;
+
+    Shader::initializeTextureLimits();
 
     //  main render loop
     while (!glfwWindowShouldClose(window))

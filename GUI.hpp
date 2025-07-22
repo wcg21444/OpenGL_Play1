@@ -10,7 +10,7 @@
 #include "InputHandler.hpp"
 #include "Objects/Object.hpp"
 #include "LightSource.hpp"
-#include "Renderer.hpp"
+#include "Renderers/RendererManager.hpp"
 #include "DebugOutput.hpp"
 #include "ModelLoader.hpp"
 #include "FileBrowser.hpp"

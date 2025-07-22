@@ -1,6 +1,8 @@
 #pragma once
 #include "Shader.hpp"
+#include <vector>
 
+// Only PointLight is supported
 class LightSource
 {
 private:
@@ -19,3 +21,5 @@ public:
         shaders.setUniform3fv("light_pos", position);
     }
 };
+
+using Lights = std::vector<LightSource>;
