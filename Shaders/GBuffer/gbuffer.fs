@@ -12,8 +12,7 @@ uniform sampler2D texture_diff;  //diff纹理单元句柄
 uniform sampler2D texture_spec;  //spec纹理单元句柄
 // out vec4 FragColor;
 
-void main()
-{    
+void main() {
     // store the fragment position vector in the first gbuffer texture
     gPosition = FragPos;
     // gPosition = vec3(0.7f,0.7f,0.7f); // Placeholder value for demonstration
