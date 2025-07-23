@@ -14,6 +14,7 @@ private:
     SimpleTextureRenderer simpleTextureRenderer;
     DepthPassRenderer depthPassRenderer;
     GBufferRenderer gbufferRenderer;
+    CubemapUnfoldRenderer cubemapUnfoldRenderer;
     Renderer *currentRenderer = nullptr;
 
 private:
@@ -50,7 +51,8 @@ public:
         debug_depth,
         simple_texture,
         depth_pass,
-        gbuffer
+        gbuffer,
+        cubemap_unfold
     };
 
 public:
@@ -75,7 +77,7 @@ public:
 
     RenderManager()
     {
-        switchMode(gbuffer); // default
+        switchMode(cubemap_unfold); // default
     }
     void switchMode(Mode _mode)
     {
@@ -100,6 +102,9 @@ public:
             break;
         case gbuffer:
             currentRenderer = &gbufferRenderer;
+            break;
+        case cubemap_unfold:
+            currentRenderer = &cubemapUnfoldRenderer;
             break;
         default:
             throw(std::exception("No Selected Render Mode."));

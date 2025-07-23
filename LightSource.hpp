@@ -10,6 +10,8 @@ public:
     glm::vec3 intensity;
     glm::vec3 position;
 
+    unsigned int depthCubemap = 0; // Depth cubemap texture for point shadows , default is 0, meaning no shadow . Prepared for multiple light sources
+
 public:
     LightSource(const glm::vec3 &_intensity, const glm::vec3 &_position)
         : intensity(_intensity), position(_position)

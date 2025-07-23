@@ -134,7 +134,7 @@ namespace GUI
 
     void RenderSwitchCombo(RenderManager &renderManager)
     {
-        static const char *modes[] = {"PointShadow", "ParrllelShadow", "DebugDepth", "Texture", "DepthPass", "GBuffer"};
+        static const char *modes[] = {"PointShadow", "ParrllelShadow", "DebugDepth", "Texture", "DepthPass", "GBuffer", "CubemapUnfold"};
         static int current_mode = 0;
         static int prev_mode = current_mode;
         ImGui::Combo("Mode", &current_mode, modes, IM_ARRAYSIZE(modes));

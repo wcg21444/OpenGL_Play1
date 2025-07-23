@@ -2,7 +2,6 @@
 #include "RendererManager.hpp"
 #include "Renderer.hpp"
 
-// 使用一个framebuffer对象, 绑定不同纹理进行阴影贴图渲染
 class PointShadowPass
 {
     Shader depthShader = Shader("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs");
@@ -36,10 +35,10 @@ private:
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
         return _depthCubemap;
     }
-    void attachDepthCubemap(unsigned int &depthCubemap, unsigned int &depthMapFBO)
+    void attachDepthCubemap(unsigned int _depthCubemap, unsigned int &_depthMapFBO)
     {
-        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, _depthMapFBO);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, _depthCubemap, 0);
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -56,6 +55,10 @@ public:
         depthCubemap = generateDepthCubemap();
         attachDepthCubemap(depthCubemap, depthMapFBO);
         shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
+    }
+    void reloadCurrentShader()
+    {
+        depthShader = Shader("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs");
     }
 
     void render(LightSource &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
@@ -75,12 +78,10 @@ public:
                                    glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
         shadowTransforms.push_back(shadowProj * glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
 
-        glClearColor(0.f, 0.f, 0.f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-        glClear(GL_DEPTH_BUFFER_BIT);
+        glClearColor(0.f, 0.f, 0.f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         depthShader.use();
         if (!depthShader.used)
@@ -96,17 +97,18 @@ public:
     }
 
     // Render the depth cubemap texture
-    // [in] light, scene, model
+    // [in] depthCubemap,light, scene, model
     // [out] a new depthCubemap
-    unsigned int renderToTexture(LightSource &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
+    void renderToTexture(unsigned int &_depthCubemap, LightSource &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
     {
-        unsigned int _depthCubemap;
-        _depthCubemap = generateDepthCubemap();
+        // initialize
+        if (_depthCubemap == 0)
+        {
+            _depthCubemap = generateDepthCubemap();
+        }
         attachDepthCubemap(_depthCubemap, depthMapFBO);
-        // config light space transformation
 
         render(light, scene, model);
-        return _depthCubemap;
     }
 };
 
@@ -171,6 +173,7 @@ private:
     Shader pls_shaders = Shader("Shaders/VertShader.vs", "Shaders/FragmShader.fs");
     Shader ps_shaders = Shader("Shaders/PointShadow/point_shadow.vs", "Shaders/PointShadow/point_shadow.fs");
     PointShadowPass pointShadowPass;
+    ParrllelShadowPass parrllelShadowPass;
     int width = 1600;
     int height = 900;
 
@@ -182,6 +185,7 @@ public:
             pls_shaders = std::move(Shader("Shaders/VertShader.vs", "Shaders/FragmShader.fs"));
         else if (render_mode == ShadowMode::point_shadow)
             ps_shaders = std::move(Shader("Shaders/PointShadow/point_shadow.vs", "Shaders/PointShadow/point_shadow.fs"));
+        pointShadowPass.reloadCurrentShader();
         contextSetup();
     }
     void reloadShaders(Shader &&_shaders, Shader &&_ps_shaders)
@@ -255,7 +259,7 @@ private:
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
         ShowGLMMatrixAsTable(lightSpaceMatrix);
-        static ParrllelShadowPass parrllelShadowPass;
+
         parrllelShadowPass.render(light, scene, model, lightSpaceMatrix);
 
         glEnable(GL_DEPTH_TEST); // 深度缓冲

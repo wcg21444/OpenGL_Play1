@@ -241,6 +241,7 @@ public:
             glUniform1i(samplerLoc, shaderTextureLocation);
         }
     }
+
     inline static GLenum getTextureUnitEnum(int textureLocation)
     {
         if (s_maxTextureUnits == -1)

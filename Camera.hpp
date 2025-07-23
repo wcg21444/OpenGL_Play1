@@ -128,4 +128,8 @@ public:
     {
         return cameraPos;
     }
+    glm::vec3 getFront() const
+    {
+        return cameraFront;
+    }
 };
