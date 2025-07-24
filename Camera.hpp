@@ -132,4 +132,8 @@ public:
     {
         return cameraFront;
     }
+    glm::vec3 getUp() const
+    {
+        return cameraUp;
+    }
 };

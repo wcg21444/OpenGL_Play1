@@ -41,5 +41,5 @@ void main() {
         break;
     }
 
-    FragColor =vec4(vec3(texture(u_cubemap, dir).r/2) ,1.0f);
+    FragColor =vec4(vec3(texture(u_cubemap, dir)) ,1.0f);
 }

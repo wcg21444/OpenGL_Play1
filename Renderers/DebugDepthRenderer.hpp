@@ -109,7 +109,7 @@ public:
         quadShader.setFloat("near_plane", near_plane);
         quadShader.setFloat("far_plane", far_plane);
 
-        quadShader.setTexture(depthMap, GL_TEXTURE_2D, 0, "depthMap");
+        quadShader.setTextureAuto(depthMap, GL_TEXTURE_2D, 0, "depthMap");
 
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

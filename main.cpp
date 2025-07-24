@@ -71,7 +71,9 @@ int main()
 
     Lights lights;
     lights.emplace_back(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
-    lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 4.f, 4.f));
+    lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
+    lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(-16.f, 10.f, 24.f));
+    lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(7.f, 10.f, 14.f));
     lights.emplace_back(glm::vec3(30.f, 20.f, 40.f), glm::vec3(16.f, 4.f, 8.f));
 
     // temporary light source variable

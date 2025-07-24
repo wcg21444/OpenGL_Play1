@@ -231,7 +231,7 @@ private:
 
         ps_shaders.use();
         ps_shaders.setFloat("far_plane", pointShadowPass.far);
-        ps_shaders.setTexture(pointShadowPass.depthCubemap, GL_TEXTURE_CUBE_MAP, 0, "depthMap");
+        ps_shaders.setTextureAuto(pointShadowPass.depthCubemap, GL_TEXTURE_CUBE_MAP, 0, "depthMap");
 
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 深度缓冲和Color缓冲一样需要交换链,清理他
@@ -267,7 +267,7 @@ private:
 
         pls_shaders.use();
         pls_shaders.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-        pls_shaders.setTexture(parrllelShadowPass.depthMap, GL_TEXTURE_2D, 0, "shdaowDepthMap");
+        pls_shaders.setTextureAuto(parrllelShadowPass.depthMap, GL_TEXTURE_2D, 0, "shdaowDepthMap");
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 深度缓冲和Color缓冲一样需要交换链,清理他

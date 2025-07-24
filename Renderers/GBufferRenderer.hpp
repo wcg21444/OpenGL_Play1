@@ -73,20 +73,19 @@ public:
         }
     }
     // 设置cubemap; 展开cubemap存储至unfoldedCubemap
+    //[out] this.unfoldedCubemap
     void unfoldCubemap(unsigned int cubemap)
     {
 
         // 将cubemap 绑定到sampler
 
-        // --- 6. 渲染循环：将 Cubemap 展开到 FBO 纹理 ---
-        // 这部分通常只需要执行一次，或者在 Cubemap 内容改变时执行
         glBindFramebuffer(GL_FRAMEBUFFER, unfoldFBO);
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         unfoldShaders.use();
-        unfoldShaders.setTexture(cubemap, GL_TEXTURE_CUBE_MAP, 5, "u_cubemap");
+        unfoldShaders.setTextureAuto(cubemap, GL_TEXTURE_CUBE_MAP, 5, "u_cubemap");
 
         glBindVertexArray(quadVAO); // 绑定 Quad VAO
 
@@ -121,14 +120,28 @@ public:
     {
         auto &[lights, cam, scene, model, window] = renderParameters;
 
+        static bool initialized = false;
+        static std::vector<std::string> faces{
+            "Resource/skybox/right.jpg",
+            "Resource/skybox/left.jpg",
+            "Resource/skybox/top.jpg",
+            "Resource/skybox/bottom.jpg",
+            "Resource/skybox/front.jpg",
+            "Resource/skybox/back.jpg"};
+        static auto skyboxCubemap = loadCubemap(faces);
+        if (!initialized)
+        {
+            initialized = true;
+        }
+
         pointShadowPass.render(lights[0], scene, model);
         // 展开Cubemap
-        unfoldCubemap(pointShadowPass.depthCubemap);
+        unfoldCubemap(skyboxCubemap);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, width, height);
 
         quadShader.use();
-        quadShader.setTexture(unfoldedCubemap, GL_TEXTURE_2D, 10, "tex_sampler");
+        quadShader.setTextureAuto(unfoldedCubemap, GL_TEXTURE_2D, 10, "tex_sampler");
         // 绘制Quad
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -144,6 +157,13 @@ private:
     Shader gShaders = Shader("Shaders/GBuffer/gbuffer.vs", "Shaders/GBuffer/gbuffer.fs");
     Shader quadShader = Shader("Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs");
     Shader lightShaders = Shader("Shaders/GBuffer/light.vs", "Shaders/GBuffer/light.fs");
+    std::vector<std::string> faces{
+        "Resource/skybox/right.jpg",
+        "Resource/skybox/left.jpg",
+        "Resource/skybox/top.jpg",
+        "Resource/skybox/bottom.jpg",
+        "Resource/skybox/front.jpg",
+        "Resource/skybox/back.jpg"};
     int width = 1600;
     int height = 900;
 
@@ -153,6 +173,9 @@ private:
     unsigned int gBuffer;
     unsigned int gPosition, gNormal, gAlbedoSpec;
     unsigned int depthMap;
+    unsigned int cubemapTexture;
+
+    const int MAX_LIGHTS = 10;
 
     PointShadowPass pointShadowPass;
 
@@ -180,6 +203,7 @@ public:
             glGenTextures(1, &gNormal);
             glGenTextures(1, &gAlbedoSpec);
             glGenRenderbuffers(1, &depthMap);
+            cubemapTexture = loadCubemap(faces);
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
@@ -296,7 +320,7 @@ private:
         // glActiveTexture(GL_TEXTURE2);
         // glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
         quadShader.use();
-        quadShader.setTexture(gPosition, GL_TEXTURE_2D, 0, "tex_sampler");
+        quadShader.setTextureAuto(gPosition, GL_TEXTURE_2D, 0, "tex_sampler");
         // quadShader.setInt("tex_sampler", 1); // gNormal
         // quadShader.setInt("tex_sampler", 2); // gAlbedoSpec
 
@@ -313,48 +337,47 @@ private:
         auto &[lights, cam, scene, model, window] = renderParameters;
 
         // 渲染阴影贴图
-        // for (auto &light : lights)
-        // {
-        //     pointShadowPass.renderToTexture(light.depthCubemap, light, scene, model);
-        // }
-
-        // pointShadowPass.render(lights[0], scene, model);
-        pointShadowPass.renderToTexture(lights[0].depthCubemap, lights[0], scene, model);
-
+        for (auto &light : lights)
+        {
+            pointShadowPass.renderToTexture(light.depthCubemap, light, scene, model);
+        }
         glViewport(0, 0, width, height);
         renderGBuffer(renderParameters);
 
         lightShaders.use();
 
         // 绑定 GBuffer Texture 到Quad
-        lightShaders.setTexture(gPosition, GL_TEXTURE_2D, 0, "gPosition");
-        lightShaders.setTexture(gNormal, GL_TEXTURE_2D, 1, "gNormal");
-        lightShaders.setTexture(gAlbedoSpec, GL_TEXTURE_2D, 2, "gAlbedoSpec");
+        lightShaders.setTextureAuto(gPosition, GL_TEXTURE_2D, 0, "gPosition");
+        lightShaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 1, "gNormal");
+        lightShaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 2, "gAlbedoSpec");
 
-        // lightShaders.setInt("numLights", static_cast<int>(lights.size()));
-        // for (size_t i = 0; i < lights.size(); ++i)
-        // {
-        //     lightShaders.setUniform3fv("light_pos[" + std::to_string(i) + "]", lights[i].position);
-        //     lightShaders.setUniform3fv("light_intensity[" + std::to_string(i) + "]", lights[i].intensity);
-        //     if (lights[i].depthCubemap != 0)
-        //     {
-        //         lightShaders.setTexture(lights[i].depthCubemap, GL_TEXTURE_CUBE_MAP, i + 3, "shadowCubeMaps");
-        //         // lightShaders.setTexture(lights[i].depthCubemap, GL_TEXTURE_CUBE_MAP, i+3, "shadowCubeMaps[" + std::to_string(i) + "]");
-        //     }
-        // }
+        // lightShaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skyBox");
 
-        // 单光源模式
-        lightShaders.setInt("numLights", 1);
-        lightShaders.setTexture(lights[0].depthCubemap, GL_TEXTURE_CUBE_MAP, 21, "depthMap"); // 证明Cubemap生成正确
-        // lightShaders.setTexture(lights[0].depthCubemap, GL_TEXTURE_CUBE_MAP, 20, "shadowCubeMaps[0]");
-
-        lightShaders.setUniform3fv("light_pos[0]", lights[0].position);
-        lightShaders.setUniform3fv("light_intensity[0]", lights[0].intensity);
+        lightShaders.setInt("numLights", static_cast<int>(lights.size()));
+        for (size_t i = 0; i < MAX_LIGHTS; ++i)
+        {
+            lightShaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps[" + std::to_string(i) + "]"); // 给sampler数组赋空
+        }
+        for (size_t i = 0; i < lights.size(); ++i)
+        {
+            lightShaders.setUniform3fv("light_pos[" + std::to_string(i) + "]", lights[i].position);
+            lightShaders.setUniform3fv("light_intensity[" + std::to_string(i) + "]", lights[i].intensity);
+            if (lights[i].depthCubemap != 0)
+            {
+                lightShaders.setTextureAuto(lights[i].depthCubemap, GL_TEXTURE_CUBE_MAP, i + 3, "shadowCubeMaps[" + std::to_string(i) + "]");
+            }
+        }
 
         // sampler location是否会被覆盖?
+        // 光照计算在 纹理计算之后,不用担心光照被纹理覆盖
         lightShaders.setUniform3fv("eye_pos", cam.getPosition());
-        lightShaders.setUniform3fv("eye_dir", cam.getFront()); // For debugging, the camera direction
-        lightShaders.setFloat("far_plane", pointShadowPass.far);
+        lightShaders.setUniform3fv("eye_front", cam.getFront());
+        lightShaders.setUniform3fv("eye_up", cam.getUp());
+
+        lightShaders.setFloat("far_plane", cam.far);
+        lightShaders.setFloat("near_plane", cam.near);
+        lightShaders.setFloat("shadow_far", pointShadowPass.far);
+        lightShaders.setFloat("fov", cam.fov);
         // 绘制Quad
         glViewport(0, 0, width, height);
 

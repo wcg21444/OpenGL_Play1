@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 
 #include "DebugOutput.hpp"
 
@@ -23,6 +24,8 @@ public:
     std::string gs_path;
     unsigned int progrm_ID;
     bool used = false;
+    std::unordered_map<std::string, int> textureLocationMap;
+    int location_ID;
 
 private:
     std::string loadShaderFile(const char *shader_path)
@@ -75,8 +78,8 @@ private:
     }
 
 public:
-    Shader() {}
-    Shader(const char *vs_path, const char *fs_path, const char *gs_path = nullptr)
+    Shader() : location_ID(0) {}
+    Shader(const char *vs_path, const char *fs_path, const char *gs_path = nullptr) : Shader()
     {
         this->vs_path = vs_path;
         this->fs_path = fs_path;
@@ -221,12 +224,20 @@ public:
         glUniform1i(location, i);
     }
 
-    void setTexture(GLuint textureID, GLenum textureTarget, int shaderTextureLocation, const std::string &samplerUniformName)
+    // TODO Shaders 接管 TextureLocation分配
+    // 分配一个局部唯一的数.联想到数据库的ID. 考虑用一个自增的数作为location.
+    void setTextureAuto(GLuint textureID, GLenum textureTarget, int shaderTextureLocation, const std::string &samplerUniformName)
     {
-        GLenum activeTextureUnit = getTextureUnitEnum(shaderTextureLocation);
-
+        if (textureLocationMap.find(samplerUniformName) == textureLocationMap.end())
+        {
+            textureLocationMap.insert({samplerUniformName, location_ID});
+            location_ID++;
+        }
+        int location = textureLocationMap.at(samplerUniformName);
+        GLenum activeTextureUnit = getTextureUnitEnum(location);
         // 激活纹理单元
         glActiveTexture(activeTextureUnit);
+
         // 绑定纹理
         glBindTexture(textureTarget, textureID);
 
@@ -238,7 +249,7 @@ public:
         }
         else
         {
-            glUniform1i(samplerLoc, shaderTextureLocation);
+            glUniform1i(samplerLoc, location);
         }
     }
 
