@@ -80,25 +80,29 @@ public:
 
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-        glClearColor(0.f, 0.f, 0.f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        {
+            glClearColor(0.f, 0.f, 0.f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        depthShader.use();
-        if (!depthShader.used)
-            throw(std::exception("Shader failed to setup."));
-        for (unsigned int i = 0; i < 6; ++i)
-            depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-        depthShader.setFloat("far_plane", far);
-        depthShader.setUniform3fv("lightPos", light.position);
+            depthShader.use();
+            if (!depthShader.used)
+                throw(std::exception("Shader failed to setup."));
+            for (unsigned int i = 0; i < 6; ++i)
+            {
+                depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+            }
+            depthShader.setFloat("far_plane", far);
+            depthShader.setUniform3fv("lightPos", light.position);
 
-        renderScene(scene, model, depthShader);
-
+            DrawScene(scene, model, depthShader);
+        }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     // Render the depth cubemap texture
     // [in] depthCubemap,light, scene, model
     // [out] a new depthCubemap
+    // [side effect] **change current viewport size**
     void renderToTexture(unsigned int &_depthCubemap, LightSource &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
     {
         // initialize
@@ -154,7 +158,7 @@ public:
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        renderScene(scene, model, depthShader);
+        DrawScene(scene, model, depthShader);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 };
@@ -242,7 +246,7 @@ private:
         cam.setViewMatrix(ps_shaders);
         cam.setPerspectiveMatrix(ps_shaders, width, height);
 
-        renderScene(scene, model, ps_shaders);
+        DrawScene(scene, model, ps_shaders);
     }
     void renderParallelShadow(RenderParameters &renderParameters)
     {
@@ -278,6 +282,6 @@ private:
         cam.setViewMatrix(pls_shaders);
         cam.setPerspectiveMatrix(pls_shaders, width, height);
 
-        renderScene(scene, model, pls_shaders);
+        DrawScene(scene, model, pls_shaders);
     }
 };

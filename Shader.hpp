@@ -84,6 +84,11 @@ public:
         this->vs_path = vs_path;
         this->fs_path = fs_path;
         this->gs_path = gs_path ? gs_path : "";
+        bool hasGS = gs_path;
+        if (hasGS)
+        {
+            hasGS = gs_path[0] != '\0';
+        }
         std::string shader_buf;
         // Config Vertex Shader
         try
@@ -115,7 +120,7 @@ public:
         compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER, fragmentShader);
 
         unsigned int geometryShader;
-        if (gs_path)
+        if (hasGS)
         { // Config Geometry Shader
             try
             {
@@ -136,7 +141,7 @@ public:
 
         glAttachShader(progrm_ID, vertexShader);
         glAttachShader(progrm_ID, fragmentShader);
-        if (gs_path)
+        if (hasGS)
             glAttachShader(progrm_ID, geometryShader);
         glLinkProgram(progrm_ID);
 
@@ -150,7 +155,7 @@ public:
         // Delete our used Shaders
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
-        if (gs_path)
+        if (hasGS)
             glDeleteShader(geometryShader);
     }
     ~Shader()
