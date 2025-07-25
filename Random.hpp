@@ -19,4 +19,21 @@ namespace Random
         }
         return ssaoNoise;
     }
+    inline std::vector<glm::vec3> GenerateSSAOKernel()
+    {
+        std::vector<glm::vec3> ssaoKernel;
+        for (unsigned int i = 0; i < 64; ++i)
+        {
+            glm::vec3 sample(
+                randomFloats(generator) * 2.0 - 1.0,
+                randomFloats(generator) * 2.0 - 1.0,
+                randomFloats(generator));
+            float scale = (float)i / 64.0;
+            scale = std::lerp(0.1f, 1.0f, scale * scale);
+            sample *= scale;
+            ssaoKernel.push_back(sample);
+        }
+        return ssaoKernel;
+    }
+
 }

@@ -253,7 +253,7 @@ public:
                 unsigned int gPosition,
                 unsigned int gNormal,
                 unsigned int gAlbedoSpec,
-                float shadow_far)
+                unsigned int ssaoTex, float shadow_far)
     {
 
         auto &[lights, cam, scene, model, window] = renderParameters;
@@ -265,8 +265,9 @@ public:
 
         // 绑定 GBuffer Texture 到Quad
         shaders.setTextureAuto(gPosition, GL_TEXTURE_2D, 0, "gPosition");
-        shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 1, "gNormal");
-        shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 2, "gAlbedoSpec");
+        shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 0, "gNormal");
+        shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
+        shaders.setTextureAuto(ssaoTex, GL_TEXTURE_2D, 0, "ssaoTex");
 
         // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skyBox");
 
@@ -304,12 +305,14 @@ class SSAOPass : public Pass
 {
 private:
     unsigned int SSAOPassTex;
+    unsigned int noiseTexture; // SSAO Noise
 
 private:
     void initializeGLResources()
     {
         glGenFramebuffers(1, &FBO);
         glGenTextures(1, &SSAOPassTex);
+        glGenTextures(1, &noiseTexture);
     }
 
 public:
@@ -319,6 +322,16 @@ public:
     {
         initializeGLResources();
         contextSetup();
+    }
+    void generateNoiseTexture()
+    {
+        auto ssaoNoise = Random::GenerateSSAONoise();
+        glBindTexture(GL_TEXTURE_2D, noiseTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 8, 8, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     }
     void contextSetup()
     {
@@ -339,21 +352,29 @@ public:
     void render(RenderParameters &renderParameters,
                 unsigned int gPosition,
                 unsigned int gNormal,
-                unsigned int gAlbedoSpec,
-                unsigned int lightPassTex)
+                unsigned int gAlbedoSpec)
     {
 
         auto &[lights, cam, scene, model, window] = renderParameters;
-
+        auto ssaoKernel = Random::GenerateSSAOKernel();
+        generateNoiseTexture();
         glViewport(0, 0, vp_width, vp_height);
         glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
         shaders.use();
 
+        for (unsigned int i = 0; i < 64; ++i)
+        {
+            shaders.setUniform3fv(std::format("samples[{}]", i), ssaoKernel[i]);
+        }
         shaders.setTextureAuto(gPosition, GL_TEXTURE_2D, 0, "gPosition");
         shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 0, "gNormal");
         shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
-        shaders.setTextureAuto(lightPassTex, GL_TEXTURE_2D, 0, "lightPassTex");
+        shaders.setTextureAuto(noiseTexture, GL_TEXTURE_2D, 0, "texNoise");
+        shaders.setUniform3fv("eye_pos", cam.getPosition());
+        shaders.setFloat("far_plane", cam.far);
+        cam.setPerspectiveMatrix(shaders, vp_width, vp_height);
+        cam.setViewMatrix(shaders);
 
         DrawQuad();
     }
@@ -478,11 +499,12 @@ private:
         gBufferPass.render(renderParameters);
         auto [gPosition, gNormal, gAlbedoSpec] = gBufferPass.getTextures();
 
-        lightPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, pointShadowPass.far);
+        ssaoPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec);
+        auto ssaoPassTexture = ssaoPass.getTextures();
+
+        lightPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, ssaoPassTexture, pointShadowPass.far);
         auto lightPassTexture = lightPass.getTextures();
 
-        ssaoPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, lightPassTexture);
-        auto ssaoPassTexture = ssaoPass.getTextures();
-        screenPass.render(ssaoPassTexture);
+        screenPass.render(lightPassTexture);
     }
 };

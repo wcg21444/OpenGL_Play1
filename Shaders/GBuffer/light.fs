@@ -15,6 +15,7 @@ uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoSpec;
 uniform samplerCube depthMap; //debug
+uniform sampler2D ssaoTex;
 const int MAX_LIGHTS = 10; // Maximum number of lights supported
 uniform int numLights; // actual number of lights used
 uniform samplerCube shadowCubeMaps[MAX_LIGHTS];
@@ -22,7 +23,7 @@ uniform vec3 light_pos[MAX_LIGHTS];
 uniform vec3 light_intensity[MAX_LIGHTS];
 
 uniform vec3 ambient_light = {
-    0.1f,0.1f,0.1f
+    0.4f,0.4f,0.4f
 };
 
 uniform float shadow_far;
@@ -90,5 +91,6 @@ void main() {
         LightResult +=  vec4(diffuse*texture(gAlbedoSpec,TexCoord).rgb,1.f);
         LightResult += vec4(specular,1.0f)*texture(gAlbedoSpec, TexCoord).a;
     }
-    LightResult += vec4(ambient_light*texture(gAlbedoSpec,TexCoord).rgb,1.f);
+    LightResult += vec4(texture(ssaoTex,TexCoord).rgb*ambient_light*texture(gAlbedoSpec,TexCoord).rgb,1.f);
+    // LightResult = texture(ssaoTex,TexCoord);
 }
