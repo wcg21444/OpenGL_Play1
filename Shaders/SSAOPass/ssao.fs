@@ -27,27 +27,22 @@ vec3 bitangent = cross(normal, tangent);
 mat3 TBN       = mat3(tangent, bitangent, normal);  
 
 int kernelSize = 64;
-float radius = 0.6f;
+float radius = 1.0f;
 
 float WorldSpaceDepth(vec3 pos)
 {
-    return length(pos-eye_pos)/far_plane*20;
-}
-
-vec3 skyClamp(vec3 pos)
-{
-    return pos == vec3(0.f)?vec3(1.0/0.0):pos;
+    return length(pos-eye_pos)/far_plane*100;
 }
 
 float CalculateOcclusion()
 {
-    fragPos = skyClamp(fragPos);
+
     float occlusion = 0.0;
     float bias = 0.001f;
         for(int i = 0; i < kernelSize; ++i)
     {
         // get sample position
-        vec3 samplePos = TBN * samples[i]*4; 
+        vec3 samplePos = TBN * samples[i]; 
         samplePos = fragPos + samplePos * radius; 
  
         float sampleDepth = WorldSpaceDepth(samplePos);
@@ -56,8 +51,8 @@ float CalculateOcclusion()
         vec3 ndcPos = clipPos.xyz / clipPos.w;
         vec2 screenUV = ndcPos.xy * 0.5 + 0.5;
         float sampleSurfaceDepth = WorldSpaceDepth(texture(gPosition, screenUV ).xyz);
-        float rangeCheck = smoothstep(0.0, 1.0, radius / pow(abs(fragPos.z - sampleDepth),2));
-        occlusion += (sampleDepth >= sampleSurfaceDepth + bias ? 1.0 : 0.0) * rangeCheck;   
+        float rangeCheck = smoothstep(0.0, 1.0, radius / (abs(WorldSpaceDepth(fragPos) - sampleSurfaceDepth)));
+        occlusion += (sampleDepth >= sampleSurfaceDepth + bias ? 1.0 : 0.0)*pow(rangeCheck,2);   
     }
     occlusion = 1.0 - (occlusion / kernelSize);
     return occlusion;
@@ -72,6 +67,7 @@ void main() {
     // vec3 ndcPos = clipPos.xyz / clipPos.w;
     // vec2 screenUV = ndcPos.xy * 0.5 + 0.5;
 
-    // result = vec4(WorldSpaceDepth(texture(gPosition, screenUV ).xyz));
+
     result = vec4(occlusion);
+
 }
