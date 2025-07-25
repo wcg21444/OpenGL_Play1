@@ -2,6 +2,9 @@
 #include "RendererManager.hpp"
 #include "Renderer.hpp"
 #include "ShadowRenderer.hpp"
+#include "Random.hpp"
+#include "Pass.hpp"
+#include <tuple>
 
 class CubemapUnfoldRenderer : public Renderer
 {
@@ -40,37 +43,16 @@ public:
         {
             glGenFramebuffers(1, &unfoldFBO);
             glGenTextures(1, &unfoldedCubemap);
+            GenerateQuad(quadVAO, quadVBO);
         }
         glBindFramebuffer(GL_FRAMEBUFFER, unfoldFBO);
-        glBindTexture(GL_TEXTURE_2D, unfoldedCubemap);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, CUBEMAP_FACE_SIZE * 4, CUBEMAP_FACE_SIZE * 3, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, unfoldedCubemap, 0);
-
-        // set up VAO of Demo Quad Plane
-        if (quadVAO == 0)
         {
-            static float quadVertices[] = {
-                // positions       // texCoords
-                -1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-                -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-                1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-
-                -1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-                1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-                1.0f, 1.0f, 0.0f, 1.0f, 1.0f};
-            // setup plane VAO
-            glGenVertexArrays(1, &quadVAO);
-            glGenBuffers(1, &quadVBO);
-            glBindVertexArray(quadVAO);
-            glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+            glBindTexture(GL_TEXTURE_2D, unfoldedCubemap);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, CUBEMAP_FACE_SIZE * 4, CUBEMAP_FACE_SIZE * 3, 0, GL_RGBA, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         }
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, unfoldedCubemap, 0);
     }
     // 设置cubemap; 展开cubemap存储至unfoldedCubemap
     //[out] this.unfoldedCubemap
@@ -128,7 +110,7 @@ public:
             "Resource/skybox/bottom.jpg",
             "Resource/skybox/front.jpg",
             "Resource/skybox/back.jpg"};
-        static auto skyboxCubemap = loadCubemap(faces);
+        static auto skyboxCubemap = LoadCubemap(faces);
         if (!initialized)
         {
             initialized = true;
@@ -143,20 +125,265 @@ public:
         quadShader.use();
         quadShader.setTextureAuto(unfoldedCubemap, GL_TEXTURE_2D, 10, "tex_sampler");
         // 绘制Quad
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glBindVertexArray(quadVAO);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
-        glBindVertexArray(0);
+        DrawQuad();
+    }
+};
+
+class GBufferPass : public Pass
+{
+private:
+    unsigned int gPosition, gNormal, gAlbedoSpec; // Output ReadOnly
+    unsigned int depthMap;
+
+private:
+    void initializeGLResources()
+    {
+        glGenFramebuffers(1, &FBO);
+        glGenTextures(1, &gPosition);
+        glGenTextures(1, &gNormal);
+        glGenTextures(1, &gAlbedoSpec);
+        glGenRenderbuffers(1, &depthMap);
+    }
+
+public:
+    GBufferPass(int _vp_width, int _vp_height, std::string _vs_path,
+                std::string _fs_path)
+        : Pass(_vp_width, _vp_height, _vs_path, _fs_path)
+    {
+        initializeGLResources();
+        contextSetup();
+    }
+
+    void contextSetup()
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+        // create depth texture
+        // - position color buffer
+        glBindTexture(GL_TEXTURE_2D, gPosition);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
+
+        // - normal color buffer
+        glBindTexture(GL_TEXTURE_2D, gNormal);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
+
+        // - color + specular color buffer
+        glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, vp_width, vp_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
+
+        // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering
+        unsigned int attachments[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
+        glDrawBuffers(3, attachments);
+
+        glBindRenderbuffer(GL_RENDERBUFFER, depthMap);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, vp_width, vp_height);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthMap);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void render(RenderParameters &renderParameters)
+    {
+        auto &[lights, cam, scene, model, window] = renderParameters;
+
+        glViewport(0, 0, vp_width, vp_height); // 状态设置内聚
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+        {
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            shaders.use();
+
+            cam.setViewMatrix(shaders);
+            cam.setPerspectiveMatrix(shaders, vp_width, vp_height);
+            DrawScene(scene, model, shaders);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+    auto getTextures()
+    {
+        return std::make_tuple(gPosition, gNormal, gAlbedoSpec);
+    }
+};
+
+class LightPass : public Pass
+{
+private:
+    const int MAX_LIGHTS = 10;
+    unsigned int lightPassTex;
+
+private:
+    void initializeGLResources()
+    {
+        glGenFramebuffers(1, &FBO);
+        glGenTextures(1, &lightPassTex);
+    }
+
+public:
+    LightPass(int _vp_width, int _vp_height, std::string _vs_path,
+              std::string _fs_path)
+        : Pass(_vp_width, _vp_height, _vs_path, _fs_path)
+    {
+        initializeGLResources();
+        contextSetup();
+    }
+    void contextSetup()
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+        {
+            glBindTexture(GL_TEXTURE_2D, lightPassTex);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightPassTex, 0);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+    unsigned int getTextures()
+    {
+        return lightPassTex;
+    }
+    void render(RenderParameters &renderParameters,
+                unsigned int gPosition,
+                unsigned int gNormal,
+                unsigned int gAlbedoSpec,
+                unsigned int ssaoTex, float shadow_far)
+    {
+
+        auto &[lights, cam, scene, model, window] = renderParameters;
+
+        glViewport(0, 0, vp_width, vp_height);
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+        shaders.use();
+
+        // 绑定 GBuffer Texture 到Quad
+        shaders.setTextureAuto(gPosition, GL_TEXTURE_2D, 0, "gPosition");
+        shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 0, "gNormal");
+        shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
+        shaders.setTextureAuto(ssaoTex, GL_TEXTURE_2D, 0, "ssaoTex");
+
+        // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skyBox");
+
+        shaders.setInt("numLights", static_cast<int>(lights.size()));
+        for (size_t i = 0; i < MAX_LIGHTS; ++i)
+        {
+            shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps[" + std::to_string(i) + "]"); // 给sampler数组赋空
+        }
+        for (size_t i = 0; i < lights.size(); ++i)
+        {
+            shaders.setUniform3fv("light_pos[" + std::to_string(i) + "]", lights[i].position);
+            shaders.setUniform3fv("light_intensity[" + std::to_string(i) + "]", lights[i].intensity);
+            if (lights[i].depthCubemap != 0)
+            {
+                shaders.setTextureAuto(lights[i].depthCubemap, GL_TEXTURE_CUBE_MAP, i + 3, "shadowCubeMaps[" + std::to_string(i) + "]");
+            }
+        }
+
+        // sampler location是否会被覆盖?
+        // 光照计算在 纹理计算之后,不用担心光照被纹理覆盖
+        shaders.setUniform3fv("eye_pos", cam.getPosition());
+        shaders.setUniform3fv("eye_front", cam.getFront());
+        shaders.setUniform3fv("eye_up", cam.getUp());
+
+        shaders.setFloat("far_plane", cam.far);
+        shaders.setFloat("near_plane", cam.near);
+        shaders.setFloat("shadow_far", shadow_far);
+        shaders.setFloat("fov", cam.fov);
+
+        DrawQuad();
+    }
+};
+
+class SSAOPass : public Pass
+{
+private:
+    unsigned int SSAOPassTex;
+    unsigned int noiseTexture; // SSAO Noise
+
+private:
+    void initializeGLResources()
+    {
+        glGenFramebuffers(1, &FBO);
+        glGenTextures(1, &SSAOPassTex);
+        glGenTextures(1, &noiseTexture);
+    }
+
+public:
+    SSAOPass(int _vp_width, int _vp_height, std::string _vs_path,
+             std::string _fs_path)
+        : Pass(_vp_width, _vp_height, _vs_path, _fs_path)
+    {
+        initializeGLResources();
+        contextSetup();
+    }
+    void generateNoiseTexture()
+    {
+        auto ssaoNoise = Random::GenerateSSAONoise();
+        glBindTexture(GL_TEXTURE_2D, noiseTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 8, 8, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    }
+    void contextSetup()
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+        {
+            glBindTexture(GL_TEXTURE_2D, SSAOPassTex);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSAOPassTex, 0);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+    unsigned int getTextures()
+    {
+        return SSAOPassTex;
+    }
+    void render(RenderParameters &renderParameters,
+                unsigned int gPosition,
+                unsigned int gNormal,
+                unsigned int gAlbedoSpec)
+    {
+
+        auto &[lights, cam, scene, model, window] = renderParameters;
+        auto ssaoKernel = Random::GenerateSSAOKernel();
+        generateNoiseTexture();
+        glViewport(0, 0, vp_width, vp_height);
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+        shaders.use();
+
+        for (unsigned int i = 0; i < 64; ++i)
+        {
+            shaders.setUniform3fv(std::format("samples[{}]", i), ssaoKernel[i]);
+        }
+        shaders.setTextureAuto(gPosition, GL_TEXTURE_2D, 0, "gPosition");
+        shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 0, "gNormal");
+        shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
+        shaders.setTextureAuto(noiseTexture, GL_TEXTURE_2D, 0, "texNoise");
+        shaders.setUniform3fv("eye_pos", cam.getPosition());
+        shaders.setFloat("far_plane", cam.far);
+        cam.setPerspectiveMatrix(shaders, vp_width, vp_height);
+        cam.setViewMatrix(shaders);
+
+        DrawQuad();
     }
 };
 
 class GBufferRenderer : public Renderer
 {
 private:
-    Shader gShaders = Shader("Shaders/GBuffer/gbuffer.vs", "Shaders/GBuffer/gbuffer.fs");
     Shader quadShader = Shader("Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs");
-    Shader lightShaders = Shader("Shaders/GBuffer/light.vs", "Shaders/GBuffer/light.fs");
     std::vector<std::string> faces{
         "Resource/skybox/right.jpg",
         "Resource/skybox/left.jpg",
@@ -167,25 +394,36 @@ private:
     int width = 1600;
     int height = 900;
 
-    unsigned int quadVAO = 0;
-    unsigned int quadVBO;
-
-    unsigned int gBuffer;
+    unsigned int FBO;
     unsigned int gPosition, gNormal, gAlbedoSpec;
     unsigned int depthMap;
     unsigned int cubemapTexture;
+    unsigned int noiseTexture; // SSAO Noise
 
     const int MAX_LIGHTS = 10;
 
     PointShadowPass pointShadowPass;
+    GBufferPass gBufferPass;
+    LightPass lightPass;
+    ScreenPass screenPass;
+    SSAOPass ssaoPass;
 
 public:
+    GBufferRenderer()
+        : gBufferPass(GBufferPass(width, height, "Shaders/GBuffer/gbuffer.vs", "Shaders/GBuffer/gbuffer.fs")),
+          lightPass(LightPass(width, height, "Shaders/GBuffer/light.vs", "Shaders/GBuffer/light.fs")),
+          screenPass(ScreenPass(width, height, "Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs")),
+          ssaoPass(SSAOPass(width, height, "Shaders/SSAOPass/ssao.vs", "Shaders/SSAOPass/ssao.fs"))
+    {
+    }
     void reloadCurrentShaders()
     {
-        gShaders = Shader("Shaders/GBuffer/gbuffer.vs", "Shaders/GBuffer/gbuffer.fs");
-        lightShaders = Shader("Shaders/GBuffer/light.vs", "Shaders/GBuffer/light.fs");
         quadShader = Shader("Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs");
         pointShadowPass.reloadCurrentShader();
+        gBufferPass.reloadCurrentShaders();
+        lightPass.reloadCurrentShaders();
+        screenPass.reloadCurrentShaders();
+        ssaoPass.reloadCurrentShaders();
         contextSetup();
     }
     // contextSetup 资源生成应当只生成一次
@@ -198,81 +436,9 @@ public:
         {
             initialized = true;
             glViewport(0, 0, width, height);
-            glGenFramebuffers(1, &gBuffer);
-            glGenTextures(1, &gPosition);
-            glGenTextures(1, &gNormal);
-            glGenTextures(1, &gAlbedoSpec);
-            glGenRenderbuffers(1, &depthMap);
-            cubemapTexture = loadCubemap(faces);
-        }
-
-        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
-        // create depth texture
-        // - position color buffer
-        glBindTexture(GL_TEXTURE_2D, gPosition);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
-
-        // - normal color buffer
-        glBindTexture(GL_TEXTURE_2D, gNormal);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
-
-        // - color + specular color buffer
-        glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
-
-        // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering
-        unsigned int attachments[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
-        glDrawBuffers(3, attachments);
-
-        glBindRenderbuffer(GL_RENDERBUFFER, depthMap);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthMap);
-
-        // set up VAO of Demo Quad Plane
-        if (quadVAO == 0)
-        {
-            static float quadVertices[] =
-                {
-                    -1.0f,
-                    1.0f,
-                    0.0f,
-                    0.0f,
-                    1.0f,
-                    -1.0f,
-                    -1.0f,
-                    0.0f,
-                    0.0f,
-                    0.0f,
-                    1.0f,
-                    1.0f,
-                    0.0f,
-                    1.0f,
-                    1.0f,
-                    1.0f,
-                    -1.0f,
-                    0.0f,
-                    1.0f,
-                    0.0f,
-                };
-            // setup plane VAO
-            glGenVertexArrays(1, &quadVAO);
-            glGenBuffers(1, &quadVBO);
-            glBindVertexArray(quadVAO);
-            glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+            glGenFramebuffers(1, &FBO);
+            glGenTextures(1, &noiseTexture);
+            cubemapTexture = LoadCubemap(faces);
         }
     }
 
@@ -291,29 +457,21 @@ public:
     }
 
 private:
-    void
-    renderGBuffer(RenderParameters &renderParameters)
-    {
-        auto &[lights, cam, scene, model, window] = renderParameters;
-        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
-        {
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-            gShaders.use();
-
-            cam.setViewMatrix(gShaders);
-            cam.setPerspectiveMatrix(gShaders, width, height);
-            renderScene(scene, model, gShaders);
-        }
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-
     void renderDebug(RenderParameters &renderParameters)
     {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        renderGBuffer(renderParameters);
-        // 绑定 GBuffer Texture 到Quad
+        gBufferPass.render(renderParameters);
+        auto [gPosition, gNormal, gAlbedoSpec] = gBufferPass.getTextures();
+
+        // SSAO Noise Texture
+        auto ssaoNoise = Random::GenerateSSAONoise();
+        glBindTexture(GL_TEXTURE_2D, noiseTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 8, 8, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
         // glActiveTexture(GL_TEXTURE1);
         // glBindTexture(GL_TEXTURE_2D, gNormal);
@@ -321,15 +479,12 @@ private:
         // glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
         quadShader.use();
         quadShader.setTextureAuto(gPosition, GL_TEXTURE_2D, 0, "tex_sampler");
+        quadShader.setTextureAuto(noiseTexture, GL_TEXTURE_2D, 0, "texNoise");
         // quadShader.setInt("tex_sampler", 1); // gNormal
         // quadShader.setInt("tex_sampler", 2); // gAlbedoSpec
 
-        // 绘制Quad
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glBindVertexArray(quadVAO);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glBindVertexArray(0);
+        glViewport(0, 0, width, height);
+        DrawQuad();
     }
 
     void renderLight(RenderParameters &renderParameters)
@@ -341,50 +496,15 @@ private:
         {
             pointShadowPass.renderToTexture(light.depthCubemap, light, scene, model);
         }
-        glViewport(0, 0, width, height);
-        renderGBuffer(renderParameters);
+        gBufferPass.render(renderParameters);
+        auto [gPosition, gNormal, gAlbedoSpec] = gBufferPass.getTextures();
 
-        lightShaders.use();
+        ssaoPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec);
+        auto ssaoPassTexture = ssaoPass.getTextures();
 
-        // 绑定 GBuffer Texture 到Quad
-        lightShaders.setTextureAuto(gPosition, GL_TEXTURE_2D, 0, "gPosition");
-        lightShaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 1, "gNormal");
-        lightShaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 2, "gAlbedoSpec");
+        lightPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, ssaoPassTexture, pointShadowPass.far);
+        auto lightPassTexture = lightPass.getTextures();
 
-        // lightShaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skyBox");
-
-        lightShaders.setInt("numLights", static_cast<int>(lights.size()));
-        for (size_t i = 0; i < MAX_LIGHTS; ++i)
-        {
-            lightShaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps[" + std::to_string(i) + "]"); // 给sampler数组赋空
-        }
-        for (size_t i = 0; i < lights.size(); ++i)
-        {
-            lightShaders.setUniform3fv("light_pos[" + std::to_string(i) + "]", lights[i].position);
-            lightShaders.setUniform3fv("light_intensity[" + std::to_string(i) + "]", lights[i].intensity);
-            if (lights[i].depthCubemap != 0)
-            {
-                lightShaders.setTextureAuto(lights[i].depthCubemap, GL_TEXTURE_CUBE_MAP, i + 3, "shadowCubeMaps[" + std::to_string(i) + "]");
-            }
-        }
-
-        // sampler location是否会被覆盖?
-        // 光照计算在 纹理计算之后,不用担心光照被纹理覆盖
-        lightShaders.setUniform3fv("eye_pos", cam.getPosition());
-        lightShaders.setUniform3fv("eye_front", cam.getFront());
-        lightShaders.setUniform3fv("eye_up", cam.getUp());
-
-        lightShaders.setFloat("far_plane", cam.far);
-        lightShaders.setFloat("near_plane", cam.near);
-        lightShaders.setFloat("shadow_far", pointShadowPass.far);
-        lightShaders.setFloat("fov", cam.fov);
-        // 绘制Quad
-        glViewport(0, 0, width, height);
-
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glBindVertexArray(quadVAO);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glBindVertexArray(0);
+        screenPass.render(lightPassTexture);
     }
 };

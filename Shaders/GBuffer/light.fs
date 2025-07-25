@@ -15,6 +15,7 @@ uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoSpec;
 uniform samplerCube depthMap; //debug
+uniform sampler2D ssaoTex;
 const int MAX_LIGHTS = 10; // Maximum number of lights supported
 uniform int numLights; // actual number of lights used
 uniform samplerCube shadowCubeMaps[MAX_LIGHTS];
@@ -22,7 +23,7 @@ uniform vec3 light_pos[MAX_LIGHTS];
 uniform vec3 light_intensity[MAX_LIGHTS];
 
 uniform vec3 ambient_light = {
-    0.2f,0.2f,0.2f
+    0.4f,0.4f,0.4f
 };
 
 uniform float shadow_far;
@@ -33,10 +34,7 @@ uniform vec3 eye_front;
 uniform vec3 eye_up;
 uniform float fov;
 
-//计算不正确导致全黑
-//就算是cubemap有问题,也只是漫射为0,不会全黑
-//shadowCubeMaps计算无法得出结果
-//使用depthMap可以得到结果,但是全都是阴影
+
 float ShadowCalculation(vec3 fragPos,vec3 fragNorm,vec3 light_pos,samplerCube _depthMap) {
     vec3 dir = fragPos-light_pos;
     float cloest_depth = texture(_depthMap,dir).r;
@@ -56,6 +54,7 @@ vec3 SkyBoxSample(vec2 uv,samplerCube skybox) {
     // return dir;
 }
 
+
 void main() {
     // Diffuse Caculation
 
@@ -71,16 +70,10 @@ void main() {
         return;
     }
 
-    // TODO 实现 所有光照累加计算
     for(int i = 0; i < numLights; ++i) {
         vec3 l = light_pos[i] - FragPos;
         float rr = pow(dot(l,l),0.6)*10;
         l = normalize(l);   
-        // vec3 diffuse = 
-        // ShadowCalculation(FragPos,n,light_pos[i],shadowCubeMaps[i]) == 0.0?
-        // light_intensity[i]/rr*max(0.f,dot(n,l)):vec3(0.f,0.f,0.f);
-
-        // vec3 diffuse = light_intensity[i]/rr*max(0.f,dot(n,l));
         vec3 diffuse=vec3(0.f,0.f,0.f);
         float spec=0.f;
         vec3 specular=vec3(0.f,0.f,0.f);
@@ -98,59 +91,6 @@ void main() {
         LightResult +=  vec4(diffuse*texture(gAlbedoSpec,TexCoord).rgb,1.f);
         LightResult += vec4(specular,1.0f)*texture(gAlbedoSpec, TexCoord).a;
     }
-    LightResult += vec4(ambient_light*texture(gAlbedoSpec,TexCoord).rgb,1.f);
-
-    // debug: test cube shadow map
-    // vec3 sampleDir = normalize(vec3(1.0, TexCoord.y, -TexCoord.x));
-    // LightResult = vec4(vec3(texture(depthMap,eye_pos).r),1.0f); // For debugging, output the shadow map texture
+    LightResult += vec4(texture(ssaoTex,TexCoord).rgb*ambient_light*texture(gAlbedoSpec,TexCoord).rgb,1.f);
+    // LightResult = texture(ssaoTex,TexCoord);
 }
-
-// float ShadowCalculation(vec3 fragPos,vec3 light_pos,samplerCube _depthMap,vec3 fragNorm) {
-//     vec3 dir = fragPos-light_pos;
-//     float cloest_depth = texture(depthMap,dir).r;
-//     cloest_depth*= shadow_far;
-//     float curr_depth = length(dir);
-//     float omega = -dot(fragNorm,dir)/curr_depth;
-//     float bias = 0.1f/tan(omega);//idea: bias increase based on center distance 
-//     //shadow test
-//     return curr_depth-cloest_depth-bias;//return shadow
-// }
-
-// //真 · 阴影渲染
-// void main() {
-//     // Diffuse Caculation
-
-//     LightResult = vec4(0.f,0.f,0.f,1.f); // Initialize LightResult
-//     vec3 FragPos = texture(gPosition, TexCoord).rgb;
-//     vec3 n = normalize(texture(gNormal, TexCoord).rgb);
-//     // TODO 实现 所有光照累加计算
-//     // for(int i = 0; i < numLights; ++i) {
-//     //     vec3 l = light_pos[i] - FragPos;
-//     //     float rr = dot(l,l);
-//     //     l = normalize(l);   
-//     //     // vec3 diffuse = 
-//     //     // ShadowCalculation(FragPos,light_pos[i],shadowCubeMaps[i]) == 0.0?
-//     //     // light_intensity[i]/rr*max(0.f,dot(n,l)):vec3(0.f,0.f,0.f);
-
-//     //     // vec3 diffuse = light_intensity[i]/rr*max(0.f,dot(n,l));
-//     //     vec3 diffuse=vec3(0.f,0.f,0.f);
-//     //     if(ShadowCalculation(FragPos,light_pos[i],shadowCubeMaps[i])==0.0) {
-//     //         diffuse = light_intensity[i]/rr*max(0.f,dot(n,l));
-//     //     }
-//     //     else {
-//     //         diffuse = light_intensity[i]/rr*max(0.f,dot(n,l))/10;
-//     //     }
-
-//     //     //Specular Caculation
-//     //     float specularStrength = 0.01f;
-//     //     vec3 viewDir = normalize(eye_pos - FragPos);
-//     //     vec3 reflectDir = reflect(-l, n);  
-//     //     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 64);
-//     //     vec3 specular = specularStrength * spec * light_intensity[i];
-//     // }
-//     LightResult =vec4(vec3(ShadowCalculation(FragPos,light_pos[0],shadowCubeMaps[0],n)),1.0f); 
-
-//     // debug: test cube shadow map
-//     // vec3 sampleDir = normalize(vec3(1.0, TexCoord.y, -TexCoord.x));
-//     // LightResult = vec4(vec3(texture(depthMap,eye_pos).r),1.0f); // For debugging, output the shadow map texture
-// }

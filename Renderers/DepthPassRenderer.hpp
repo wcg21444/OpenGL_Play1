@@ -40,6 +40,6 @@ public:
         cam.setViewMatrix(shaders);
         cam.setPerspectiveMatrix(shaders, width, height);
 
-        renderScene(scene, model, shaders);
+        DrawScene(scene, model, shaders);
     }
 };
