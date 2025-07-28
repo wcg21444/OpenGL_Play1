@@ -9,6 +9,7 @@ out vec4 LightResult;
 
 in vec2 TexCoord;
 
+uniform mat4 view;
 uniform samplerCube skyBox;
 
 uniform sampler2D gPosition;
@@ -22,9 +23,10 @@ uniform samplerCube shadowCubeMaps[MAX_LIGHTS];
 uniform vec3 light_pos[MAX_LIGHTS];
 uniform vec3 light_intensity[MAX_LIGHTS];
 
-uniform vec3 ambient_light = {
-    0.4f,0.4f,0.4f
-};
+const int width = 1600;
+const int height = 900;
+
+uniform vec3 ambient_light = vec3(0.2f);
 
 uniform float shadow_far;
 uniform float near_plane;
@@ -33,7 +35,6 @@ uniform vec3 eye_pos;
 uniform vec3 eye_front;
 uniform vec3 eye_up;
 uniform float fov;
-
 
 float ShadowCalculation(vec3 fragPos,vec3 fragNorm,vec3 light_pos,samplerCube _depthMap) {
     vec3 dir = fragPos-light_pos;
@@ -48,12 +49,16 @@ float ShadowCalculation(vec3 fragPos,vec3 fragNorm,vec3 light_pos,samplerCube _d
 }
 
 vec3 SkyBoxSample(vec2 uv,samplerCube skybox) {
-    vec3 uv_centered = vec3(uv-vec2(0.5f,0.5f),0.f);
-    vec3 dir = normalize(eye_front+near_plane*uv_centered*2*tan(radians(fov)/2));
-    return vec3(texture(skybox,dir));
+    // vec3 uv_centered = vec3(uv-vec2(0.5f,0.5f),0.f);
+    vec4 dir = vec4(uv-vec2(0.5f,0.5f),0.f,0.f);
+    dir.y = dir.y/width*height;
+    dir.z = -near_plane/tan(radians(fov/2));
+    dir = inverse(view) *dir;
+    
+    // vec3 dir = normalize(eye_front+near_plane*uv_centered*2*tan(radians(fov)/2));
+    return vec3(texture(skybox,dir.xyz));
     // return dir;
 }
-
 
 void main() {
     // Diffuse Caculation
@@ -65,8 +70,8 @@ void main() {
 
     // skybox
     if (length(FragPos)==0) {
-        // LightResult = vec4(SkyBoxSample(TexCoord,shadowCubeMaps[0]),1.0f);
-        LightResult = vec4(0.3f,0.3f,0.3f,1.0f);
+        LightResult = vec4(SkyBoxSample(TexCoord,skyBox),1.0f);
+        // LightResult = vec4(0.3f,0.3f,0.3f,1.0f);
         return;
     }
 
@@ -91,6 +96,6 @@ void main() {
         LightResult +=  vec4(diffuse*texture(gAlbedoSpec,TexCoord).rgb,1.f);
         LightResult += vec4(specular,1.0f)*texture(gAlbedoSpec, TexCoord).a;
     }
-    LightResult += vec4(texture(ssaoTex,TexCoord).rgb*ambient_light*texture(gAlbedoSpec,TexCoord).rgb,1.f);
+    LightResult += vec4(texture(ssaoTex,TexCoord).rgb*ambient_light*texture(gAlbedoSpec,TexCoord).rgb,1.f);  
     // LightResult = texture(ssaoTex,TexCoord);
 }

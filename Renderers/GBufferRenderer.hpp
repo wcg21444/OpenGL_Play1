@@ -132,7 +132,7 @@ public:
 class GBufferPass : public Pass
 {
 private:
-    unsigned int gPosition, gNormal, gAlbedoSpec; // Output ReadOnly
+    unsigned int gPosition, gNormal, gAlbedoSpec, gViewPosition; // Output ReadOnly
     unsigned int depthMap;
 
 private:
@@ -142,6 +142,7 @@ private:
         glGenTextures(1, &gPosition);
         glGenTextures(1, &gNormal);
         glGenTextures(1, &gAlbedoSpec);
+        glGenTextures(1, &gViewPosition);
         glGenRenderbuffers(1, &depthMap);
     }
 
@@ -179,9 +180,15 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
 
+        glBindTexture(GL_TEXTURE_2D, gViewPosition);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gViewPosition, 0);
+
         // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering
-        unsigned int attachments[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
-        glDrawBuffers(3, attachments);
+        unsigned int attachments[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
+        glDrawBuffers(4, attachments);
 
         glBindRenderbuffer(GL_RENDERBUFFER, depthMap);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, vp_width, vp_height);
@@ -208,7 +215,7 @@ public:
     }
     auto getTextures()
     {
-        return std::make_tuple(gPosition, gNormal, gAlbedoSpec);
+        return std::make_tuple(gPosition, gNormal, gAlbedoSpec, gViewPosition);
     }
 };
 
@@ -253,7 +260,9 @@ public:
                 unsigned int gPosition,
                 unsigned int gNormal,
                 unsigned int gAlbedoSpec,
-                unsigned int ssaoTex, float shadow_far)
+                unsigned int ssaoTex,
+                unsigned int skyBox,
+                float shadow_far)
     {
 
         auto &[lights, cam, scene, model, window] = renderParameters;
@@ -268,6 +277,7 @@ public:
         shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 0, "gNormal");
         shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
         shaders.setTextureAuto(ssaoTex, GL_TEXTURE_2D, 0, "ssaoTex");
+        shaders.setTextureAuto(skyBox, GL_TEXTURE_CUBE_MAP, 0, "skyBox");
 
         // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skyBox");
 
@@ -291,6 +301,7 @@ public:
         shaders.setUniform3fv("eye_pos", cam.getPosition());
         shaders.setUniform3fv("eye_front", cam.getFront());
         shaders.setUniform3fv("eye_up", cam.getUp());
+        cam.setViewMatrix(shaders);
 
         shaders.setFloat("far_plane", cam.far);
         shaders.setFloat("near_plane", cam.near);
@@ -352,7 +363,8 @@ public:
     void render(RenderParameters &renderParameters,
                 unsigned int gPosition,
                 unsigned int gNormal,
-                unsigned int gAlbedoSpec)
+                unsigned int gAlbedoSpec,
+                unsigned int gViewPosition)
     {
 
         auto &[lights, cam, scene, model, window] = renderParameters;
@@ -370,6 +382,7 @@ public:
         shaders.setTextureAuto(gPosition, GL_TEXTURE_2D, 0, "gPosition");
         shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 0, "gNormal");
         shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
+        shaders.setTextureAuto(gViewPosition, GL_TEXTURE_2D, 0, "gViewPosition");
         shaders.setTextureAuto(noiseTexture, GL_TEXTURE_2D, 0, "texNoise");
         shaders.setUniform3fv("eye_pos", cam.getPosition());
         shaders.setFloat("far_plane", cam.far);
@@ -462,7 +475,7 @@ private:
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         gBufferPass.render(renderParameters);
-        auto [gPosition, gNormal, gAlbedoSpec] = gBufferPass.getTextures();
+        auto [gPosition, gNormal, gAlbedoSpec, gViewPosition] = gBufferPass.getTextures();
 
         // SSAO Noise Texture
         auto ssaoNoise = Random::GenerateSSAONoise();
@@ -497,12 +510,12 @@ private:
             pointShadowPass.renderToTexture(light.depthCubemap, light, scene, model);
         }
         gBufferPass.render(renderParameters);
-        auto [gPosition, gNormal, gAlbedoSpec] = gBufferPass.getTextures();
+        auto [gPosition, gNormal, gAlbedoSpec, gViewPosition] = gBufferPass.getTextures();
 
-        ssaoPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec);
+        ssaoPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, gViewPosition);
         auto ssaoPassTexture = ssaoPass.getTextures();
 
-        lightPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, ssaoPassTexture, pointShadowPass.far);
+        lightPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, ssaoPassTexture, cubemapTexture, pointShadowPass.far);
         auto lightPassTexture = lightPass.getTextures();
 
         screenPass.render(lightPassTexture);
