@@ -63,18 +63,45 @@ int main()
     Camera cam(width, height, 14.f, 0.05f);
 
     std::vector<std::unique_ptr<Object>> scene;
-    scene.push_back(std::make_unique<Grid>());
+    glm::mat4 plane_model = glm::translate(model, glm::vec3(0.f, -1.f, 0.f));
+    glm::mat4 box_model = glm::translate(model, glm::vec3(3.f, 0.f, -4.f));
+    glm::mat4 sphere_model = glm::translate(model, glm::vec3(6.f, 0.f, 2.f));
+    glm::mat4 backPack_model = glm::translate(model, glm::vec3(0.f, 2.f, 4.f));
+    glm::mat4 bass_model = glm::translate(model, glm::vec3(0.f, 4.f, 4.f));
+
+    // scene.push_back(std::make_unique<Grid>());
+
     scene.push_back(std::make_unique<Cube>(glm::vec3(1.f, 1.f, 1.f)));
+    scene.back()->setModelTransform(box_model);
+
     scene.push_back(std::make_unique<Sphere>(1.f));
+    scene.back()->setModelTransform(sphere_model);
+
     scene.push_back(std::make_unique<Plane>(200.f, 200.f));
+    scene.back()->setModelTransform(plane_model);
+
     // ModelLoader::loadFile("Resource/backpack.obj");
 
     Lights lights;
-    lights.emplace_back(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
-    lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
-    lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(-16.f, 10.f, 24.f));
-    lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(7.f, 10.f, 14.f));
-    lights.emplace_back(glm::vec3(30.f, 20.f, 40.f), glm::vec3(16.f, 4.f, 8.f));
+    // lights.emplace_back(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
+    // define quad light: quad: (0.0f,0.0f)  (4.0f,4.0f)
+    glm::vec2 lb(0.0f, 0.0f);
+    glm::vec2 rt(1.0f, 2.0f);
+    int i_samples = 3;
+    int j_samples = 3;
+    float i_step = (rt.x - lb.x) / i_samples;
+    float j_step = (rt.y - lb.y) / j_samples;
+    for (size_t i = 0; i < i_samples; ++i)
+    {
+        for (size_t j = 0; j < j_samples; ++j)
+        {
+            lights.emplace_back(glm::vec3(20.f), glm::vec3(10.f + i * i_step, 2.f, 20.f + j * j_step));
+        }
+    }
+    // lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
+    // lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(-16.f, 10.f, 24.f));
+    // lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(2.f, 10.f, 14.f));
+    // lights.emplace_back(glm::vec3(30.f, 20.f, 40.f), glm::vec3(16.f, 4.f, 8.f));
 
     // temporary light source variable
     LightSource &light = lights[0]; // Assuming the first light is the one we want to use for shadow

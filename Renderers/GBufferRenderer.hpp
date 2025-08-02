@@ -1,10 +1,12 @@
 #pragma once
+#include <tuple>
+
 #include "RendererManager.hpp"
 #include "Renderer.hpp"
 #include "ShadowRenderer.hpp"
 #include "Random.hpp"
 #include "Pass.hpp"
-#include <tuple>
+#include "ShaderGUI.hpp"
 
 class CubemapUnfoldRenderer : public Renderer
 {
@@ -224,6 +226,8 @@ class LightPass : public Pass
 private:
     const int MAX_LIGHTS = 10;
     unsigned int lightPassTex;
+    unsigned int shadowNoiseTex;
+    LightShaderUI shaderUI;
 
 private:
     void initializeGLResources()
@@ -252,6 +256,16 @@ public:
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
+    void generateShadowNoiseTexture()
+    {
+        auto noise = Random::GenerateNoise();
+        glBindTexture(GL_TEXTURE_2D, shadowNoiseTex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 8, 8, 0, GL_RGB, GL_FLOAT, &noise[0]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    }
     unsigned int getTextures()
     {
         return lightPassTex;
@@ -266,7 +280,9 @@ public:
     {
 
         auto &[lights, cam, scene, model, window] = renderParameters;
-
+        auto shadowKernel = Random::GenerateShadowKernel();
+        generateShadowNoiseTexture();
+        shaderUI.render();
         glViewport(0, 0, vp_width, vp_height);
         glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
@@ -277,6 +293,7 @@ public:
         shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 0, "gNormal");
         shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
         shaders.setTextureAuto(ssaoTex, GL_TEXTURE_2D, 0, "ssaoTex");
+        shaders.setTextureAuto(shadowNoiseTex, GL_TEXTURE_2D, 0, "shadowNoiseTex");
         shaders.setTextureAuto(skyBox, GL_TEXTURE_CUBE_MAP, 0, "skyBox");
 
         // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skyBox");
@@ -303,10 +320,16 @@ public:
         shaders.setUniform3fv("eye_up", cam.getUp());
         cam.setViewMatrix(shaders);
 
+        for (unsigned int i = 0; i < shadowKernel.size(); ++i)
+        {
+            shaders.setUniform3fv(std::format("shadowSamples[{}]", i), shadowKernel[i]);
+        }
         shaders.setFloat("far_plane", cam.far);
         shaders.setFloat("near_plane", cam.near);
         shaders.setFloat("shadow_far", shadow_far);
         shaders.setFloat("fov", cam.fov);
+        shaders.setFloat("skybox_scale", shaderUI.skyBoxScale);
+        shaders.setUniform3fv("ambient_light", shaderUI.ambientLight);
 
         DrawQuad();
     }
@@ -317,6 +340,8 @@ class SSAOPass : public Pass
 private:
     unsigned int SSAOPassTex;
     unsigned int noiseTexture; // SSAO Noise
+
+    SSAOShaderUI shaderUI;
 
 private:
     void initializeGLResources()
@@ -336,7 +361,7 @@ public:
     }
     void generateNoiseTexture()
     {
-        auto ssaoNoise = Random::GenerateSSAONoise();
+        auto ssaoNoise = Random::GenerateNoise();
         glBindTexture(GL_TEXTURE_2D, noiseTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 8, 8, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -368,12 +393,18 @@ public:
     {
 
         auto &[lights, cam, scene, model, window] = renderParameters;
+        shaderUI.render();
         auto ssaoKernel = Random::GenerateSSAOKernel();
         generateNoiseTexture();
         glViewport(0, 0, vp_width, vp_height);
         glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
         shaders.use();
+
+        shaders.setInt("kernelSize", shaderUI.kernelSize);
+        shaders.setFloat("radius", shaderUI.radius);
+        shaders.setFloat("intensity", shaderUI.intensity);
+        shaders.setFloat("bias", shaderUI.bias);
 
         for (unsigned int i = 0; i < 64; ++i)
         {
@@ -384,8 +415,10 @@ public:
         shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
         shaders.setTextureAuto(gViewPosition, GL_TEXTURE_2D, 0, "gViewPosition");
         shaders.setTextureAuto(noiseTexture, GL_TEXTURE_2D, 0, "texNoise");
+
         shaders.setUniform3fv("eye_pos", cam.getPosition());
         shaders.setFloat("far_plane", cam.far);
+
         cam.setPerspectiveMatrix(shaders, vp_width, vp_height);
         cam.setViewMatrix(shaders);
 
@@ -478,7 +511,7 @@ private:
         auto [gPosition, gNormal, gAlbedoSpec, gViewPosition] = gBufferPass.getTextures();
 
         // SSAO Noise Texture
-        auto ssaoNoise = Random::GenerateSSAONoise();
+        auto ssaoNoise = Random::GenerateNoise();
         glBindTexture(GL_TEXTURE_2D, noiseTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 8, 8, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

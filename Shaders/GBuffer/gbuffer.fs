@@ -2,10 +2,12 @@
 layout (location = 0) out vec3 gPosition;
 layout (location = 1) out vec3 gNormal;
 layout (location = 2) out vec4 gAlbedoSpec;
+layout (location = 3) out vec3 gViewPosition;
 
 in vec2 TexCoord;
 in vec3 FragPos;
 in vec3 Normal;
+in vec3 ViewFragPos;
 
 uniform int enable_tex = 0;
 uniform sampler2D texture_diff;  //diff纹理单元句柄
@@ -23,6 +25,7 @@ void main() {
     gAlbedoSpec.rgb = (enable_tex==1)? vec3(texture(texture_diff, TexCoord).rgb) : vec3(1.f);
     // store specular intensity in gAlbedoSpec's alpha component
     gAlbedoSpec.a = (enable_tex==1)?texture(texture_spec, TexCoord).r: 1.f;
+    gViewPosition = ViewFragPos;
 
     // FragColor = vec4(gPosition, 1.0f); // For debugging purposes, output gPosition
     // FragColor = vec4(gNormal, 1.0f); // For debugging purposes, output gNormal

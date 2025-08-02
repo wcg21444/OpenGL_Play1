@@ -6,18 +6,18 @@ namespace Random
 {
     std::uniform_real_distribution<float> randomFloats(0.0, 1.0); // random floats between [0.0, 1.0]
     std::default_random_engine generator;
-    inline std::vector<glm::vec3> GenerateSSAONoise()
+    inline std::vector<glm::vec3> GenerateNoise()
     {
-        std::vector<glm::vec3> ssaoNoise;
+        std::vector<glm::vec3> Noises;
         for (unsigned int i = 0; i < 64; i++)
         {
             glm::vec3 noise(
                 randomFloats(generator) * 2.0 - 1.0,
                 randomFloats(generator) * 2.0 - 1.0,
                 0.0f);
-            ssaoNoise.push_back(noise);
+            Noises.push_back(noise);
         }
-        return ssaoNoise;
+        return Noises;
     }
     inline std::vector<glm::vec3> GenerateSSAOKernel()
     {
@@ -34,6 +34,22 @@ namespace Random
             ssaoKernel.push_back(sample);
         }
         return ssaoKernel;
+    }
+    inline std::vector<glm::vec3> GenerateShadowKernel()
+    {
+        std::vector<glm::vec3> shadowKernel;
+        for (unsigned int i = 0; i < 16; ++i)
+        {
+            glm::vec3 sample(
+                randomFloats(generator) * 2.0 - 1.0,
+                randomFloats(generator) * 2.0 - 1.0,
+                0.f); // 平面分布
+            float scale = (float)i / 16.0;
+            scale = std::lerp(0.1f, 1.0f, scale * scale);
+            sample *= scale;
+            shadowKernel.push_back(sample);
+        }
+        return shadowKernel;
     }
 
 }
