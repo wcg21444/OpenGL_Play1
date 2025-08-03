@@ -94,7 +94,7 @@ public:
             depthShader.setFloat("far_plane", far);
             depthShader.setUniform3fv("lightPos", light.position);
 
-            DrawScene(scene, model, depthShader);
+            Renderer::DrawScene(scene, model, depthShader);
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
@@ -158,7 +158,7 @@ public:
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        DrawScene(scene, model, depthShader);
+        Renderer::DrawScene(scene, model, depthShader);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 };
@@ -246,7 +246,7 @@ public:
         shaders.setFloat("shadow_far", shadow_far);
         shaders.setFloat("fov", cam.fov);
 
-        DrawQuad();
+        Renderer::DrawQuad();
     }
 };
 
@@ -333,7 +333,7 @@ private:
         cam.setViewMatrix(ps_shaders);
         cam.setPerspectiveMatrix(ps_shaders, width, height);
 
-        DrawScene(scene, model, ps_shaders);
+        Renderer::DrawScene(scene, model, ps_shaders);
     }
     void renderParallelShadow(RenderParameters &renderParameters)
     {
@@ -369,6 +369,6 @@ private:
         cam.setViewMatrix(pls_shaders);
         cam.setPerspectiveMatrix(pls_shaders, width, height);
 
-        DrawScene(scene, model, pls_shaders);
+        Renderer::DrawScene(scene, model, pls_shaders);
     }
 };

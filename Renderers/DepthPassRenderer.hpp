@@ -39,6 +39,6 @@ public:
         cam.setViewMatrix(shaders);
         cam.setPerspectiveMatrix(shaders, width, height);
 
-        DrawScene(scene, model, shaders);
+        Renderer::DrawScene(scene, model, shaders);
     }
 };

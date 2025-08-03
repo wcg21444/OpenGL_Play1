@@ -1,11 +1,13 @@
+#pragma once
+
 #include <random>
 #include <glm/glm.hpp>
 #include <vector>
 
 namespace Random
 {
-    std::uniform_real_distribution<float> randomFloats(0.0, 1.0); // random floats between [0.0, 1.0]
-    std::default_random_engine generator;
+    inline std::uniform_real_distribution<float> randomFloats(0.0, 1.0); // random floats between [0.0, 1.0]
+    inline std::default_random_engine generator;
     inline std::vector<glm::vec3> GenerateNoise()
     {
         std::vector<glm::vec3> Noises;

@@ -1,5 +1,5 @@
 #pragma once
-#include "Shader.hpp"
+#include "../Shader.hpp"
 #include "Renderer.hpp"
 
 /* 1个Pass对应一个FBO , 一个Shader
@@ -60,6 +60,6 @@ public:
         // 设置着色器参数
         shaders.use();
         shaders.setTextureAuto(finalTextureID, GL_TEXTURE_2D, 0, "tex_sampler");
-        DrawQuad();
+        Renderer::DrawQuad();
     }
 };

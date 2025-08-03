@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "utils/DebugOutput.hpp"
+#include "../utils/TextureLoader.hpp"
 #include "Model.hpp"
 
 class ModelLoader

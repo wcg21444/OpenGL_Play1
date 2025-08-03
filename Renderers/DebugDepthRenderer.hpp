@@ -98,7 +98,7 @@ public:
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        DrawScene(scene, model, depthShader);
+        Renderer::DrawScene(scene, model, depthShader);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);

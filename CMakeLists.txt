@@ -17,18 +17,23 @@ file(GLOB_RECURSE IMGUI_SRC
     imgui/*.cpp
 )
 
-# set(RENDERERS_SRC
-#     Renderers/GBufferRenderer.cpp
-# )
 
 include_directories(${IMGUI})
 include_directories("Objects")
+include_directories("Renderers")
+include_directories("utils")
 include_directories(${INCLUDES})
 
 file(GLOB OBJECTS_SRC
     Objects/*.cpp
 )
-add_executable(${PROJECT_NAME} "main.cpp" ${IMGUI_SRC} ${RENDERERS_SRC} ${OBJECTS_SRC})
+file(GLOB RENDERERS_SRC
+    Renderers/*.cpp
+)
+file(GLOB UTILS_SRC
+    utils/*.cpp
+)
+add_executable(${PROJECT_NAME} "main.cpp" ${IMGUI_SRC} ${RENDERERS_SRC} ${OBJECTS_SRC} ${UTILS_SRC})
 
 find_package(glfw3 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw)

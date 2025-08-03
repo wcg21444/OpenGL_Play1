@@ -229,9 +229,6 @@ public:
         GLint location = getUniformLocationSafe(name);
         glUniform1i(location, i);
     }
-
-    // TODO Shaders 接管 TextureLocation分配
-    // 分配一个局部唯一的数.联想到数据库的ID. 考虑用一个自增的数作为location.
     void setTextureAuto(GLuint textureID, GLenum textureTarget, int shaderTextureLocation, const std::string &samplerUniformName)
     {
         static bool warnned = false;
