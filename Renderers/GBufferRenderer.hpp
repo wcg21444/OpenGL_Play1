@@ -1,10 +1,9 @@
 #pragma once
 #include <tuple>
 
-#include "RendererManager.hpp"
 #include "Renderer.hpp"
 #include "ShadowRenderer.hpp"
-#include "Random.hpp"
+#include "utils/Random.hpp"
 #include "Pass.hpp"
 #include "ShaderGUI.hpp"
 

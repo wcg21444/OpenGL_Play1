@@ -11,7 +11,7 @@
 #include "Objects/Object.hpp"
 #include "LightSource.hpp"
 #include "Renderers/RendererManager.hpp"
-#include "DebugOutput.hpp"
+#include "utils/DebugOutput.hpp"
 #include "ModelLoader.hpp"
 #include "FileBrowser.hpp"
 

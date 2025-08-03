@@ -12,15 +12,23 @@ imgui/backends
 )
 set (INCLUDES includes)
 
+
 file(GLOB_RECURSE IMGUI_SRC 
-imgui/*.cpp
+    imgui/*.cpp
 )
+
+# set(RENDERERS_SRC
+#     Renderers/GBufferRenderer.cpp
+# )
 
 include_directories(${IMGUI})
 include_directories("Objects")
 include_directories(${INCLUDES})
 
-add_executable(${PROJECT_NAME} "main.cpp" "Shader.hpp" "Camera.hpp" ${IMGUI_SRC})
+file(GLOB OBJECTS_SRC
+    Objects/*.cpp
+)
+add_executable(${PROJECT_NAME} "main.cpp" ${IMGUI_SRC} ${RENDERERS_SRC} ${OBJECTS_SRC})
 
 find_package(glfw3 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw)

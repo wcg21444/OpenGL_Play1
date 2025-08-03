@@ -23,7 +23,7 @@ uniform samplerCube shadowCubeMaps[MAX_LIGHTS];
 
 const vec2 noiseScale = vec2(1600.0/8.0, 900.0/8.0);
 uniform sampler2D shadowNoiseTex;
-uniform vec3 shadowSamples[16];
+uniform vec3 shadowSamples[32];
 uniform float blurRadius = 0.1f;
 uniform vec3 light_pos[MAX_LIGHTS];
 uniform vec3 light_intensity[MAX_LIGHTS];
@@ -67,9 +67,26 @@ float ShadowCalculation(vec3 fragPos,vec3 fragNorm,vec3 light_pos,samplerCube _d
     float omega = -dot(fragNorm,dir)/curr_depth;
     float bias = 0.05f/tan(omega);//idea: bias increase based on center distance 
     //shadow test
+
+    //计算遮挡物与接受物的平均距离
+    float d=0.f;
+    int occlusion_times = 0;
+    for(int k =0;k<32;++k) {
+        vec3 samplePos = TBN*shadowSamples[k]*4.f; 
+        vec3 dir_sample = samplePos+fragPos-light_pos;
+        float curr_depth_sample = length(dir_sample);
+        float cloest_depth_sample = texture(_depthMap,dir_sample).r;
+
+        cloest_depth_sample*= shadow_far;
+        if(curr_depth_sample-cloest_depth_sample-bias>0.01f) {
+            occlusion_times++;
+            d+=curr_depth_sample-cloest_depth_sample;
+        }
+    }
+    d= d/occlusion_times;
     float factor = 0.f;
-    for(int j =0;j<16;++j) {
-        vec3 samplePos = TBN*shadowSamples[j]*blurRadius*pow(curr_depth/10,3); 
+    for(int j =0;j<32;++j) {
+        vec3 samplePos = TBN*shadowSamples[j]*blurRadius*pow(curr_depth/15,2)*d; 
         vec3 dir_sample = samplePos+fragPos-light_pos;
         float curr_depth_sample = length(dir_sample);
         float cloest_depth_sample = texture(_depthMap,dir_sample).r;
@@ -77,7 +94,7 @@ float ShadowCalculation(vec3 fragPos,vec3 fragNorm,vec3 light_pos,samplerCube _d
         factor += (curr_depth_sample-cloest_depth_sample-bias>0.f ? 1.0:0.0);
         // factor = curr_depth_sample;
     }
-    return (factor)/16;//return shadow
+    return (factor)/32;//return shadow
 }
 
 vec3 SkyBoxSample(vec2 uv,samplerCube skybox) {

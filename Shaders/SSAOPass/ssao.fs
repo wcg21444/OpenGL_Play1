@@ -5,6 +5,7 @@ out vec4 result;
 in vec2 TexCoord;
 
 uniform sampler2D gPosition;//World Space
+uniform sampler2D gViewPosition;//View Space
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoSpec;
 
@@ -28,11 +29,14 @@ vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));//WorldS
 vec3 bitangent = cross(normal, tangent);
 mat3 TBN       = mat3(tangent, bitangent, normal);  
 
-int kernelSize =64;
-float radius = 0.5f;
+uniform int kernelSize =64;
+uniform float radius = 2.f;
+uniform float intensity = 1.f;
+ //bias 为什么要给 surface depth 加? 有什么作用?
+uniform float bias = 1.f; 
 
 float WorldSpaceDepth(vec3 pos) {
-    return length(pos-eye_pos)/far_plane*100;
+    return length(pos-eye_pos)/far_plane/pow(intensity,2);
 }
 
 // float CalculateOcclusion() {
@@ -66,7 +70,6 @@ float CalculateOcclusion() {
         return 1.0f;
     }
     float occlusion = 0.0;
-    float bias = -0.1f; //bias 为什么要给 surface depth 加? 有什么作用?
     for(int i = 0; i < kernelSize; ++i) {
         vec3 fragPosView = (view*texture(gPosition,TexCoord)).xyz;
         vec3 samplePos = TBN * samples[i]; 
@@ -107,7 +110,9 @@ void main() {
 
     // vec3 sampleSurface = (view*texture(gPosition,screenUV)).xyz;
     // float sampleSurfaceDepth =sampleSurface.z;
-    // result = vec4(sampleSurfaceDepth-samplePosView.z);
+    // vec3 eye_posView = (view*vec4(eye_pos,1.0f)).xyz;
+    // // result = vec4((view*texture(gPosition,TexCoord)).z);
+    // result = vec4((view*texture(gPosition,TexCoord)).z);
 
     result = vec4(occlusion);
 }

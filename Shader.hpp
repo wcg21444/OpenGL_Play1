@@ -11,8 +11,9 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <iostream>
 
-#include "DebugOutput.hpp"
+#include "utils/DebugOutput.hpp"
 
 static GLint s_maxTextureUnits = -1;
 
@@ -233,6 +234,7 @@ public:
     // 分配一个局部唯一的数.联想到数据库的ID. 考虑用一个自增的数作为location.
     void setTextureAuto(GLuint textureID, GLenum textureTarget, int shaderTextureLocation, const std::string &samplerUniformName)
     {
+        static bool warnned = false;
         if (textureLocationMap.find(samplerUniformName) == textureLocationMap.end())
         {
             textureLocationMap.insert({samplerUniformName, location_ID});
@@ -248,8 +250,9 @@ public:
 
         // 获取 uniform 位置并设置
         GLint samplerLoc = getUniformLocationSafe(samplerUniformName);
-        if (samplerLoc == -1)
+        if (samplerLoc == -1 && !warnned)
         {
+            warnned = true;
             std::cerr << "Warning: Uniform '" << samplerUniformName << "' not found in shader program " << progrm_ID << std::endl;
         }
         else

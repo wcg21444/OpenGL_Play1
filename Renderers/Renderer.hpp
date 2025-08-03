@@ -36,31 +36,13 @@ void ShowGLMMatrixAsTable(const glm::mat4 &matrix, const char *name = "Matrix")
 // 绘制场景
 void DrawScene(std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, Shader &shaders)
 {
-    glm::mat4 sphere_model = glm::translate(model, glm::vec3(6.f, 0.f, 0.f));
-    glm::mat4 plane_model = glm::translate(model, glm::vec3(0.f, -1.f, 0.f));
-    glm::mat4 backPack_model = glm::translate(model, glm::vec3(0.f, 2.f, 4.f));
-    glm::mat4 bass_model = glm::translate(model, glm::vec3(0.f, 4.f, 4.f));
-    bass_model = glm::scale(bass_model, glm::vec3(4.f, 4.f, 4.f));
+
     for (auto &&object : scene)
     {
         try
         {
-            if (object->name == "Sphere")
-                object->draw(sphere_model, shaders);
-            else if (object->name == "Plane")
-                object->draw(plane_model, shaders);
-            else if (object->name == "Backpack")
-            {
-                object->draw(backPack_model, shaders);
-            }
-            else if (object->name == "Bass")
-            {
-                object->draw(bass_model, shaders);
-            }
-            else if (object->name == "Grid")
-                continue;
-            else
-                object->draw(model, shaders);
+            glm::mat4 obj_model = model * object->modelMatrix;
+            object->draw(obj_model, shaders);
         }
         catch (const std::exception &e)
         {

@@ -11,7 +11,7 @@
 #include <atomic>
 #include <vector>
 
-#include "DebugOutput.hpp"
+#include "utils/DebugOutput.hpp"
 #include "Model.hpp"
 
 class ModelLoader

@@ -11,7 +11,7 @@
 #include "Objects/Plane.hpp"
 #include "LightSource.hpp"
 #include "Renderers/RendererManager.hpp"
-#include "DebugOutput.hpp"
+#include "utils/DebugOutput.hpp"
 #include "ModelLoader.hpp"
 #include "GUI.hpp"
 
@@ -83,21 +83,23 @@ int main()
     // ModelLoader::loadFile("Resource/backpack.obj");
 
     Lights lights;
+    lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
+
     // lights.emplace_back(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
     // define quad light: quad: (0.0f,0.0f)  (4.0f,4.0f)
-    glm::vec2 lb(0.0f, 0.0f);
-    glm::vec2 rt(1.0f, 2.0f);
-    int i_samples = 3;
-    int j_samples = 3;
-    float i_step = (rt.x - lb.x) / i_samples;
-    float j_step = (rt.y - lb.y) / j_samples;
-    for (size_t i = 0; i < i_samples; ++i)
-    {
-        for (size_t j = 0; j < j_samples; ++j)
-        {
-            lights.emplace_back(glm::vec3(20.f), glm::vec3(10.f + i * i_step, 2.f, 20.f + j * j_step));
-        }
-    }
+    // glm::vec2 lb(0.0f, 0.0f);
+    // glm::vec2 rt(1.0f, 2.0f);
+    // int i_samples = 3;
+    // int j_samples = 3;
+    // float i_step = (rt.x - lb.x) / i_samples;
+    // float j_step = (rt.y - lb.y) / j_samples;
+    // for (size_t i = 0; i < i_samples; ++i)
+    // {
+    //     for (size_t j = 0; j < j_samples; ++j)
+    //     {
+    //         lights.emplace_back(glm::vec3(20.f), glm::vec3(10.f + i * i_step, 2.f, 20.f + j * j_step));
+    //     }
+    // }
     // lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
     // lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(-16.f, 10.f, 24.f));
     // lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(2.f, 10.f, 14.f));

@@ -38,13 +38,13 @@ namespace Random
     inline std::vector<glm::vec3> GenerateShadowKernel()
     {
         std::vector<glm::vec3> shadowKernel;
-        for (unsigned int i = 0; i < 16; ++i)
+        for (unsigned int i = 0; i < 32; ++i)
         {
             glm::vec3 sample(
                 randomFloats(generator) * 2.0 - 1.0,
                 randomFloats(generator) * 2.0 - 1.0,
                 0.f); // 平面分布
-            float scale = (float)i / 16.0;
+            float scale = (float)i / 32.0;
             scale = std::lerp(0.1f, 1.0f, scale * scale);
             sample *= scale;
             shadowKernel.push_back(sample);

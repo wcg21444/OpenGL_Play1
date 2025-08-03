@@ -1,5 +1,4 @@
 #pragma once
-#include "RendererManager.hpp"
 #include "Renderer.hpp"
 class DepthPassRenderer : public Renderer
 {

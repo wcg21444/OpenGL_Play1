@@ -1,10 +1,10 @@
 #pragma once
-#include "Renderers/DebugDepthRenderer.hpp"
 #include "Renderers/ShadowRenderer.hpp"
 #include "Renderers/SimpleTextureRenderer.hpp"
 #include "Renderers/DepthPassRenderer.hpp"
 #include "Renderers/GBufferRenderer.hpp"
 #include "Renderer.hpp"
+#include "Renderers/DebugDepthRenderer.hpp"
 
 class RenderManager
 {

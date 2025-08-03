@@ -1,20 +1,16 @@
 #pragma once
-#include "Shader.hpp"
+#include "../Shader.hpp"
 #include <string>
 
 class Object
 {
-private:
-    /* data */
 public:
     std::string name;
-
-public:
-    Object()
-    {
-    }
+    glm::mat4 modelMatrix = glm::identity<glm::mat4>();
+    Object();
     virtual void draw(glm::mat4 modelMatrix, Shader &shaders) = 0;
-    virtual ~Object() {}
-    void setName(const std::string &_name) { name = _name; }
+    virtual ~Object();
+    void setName(const std::string &_name);
+    void setModelTransform(glm::mat4 &_transform);
 };
 using Scene = std::vector<std::unique_ptr<Object>>;
