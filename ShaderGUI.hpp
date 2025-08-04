@@ -29,6 +29,7 @@ class LightShaderUI
 public:
     glm::vec3 ambientLight{0.4f, 0.4f, 0.4f};
     float skyBoxScale = 3.5f;
+    int samplesNumber = 32;
     void render()
     {
         ImGui::Begin("SSAOShaders");
@@ -37,6 +38,7 @@ public:
             ImGui::DragFloat("AmbientLight R", &ambientLight.x, 0.01f);
             ImGui::DragFloat("AmbientLight G", &ambientLight.y, 0.01f);
             ImGui::DragFloat("AmbientLight B", &ambientLight.z, 0.01f);
+            ImGui::SliderInt("Samples", &samplesNumber, 1, 128);
         }
         ImGui::End();
     }

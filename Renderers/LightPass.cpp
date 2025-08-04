@@ -48,7 +48,7 @@ void LightPass::render(RenderParameters &renderParameters,
 {
 
     auto &[lights, cam, scene, model, window] = renderParameters;
-    auto shadowKernel = Random::GenerateShadowKernel();
+    auto shadowKernel = Random::GenerateShadowKernel(128);
     generateShadowNoiseTexture();
     shaderUI.render();
     glViewport(0, 0, vp_width, vp_height);
@@ -81,8 +81,6 @@ void LightPass::render(RenderParameters &renderParameters,
         }
     }
 
-    // sampler location是否会被覆盖?
-    // 光照计算在 纹理计算之后,不用担心光照被纹理覆盖
     shaders.setUniform3fv("eye_pos", cam.getPosition());
     shaders.setUniform3fv("eye_front", cam.getFront());
     shaders.setUniform3fv("eye_up", cam.getUp());
@@ -92,6 +90,7 @@ void LightPass::render(RenderParameters &renderParameters,
     {
         shaders.setUniform3fv(std::format("shadowSamples[{}]", i), shadowKernel[i]);
     }
+    shaders.setInt("n_samples", shaderUI.samplesNumber);
     shaders.setFloat("far_plane", cam.far);
     shaders.setFloat("near_plane", cam.near);
     shaders.setFloat("shadow_far", shadow_far);

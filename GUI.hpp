@@ -22,7 +22,7 @@
 namespace GUI
 {
     // 状态管理变量
-    static bool modelLoadView = false; // 控制显示状态
+    inline static bool modelLoadView = false; // 控制显示状态
     int selectedIndex = -1;
 
     void RendererShaderManager(RenderManager &renderManager)
@@ -191,6 +191,9 @@ namespace GUI
             ImGui::End();
         }
     }
+
+#include <algorithm>
+
     void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, LightSource &light, glm::mat4 &model)
     {
         static float sidebar_width = 300.0f;
@@ -252,6 +255,7 @@ namespace GUI
             DebugOutput::Draw();
         }
 
+        ImGui::Text("FPS: %.2f", ImGui::GetIO().Framerate);
         ImGui::End();
         // 绘制可拖动的分隔条
         ImGui::SetNextWindowPos(ImVec2(side_bar_x, side_bar_y));

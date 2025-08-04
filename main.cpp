@@ -100,19 +100,16 @@ int main()
     //         lights.emplace_back(glm::vec3(20.f), glm::vec3(10.f + i * i_step, 2.f, 20.f + j * j_step));
     //     }
     // }
-    // lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
-    // lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(-16.f, 10.f, 24.f));
-    // lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(2.f, 10.f, 14.f));
-    // lights.emplace_back(glm::vec3(30.f, 20.f, 40.f), glm::vec3(16.f, 4.f, 8.f));
+    lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
+    lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(-16.f, 10.f, 24.f));
+    lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(2.f, 10.f, 14.f));
+    lights.emplace_back(glm::vec3(30.f, 20.f, 40.f), glm::vec3(16.f, 4.f, 8.f));
 
     // temporary light source variable
     LightSource &light = lights[0]; // Assuming the first light is the one we want to use for shadow
 
     RenderParameters renderParameters{lights, cam, scene, model, window};
-
     RenderManager renderManager;
-
-    Shader::initializeTextureLimits();
 
     //  main render loop
     while (!glfwWindowShouldClose(window))
@@ -145,6 +142,7 @@ int main()
         }
         ModelLoader::run(scene);
         // 渲染顺序
+
         renderManager.render(renderParameters);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
