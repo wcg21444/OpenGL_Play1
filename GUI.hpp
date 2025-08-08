@@ -4,12 +4,13 @@
 #include <array>
 #include <future>
 #include <thread>
+#include <algorithm>
 
 #include "Shader.hpp"
 #include "Camera.hpp"
 #include "InputHandler.hpp"
 #include "Objects/Object.hpp"
-#include "LightSource.hpp"
+#include "LightSource/LightSource.hpp"
 #include "Renderers/RendererManager.hpp"
 #include "utils/DebugOutput.hpp"
 #include "ModelLoader.hpp"
@@ -19,6 +20,7 @@
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
 
+extern ParallelLight parallelLight; // 临时, 测试用
 namespace GUI
 {
     // 状态管理变量
@@ -65,15 +67,30 @@ namespace GUI
     {
         static glm::vec3 lightIntensity = light_source.intensity;
         static glm::vec3 lightPosition = light_source.position;
-        ImGui::DragFloat("LightIntensitiy.X", &lightIntensity.x, 1.f);
-        ImGui::DragFloat("LightIntensitiy.Y", &lightIntensity.y, 1.f);
-        ImGui::DragFloat("LightIntensitiy.Z", &lightIntensity.z, 1.f);
+        ImGui::DragFloat("LightIntensitiy.R", &lightIntensity.x, 1.f);
+        ImGui::DragFloat("LightIntensitiy.G", &lightIntensity.y, 1.f);
+        ImGui::DragFloat("LightIntensitiy.B", &lightIntensity.z, 1.f);
 
         ImGui::DragFloat("LightPosition.X", &lightPosition.x, 0.1f);
         ImGui::DragFloat("LightPosition.Y", &lightPosition.y, 0.1f);
         ImGui::DragFloat("LightPosition.Z", &lightPosition.z, 0.1f);
         light_source.intensity = lightIntensity;
         light_source.position = lightPosition;
+    }
+    void LightHandle(ParallelLight &light_source)
+    {
+
+        static glm::vec3 lightIntensity = light_source.intensity;
+        static glm::vec3 lightPosition = light_source.position;
+        ImGui::DragFloat("DirLightIntensitiy.R", &lightIntensity.x, 0.01f);
+        ImGui::DragFloat("DirLightIntensitiy.G", &lightIntensity.y, 0.01f);
+        ImGui::DragFloat("DirLightIntensitiy.B", &lightIntensity.z, 0.01f);
+
+        ImGui::DragFloat("DirLightPosition.X", &lightPosition.x, 0.1f);
+        ImGui::DragFloat("DirLightPosition.Y", &lightPosition.y, 0.1f);
+        ImGui::DragFloat("DirLightPosition.Z", &lightPosition.z, 0.1f);
+        light_source.intensity = lightIntensity;
+        light_source.updatePosition(lightPosition);
     }
 
     glm::mat4 MatrixInputWithImGui(const char *label, const glm::mat4 &initial)
@@ -142,7 +159,7 @@ namespace GUI
         if (current_mode != prev_mode)
         {
             prev_mode = current_mode;
-            renderManager.switchMode(static_cast<RenderManager::Mode>(current_mode));
+            renderManager.switchMode(static_cast<RenderManager::Mode>(current_mode)); // current_mode == 状态触发器 static_cast<RenderManager::Mode>(current_mode) 是一种隐含的触发器->状态映射
         }
     }
 
@@ -192,8 +209,6 @@ namespace GUI
         }
     }
 
-#include <algorithm>
-
     void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, LightSource &light, glm::mat4 &model)
     {
         static float sidebar_width = 300.0f;
@@ -222,6 +237,7 @@ namespace GUI
         if (ImGui::CollapsingHeader("Light Settings", ImGuiTreeNodeFlags_DefaultOpen))
         {
             GUI::LightHandle(light);
+            GUI::LightHandle(parallelLight);
         }
 
         // 2. 模型矩阵控制
@@ -292,5 +308,4 @@ namespace GUI
             is_resizing = false;
         }
     }
-
 }

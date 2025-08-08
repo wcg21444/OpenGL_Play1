@@ -3,6 +3,7 @@
 
 #include "Renderer.hpp"
 #include "ShadowRenderer.hpp"
+#include "DirShadowPass.hpp"
 #include "../utils/Random.hpp"
 #include "Pass.hpp"
 #include "../ShaderGUI.hpp"
@@ -11,6 +12,9 @@
 #include "SSAOPass.hpp"
 
 #include "../utils/TextureLoader.hpp"
+
+extern ParallelLight parallelLight; // 临时, 测试用
+
 class GBufferRenderer : public Renderer
 {
 private:
@@ -34,6 +38,7 @@ private:
     const int MAX_LIGHTS = 10;
 
     PointShadowPass pointShadowPass;
+    DirShadowPass dirShadowPass;
     GBufferPass gBufferPass;
     LightPass lightPass;
     ScreenPass screenPass;
@@ -44,13 +49,15 @@ public:
         : gBufferPass(GBufferPass(width, height, "Shaders/GBuffer/gbuffer.vs", "Shaders/GBuffer/gbuffer.fs")),
           lightPass(LightPass(width, height, "Shaders/GBuffer/light.vs", "Shaders/GBuffer/light.fs")),
           screenPass(ScreenPass(width, height, "Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs")),
-          ssaoPass(SSAOPass(width, height, "Shaders/SSAOPass/ssao.vs", "Shaders/SSAOPass/ssao.fs"))
+          ssaoPass(SSAOPass(width, height, "Shaders/SSAOPass/ssao.vs", "Shaders/SSAOPass/ssao.fs")),
+          dirShadowPass(DirShadowPass("Shaders/DirShadow/dirShadow.vs", "Shaders/DirShadow/dirShadow.fs"))
     {
     }
     void reloadCurrentShaders()
     {
         quadShader = Shader("Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs");
         pointShadowPass.reloadCurrentShader();
+        dirShadowPass.reloadCurrentShaders();
         gBufferPass.reloadCurrentShaders();
         lightPass.reloadCurrentShaders();
         screenPass.reloadCurrentShaders();
@@ -122,20 +129,28 @@ private:
     {
         auto &[lights, cam, scene, model, window] = renderParameters;
 
-        // 渲染阴影贴图
+        /****************************阴影贴图渲染*********************************************/
         for (auto &light : lights)
         {
             pointShadowPass.renderToTexture(light.depthCubemap, light, scene, model);
         }
+
+        parallelLight.generateDepthMapResource();
+        dirShadowPass.renderToTexture(parallelLight.depthMap, parallelLight, scene, model, parallelLight.depthMapResolution, parallelLight.depthMapResolution);
+
+        /****************************GBuffer渲染*********************************************/
         gBufferPass.render(renderParameters);
         auto [gPosition, gNormal, gAlbedoSpec, gViewPosition] = gBufferPass.getTextures();
 
+        /****************************SSAO渲染*********************************************/
         ssaoPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, gViewPosition);
         auto ssaoPassTexture = ssaoPass.getTextures();
 
+        /****************************光照渲染*********************************************/
         lightPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, ssaoPassTexture, cubemapTexture, pointShadowPass.far);
         auto lightPassTexture = lightPass.getTextures();
 
+        /****************************Screen渲染*********************************************/
         screenPass.render(lightPassTexture);
     }
 };

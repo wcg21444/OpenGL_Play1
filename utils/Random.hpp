@@ -53,5 +53,20 @@ namespace Random
         }
         return shadowKernel;
     }
-
+    inline std::vector<glm::vec3> GenerateSemiSphereKernel(unsigned int n_samples)
+    {
+        std::vector<glm::vec3> kernel;
+        for (unsigned int i = 0; i < n_samples; ++i)
+        {
+            glm::vec3 sample(
+                randomFloats(generator) * 2.0 - 1.0,
+                randomFloats(generator) * 2.0 - 1.0,
+                randomFloats(generator)); // 半球均匀
+            float scale = (float)i / (float)n_samples;
+            scale = std::lerp(0.1f, 1.0f, scale * scale);
+            sample *= scale;
+            kernel.push_back(sample);
+        }
+        return kernel;
+    }
 }

@@ -1,58 +1,73 @@
 //TODO: use GBuffer as geometry buffer
 //TODO: render a light pass , summary all the light information, hence this shader will be used many times
-//input: gPosition; gNormal; gAlbedoSpec; , light_pos, light_intensity, eye_pos
+//input: gPosition; gNormal; gAlbedoSpec; lightPos, lightIntensity, eyePos
 //output: LightResult
 //the final result is the summary of all the light rendering results
 
 #version 330 core
 out vec4 LightResult;
-
 in vec2 TexCoord;
 
-uniform mat4 view;
-uniform samplerCube skyBox;
-
+/*****************GBuffer输入*****************************************************************/
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoSpec;
 uniform samplerCube depthMap; //debug
+
+/*****************SSAO输入******************************************************************/
 uniform sampler2D ssaoTex;
+
+/*****************点光源设置******************************************************************/
 const int MAX_LIGHTS = 10; // Maximum number of lights supported
 uniform int numLights; // actual number of lights used
 uniform samplerCube shadowCubeMaps[MAX_LIGHTS];
+uniform vec3 lightPos[MAX_LIGHTS];
+uniform vec3 lightIntensity[MAX_LIGHTS];
+uniform float pointLightFar;
 
+/*****************阴影采样设置******************************************************************/
 const vec2 noiseScale = vec2(1600.0/8.0, 900.0/8.0);
 uniform sampler2D shadowNoiseTex;
 uniform vec3 shadowSamples[128];
 uniform int n_samples;
 uniform float blurRadius = 0.1f;
-uniform vec3 light_pos[MAX_LIGHTS];
-uniform vec3 light_intensity[MAX_LIGHTS];
 
-vec3 randomVec = vec3(texture(shadowNoiseTex, TexCoord * noiseScale).xy*4,1.0f);  
+/*****************定向光源******************************************************************/
+uniform sampler2D dirDepthMap;
+uniform vec3 dirLightPos;
+uniform vec3 dirLightIntensity;
+uniform mat4 dirLightSpaceMatrix;
+/*****************天空盒******************************************************************/
+uniform vec3 skyboxSamples[16];
+uniform float skyboxScale;
+uniform samplerCube skybox;
+uniform mat4 view;//视图矩阵
+
+/*****************TBN******************************************************************/
+vec3 randomVec = vec3(texture(shadowNoiseTex, TexCoord * noiseScale).xy/2,1.0f);  
 vec3 normal    = texture(gNormal, TexCoord).rgb;
 vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));//WorldSpace 
 vec3 bitangent = cross(normal, tangent);
 mat3 TBN       = mat3(tangent, bitangent, normal);  
 
+/*****************视口大小******************************************************************/
 const int width = 1600;
 const int height = 900;
 
-uniform vec3 ambient_light;
+uniform vec3 ambientLight;
 
-uniform float shadow_far;
-uniform float near_plane;
-uniform float far_plane;
-uniform vec3 eye_pos;
-uniform vec3 eye_front;
-uniform vec3 eye_up;
+/*****************Camera设置******************************************************************/
+uniform float nearPlane;
+uniform float farPlane;
+uniform vec3 eyePos;
+uniform vec3 eyeFront;
+uniform vec3 eyeUp;
 uniform float fov;
-uniform float skybox_scale;
 
-// float ShadowCalculation(vec3 fragPos,vec3 fragNorm,vec3 light_pos,samplerCube _depthMap) {
-//     vec3 dir = fragPos-light_pos;
+// float computePointLightShadow(vec3 fragPos,vec3 fragNorm,vec3 lightPos,samplerCube _depthMap) {
+//     vec3 dir = fragPos-lightPos;
 //     float cloest_depth = texture(_depthMap,dir).r;
-//     cloest_depth*= shadow_far;
+//     cloest_depth*= pointLightFar;
 //     float curr_depth = length(dir);
 //     float omega = -dot(fragNorm,dir)/curr_depth;
 //     float bias = 0.05f/tan(omega);//idea: bias increase based on center distance 
@@ -61,8 +76,8 @@ uniform float skybox_scale;
 //     return curr_depth-cloest_depth-bias>0.f ? 1.0:0.0;//return shadow
 // }
 
-float ShadowCalculation(vec3 fragPos,vec3 fragNorm,vec3 light_pos,samplerCube _depthMap) {
-    vec3 dir = fragPos-light_pos;
+float computePointLightShadow(vec3 fragPos,vec3 fragNorm,vec3 lightPos,samplerCube _depthMap) {
+    vec3 dir = fragPos-lightPos;
 
     float curr_depth = length(dir);
     float omega = -dot(fragNorm,dir)/curr_depth;
@@ -73,12 +88,12 @@ float ShadowCalculation(vec3 fragPos,vec3 fragNorm,vec3 light_pos,samplerCube _d
     float d=0.f;
     int occlusion_times = 0;
     for(int k =0;k<n_samples;++k) {
-        vec3 samplePos = TBN*shadowSamples[k]*4.f; 
-        vec3 dir_sample = samplePos+fragPos-light_pos;
+        vec3 sampleOffset = TBN*shadowSamples[k]*4.f; 
+        vec3 dir_sample = sampleOffset+fragPos-lightPos;
         float curr_depth_sample = length(dir_sample);
         float cloest_depth_sample = texture(_depthMap,dir_sample).r;
 
-        cloest_depth_sample*= shadow_far;
+        cloest_depth_sample*= pointLightFar;
         if(curr_depth_sample-cloest_depth_sample-bias>0.01f) {
             occlusion_times++;
             d+=curr_depth_sample-cloest_depth_sample;
@@ -87,28 +102,79 @@ float ShadowCalculation(vec3 fragPos,vec3 fragNorm,vec3 light_pos,samplerCube _d
     d= d/occlusion_times;
     float factor = 0.f;
     for(int j =0;j<n_samples;++j) {
-        vec3 samplePos = TBN*shadowSamples[j]*blurRadius*pow(curr_depth/12,2)*d/n_samples*64; 
-        vec3 dir_sample = samplePos+fragPos-light_pos;
+        vec3 sampleOffset = TBN*shadowSamples[j]*blurRadius*pow(curr_depth/12,2)*d/n_samples*64; 
+        vec3 dir_sample = sampleOffset+fragPos-lightPos;
         float curr_depth_sample = length(dir_sample);
         float cloest_depth_sample = texture(_depthMap,dir_sample).r;
-        cloest_depth_sample*= shadow_far;
+        cloest_depth_sample*= pointLightFar;
         factor += (curr_depth_sample-cloest_depth_sample-bias>0.f ? 1.0:0.0);
         // factor = curr_depth_sample;
     }
     return (factor)/n_samples;//return shadow
 }
 
-vec3 SkyBoxSample(vec2 uv,samplerCube skybox) {
+vec3 sampleSkybox(vec2 uv,samplerCube _skybox) {
     // vec3 uv_centered = vec3(uv-vec2(0.5f,0.5f),0.f);
     vec3 dir = vec3(uv-vec2(0.5f,0.5f),0.f);
-    dir.y = dir.y/width*height*tan(radians(fov/2))*skybox_scale;
-    dir.x = dir.x*tan(radians(fov/2))*skybox_scale;
+    dir.y = dir.y/width*height*tan(radians(fov/2))*skyboxScale;
+    dir.x = dir.x*tan(radians(fov/2))*skyboxScale;
     dir.z = -1.0f;
     dir = normalize(inverse(mat3(view)) *dir);
 
-    // vec3 dir = normalize(eye_front+near_plane*uv_centered*2*tan(radians(fov)/2));
-    return vec3(texture(skybox,dir.xyz));
+    // vec3 dir = normalize(eyeFront+nearPlane*uv_centered*2*tan(radians(fov)/2));
+    return vec3(texture(_skybox,dir.xyz));
     // return dir;
+}
+
+vec3 computeSkyboxAmbient(samplerCube _skybox) {
+    vec3 ambient = vec3(0.f);
+
+    for(int i =0;i<16;++i) {
+        vec3 sample_dir = TBN*vec4(skyboxSamples[i],1.f).xyz;
+        ambient += texture(_skybox,normalize(sample_dir)).rgb;
+    }
+    return ambient/24;
+}
+
+float computeDirLightShadow(vec3 fragPos) {
+    // perform perspective divide
+    vec4 fragPosLightSpace = dirLightSpaceMatrix*vec4(fragPos,1.0f);
+
+    float factor = 0.f;
+    for(int j =0;j<n_samples;++j) {
+        vec3 sampleOffset = TBN*shadowSamples[j]*blurRadius/n_samples/4; 
+
+        vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
+        // transform to [0,1] range
+        projCoords = sampleOffset+projCoords * 0.5 + 0.5;
+        // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+        float closestDepth = texture(dirDepthMap, projCoords.xy).r; 
+        // get depth of current fragment from light's perspective
+        float currentDepth = projCoords.z;
+        float bias = 0.00005f;
+        // check whether current frag pos is in shadow
+        factor += currentDepth-closestDepth-bias>0?1.0f:0.0f;
+    }
+
+    return factor/n_samples;
+}
+vec3 parallelLightDiffuse(vec3 fragPos,vec3 n) {
+    vec3 l = normalize(dirLightPos);
+    float rr = dot(l,l);
+    float shadowFactor = 1-computeDirLightShadow(fragPos);
+    vec3 diffuse = 
+    shadowFactor*dirLightIntensity/rr*max(0.f,dot(n,l));
+    return diffuse;
+}
+vec3 parallelLightSpec(vec3 fragPos,vec3 n) {
+    vec3 l = normalize(dirLightPos);
+    float specularStrength = 0.01f;
+    vec3 viewDir = normalize(eyePos - fragPos);
+    vec3 reflectDir = reflect(-l, n);  
+    float shadowFactor = 1-computeDirLightShadow(fragPos);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 128);
+    vec3 specular = shadowFactor*specularStrength * spec * dirLightIntensity*160;  
+    return specular;
 }
 
 void main() {
@@ -121,13 +187,13 @@ void main() {
 
     // skybox
     if (length(FragPos)==0) {
-        LightResult = vec4(SkyBoxSample(TexCoord,skyBox),1.0f);
+        LightResult = vec4(sampleSkybox(TexCoord,skybox),1.0f);
         // LightResult = vec4(0.3f,0.3f,0.3f,1.0f);
         return;
     }
 
     for(int i = 0; i < numLights; ++i) {
-        vec3 l = light_pos[i] - FragPos;
+        vec3 l = lightPos[i] - FragPos;
         float rr = pow(dot(l,l),0.6)*10;
         l = normalize(l);   
         vec3 diffuse=vec3(0.f,0.f,0.f);
@@ -135,18 +201,22 @@ void main() {
         vec3 specular=vec3(0.f,0.f,0.f);
         float specularStrength = 0.005f;
 
-        float shadow_factor = 1-ShadowCalculation(FragPos,n,light_pos[i],shadowCubeMaps[i]); 
+        float shadow_factor = 1-computePointLightShadow(FragPos,n,lightPos[i],shadowCubeMaps[i]); 
+
         // float shadow_factor = 1.0f;
-        diffuse = light_intensity[i]/rr*max(0.f,dot(n,l))*shadow_factor;
+        diffuse = lightIntensity[i]/rr*max(0.f,dot(n,l))*shadow_factor;
+        diffuse += parallelLightDiffuse(FragPos,n);
         //Specular Caculation
-        vec3 viewDir = normalize(eye_pos - FragPos);
+        vec3 viewDir = normalize(eyePos - FragPos);
         vec3 reflectDir = reflect(-l, n);  
         spec = pow(max(dot(viewDir, reflectDir), 0.0), 64);
-        specular = specularStrength * spec * light_intensity[i]*shadow_factor;
+        specular = specularStrength * spec * lightIntensity[i]*shadow_factor;
+        specular+= parallelLightSpec(FragPos,n);
 
         LightResult +=  vec4(diffuse*texture(gAlbedoSpec,TexCoord).rgb,1.f);
         LightResult += vec4(specular,1.0f)*texture(gAlbedoSpec, TexCoord).a;
     }
-    LightResult += vec4(texture(ssaoTex,TexCoord).rgb*ambient_light*texture(gAlbedoSpec,TexCoord).rgb,1.f);  
+    LightResult += vec4(texture(ssaoTex,TexCoord).rgb*(ambientLight+computeSkyboxAmbient(skybox))*texture(gAlbedoSpec,TexCoord).rgb,1.f);  
+    // LightResult = vec4(texture(dirDepthMap,TexCoord));
     // LightResult = texture(ssaoTex,TexCoord);
 }

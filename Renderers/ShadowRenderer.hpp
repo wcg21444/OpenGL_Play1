@@ -91,7 +91,7 @@ public:
             {
                 depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
             }
-            depthShader.setFloat("far_plane", far);
+            depthShader.setFloat("farPlane", far);
             depthShader.setUniform3fv("lightPos", light.position);
 
             Renderer::DrawScene(scene, model, depthShader);
@@ -119,7 +119,7 @@ public:
 class ParrllelShadowPass
 {
     Shader depthShader = Shader("Shaders/shadow_depth.vs", "Shaders/shadow_depth.fs");
-    int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+    int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 
     unsigned int depthMapFBO;
 
@@ -153,6 +153,49 @@ public:
 
         depthShader.use();
         depthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        Renderer::DrawScene(scene, model, depthShader);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    unsigned int generateDepthMap()
+    {
+        unsigned int _depthMap;
+        glGenTextures(1, &_depthMap);
+        glBindTexture(GL_TEXTURE_2D, _depthMap);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        return _depthMap;
+    }
+    void attachDepthMap(unsigned int _depthMap, unsigned int &_depthMapFBO)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, _depthMap, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+    void renderToTexture(unsigned int &_depthMap, ParallelLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
+    {
+        // initialize
+        if (_depthMap == 0)
+        {
+            _depthMap = generateDepthMap();
+        }
+        attachDepthMap(_depthMap, depthMapFBO);
+
+        glClearColor(0.f, 0.f, 0.f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        depthShader.use();
+        depthShader.setMat4("lightSpaceMatrix", light.lightSpaceMatrix);
 
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
@@ -204,7 +247,7 @@ public:
                 unsigned int gPosition,
                 unsigned int gNormal,
                 unsigned int gAlbedoSpec,
-                unsigned int ssaoTex, float shadow_far)
+                unsigned int ssaoTex, float pointLightFar)
     {
 
         auto &[lights, cam, scene, model, window] = renderParameters;
@@ -220,7 +263,7 @@ public:
         shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
         shaders.setTextureAuto(ssaoTex, GL_TEXTURE_2D, 0, "ssaoTex");
 
-        // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skyBox");
+        // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skybox");
 
         shaders.setInt("numLights", static_cast<int>(lights.size()));
         for (size_t i = 0; i < MAX_LIGHTS; ++i)
@@ -229,21 +272,21 @@ public:
         }
         for (size_t i = 0; i < lights.size(); ++i)
         {
-            shaders.setUniform3fv("light_pos[" + std::to_string(i) + "]", lights[i].position);
-            shaders.setUniform3fv("light_intensity[" + std::to_string(i) + "]", lights[i].intensity);
+            shaders.setUniform3fv("lightPos[" + std::to_string(i) + "]", lights[i].position);
+            shaders.setUniform3fv("lightIntensity[" + std::to_string(i) + "]", lights[i].intensity);
             if (lights[i].depthCubemap != 0)
             {
                 shaders.setTextureAuto(lights[i].depthCubemap, GL_TEXTURE_CUBE_MAP, i + 3, "shadowCubeMaps[" + std::to_string(i) + "]");
             }
         }
 
-        shaders.setUniform3fv("eye_pos", cam.getPosition());
-        shaders.setUniform3fv("eye_front", cam.getFront());
-        shaders.setUniform3fv("eye_up", cam.getUp());
+        shaders.setUniform3fv("eyePos", cam.getPosition());
+        shaders.setUniform3fv("eyeFront", cam.getFront());
+        shaders.setUniform3fv("eyeUp", cam.getUp());
 
-        shaders.setFloat("far_plane", cam.far);
-        shaders.setFloat("near_plane", cam.near);
-        shaders.setFloat("shadow_far", shadow_far);
+        shaders.setFloat("farPlane", cam.far);
+        shaders.setFloat("nearPlane", cam.near);
+        shaders.setFloat("pointLightFar", pointLightFar);
         shaders.setFloat("fov", cam.fov);
 
         Renderer::DrawQuad();
@@ -321,7 +364,7 @@ private:
         glViewport(0, 0, width, height);
 
         ps_shaders.use();
-        ps_shaders.setFloat("far_plane", pointShadowPass.far);
+        ps_shaders.setFloat("farPlane", pointShadowPass.far);
         ps_shaders.setTextureAuto(pointShadowPass.depthCubemap, GL_TEXTURE_CUBE_MAP, 0, "depthMap");
 
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
@@ -342,14 +385,19 @@ private:
         // temporary light source variable
         LightSource &light = lights[0]; // Assuming the first light is the one we want to use for shadow
 
-        static float near_plane = 1.f, far_plane = 700.f;
-        glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+        // 怎样设置正交投影farplane,正交比例,光源位置,使得阴影覆盖最优?
+        static float ortho_scale = 10.f;
+        ImGui::Begin("ParellLightMatrix");
+        {
+            ImGui::SliderFloat("OrthoScale", &ortho_scale, 1, 500.f);
+        }
+        ImGui::End();
+        static float nearPlane = 0.1f, farPlane = 1000.f;
+        glm::mat4 lightProjection = glm::ortho(-1.0f * ortho_scale, 1.0f * ortho_scale, -1.0f * ortho_scale, 1.0f * ortho_scale, nearPlane, farPlane); //
         glm::mat4 lightView = glm::lookAt(light.position,
                                           glm::vec3(0.0f, 0.0f, 0.0f),
                                           glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
-        ShowGLMMatrixAsTable(lightSpaceMatrix);
 
         parrllelShadowPass.render(light, scene, model, lightSpaceMatrix);
 

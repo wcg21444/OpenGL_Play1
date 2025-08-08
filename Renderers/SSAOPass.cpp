@@ -71,8 +71,8 @@ void SSAOPass::render(RenderParameters &renderParameters,
     shaders.setTextureAuto(gViewPosition, GL_TEXTURE_2D, 0, "gViewPosition");
     shaders.setTextureAuto(noiseTexture, GL_TEXTURE_2D, 0, "texNoise");
 
-    shaders.setUniform3fv("eye_pos", cam.getPosition());
-    shaders.setFloat("far_plane", cam.far);
+    shaders.setUniform3fv("eyePos", cam.getPosition());
+    shaders.setFloat("farPlane", cam.far);
 
     cam.setPerspectiveMatrix(shaders, vp_width, vp_height);
     cam.setViewMatrix(shaders);

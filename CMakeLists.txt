@@ -22,6 +22,7 @@ include_directories(${IMGUI})
 include_directories("Objects")
 include_directories("Renderers")
 include_directories("utils")
+include_directories("LightSource")
 include_directories(${INCLUDES})
 
 file(GLOB OBJECTS_SRC
@@ -33,7 +34,7 @@ file(GLOB RENDERERS_SRC
 file(GLOB UTILS_SRC
     utils/*.cpp
 )
-add_executable(${PROJECT_NAME} "main.cpp" ${IMGUI_SRC} ${RENDERERS_SRC} ${OBJECTS_SRC} ${UTILS_SRC})
+add_executable(${PROJECT_NAME} "main.cpp" "LightSource/LightSource.cpp" ${IMGUI_SRC} ${RENDERERS_SRC} ${OBJECTS_SRC} ${UTILS_SRC})
 
 find_package(glfw3 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw)

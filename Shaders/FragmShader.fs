@@ -12,18 +12,20 @@ uniform sampler2D texture_spec;  //spec纹理单元句柄
 uniform int enable_tex = 0;
 uniform sampler2D shdaowDepthMap;
 
-uniform vec3 ambient_light = {
+uniform vec3 ambientLight = {
     0.2f,0.2f,0.2f
 };
-uniform vec3 light_pos = {
+uniform vec3 lightPos = {
     1.f, 4.f, 10.f
 };
-uniform vec3 light_intensity = {
+uniform vec3 lightIntensity = {
     10.f, 50.f, 100.f
 };
-uniform vec3 eye_pos;
+uniform vec3 eyePos;
 
-float ShadowCalculation(vec4 fragPosLightSpace) {
+vec3 l = normalize(lightPos);
+
+float computePointLightShadow(vec4 fragPosLightSpace) {
     // perform perspective divide
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     // transform to [0,1] range
@@ -32,36 +34,40 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
     float closestDepth = texture(shdaowDepthMap, projCoords.xy).r; 
     // get depth of current fragment from light's perspective
     float currentDepth = projCoords.z;
-    float bias = 0.005;
+    float bias = 0.0005;
     // check whether current frag pos is in shadow
     float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;  
+    // float shadow = closestDepth*10;  
+    // float shadow = currentDepth*10;  
 
-    return shadow;
+    return 1-shadow;
 }
 
 void main() {
     //Diffuse Caculation
     vec3 n = normalize(Normal);
-    vec3 l = light_pos - FragPos;
+    // vec3 l = lightPos - FragPos;
     float rr = dot(l,l);
-    l = normalize(l);
+    // l = normalize(l);
+    // vec3 diffuse = 
+    // computePointLightShadow(FragPosLightSpace) == 0.0?
+    // lightIntensity/rr*max(0.f,dot(n,l)):vec3(0.f,0.f,0.f);
     vec3 diffuse = 
-    ShadowCalculation(FragPosLightSpace) == 0.0?
-    light_intensity/rr*max(0.f,dot(n,l)):vec3(0.f,0.f,0.f);
+    computePointLightShadow(FragPosLightSpace)*lightIntensity/rr*max(0.f,dot(n,l));
 
     //Specular Caculation
     float specularStrength = 0.01f;
-    vec3 viewDir = normalize(eye_pos - FragPos);
+    vec3 viewDir = normalize(eyePos - FragPos);
     vec3 reflectDir = reflect(-l, n);  
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 64);
-    vec3 specular = specularStrength * spec * light_intensity;  
+    vec3 specular = specularStrength * spec * lightIntensity*40;  
 
     if(enable_tex == 1) {
-        FragColor =  vec4(ambient_light+diffuse,1.f)*texture(texture_diff,TexCoord);
+        FragColor =  vec4(ambientLight+diffuse,1.f)*texture(texture_diff,TexCoord);
         FragColor += vec4(specular,1.0f)*texture(texture_spec,TexCoord)*1.f;
     }
     else {
-        FragColor = vec4(ambient_light+diffuse,1.f);
+        FragColor = vec4(ambientLight+diffuse,1.f);
         FragColor += vec4(specular,1.0f);
     }
 

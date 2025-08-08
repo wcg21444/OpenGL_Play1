@@ -13,8 +13,8 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform vec3 samples[64];
 
-uniform vec3 eye_pos;
-uniform float far_plane;
+uniform vec3 eyePos;
+uniform float farPlane;
 
 uniform sampler2D texNoise;
 const vec2 noiseScale = vec2(1600.0/8.0, 900.0/8.0);
@@ -36,7 +36,7 @@ uniform float intensity = 1.f;
 uniform float bias = 1.f; 
 
 float WorldSpaceDepth(vec3 pos) {
-    return length(pos-eye_pos)/far_plane/pow(intensity,2);
+    return length(pos-eyePos)/farPlane/pow(intensity,2);
 }
 
 // float CalculateOcclusion() {
@@ -110,7 +110,7 @@ void main() {
 
     // vec3 sampleSurface = (view*texture(gPosition,screenUV)).xyz;
     // float sampleSurfaceDepth =sampleSurface.z;
-    // vec3 eye_posView = (view*vec4(eye_pos,1.0f)).xyz;
+    // vec3 eyePosView = (view*vec4(eyePos,1.0f)).xyz;
     // // result = vec4((view*texture(gPosition,TexCoord)).z);
     // result = vec4((view*texture(gPosition,TexCoord)).z);
 

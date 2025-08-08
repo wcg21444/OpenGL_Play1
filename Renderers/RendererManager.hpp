@@ -14,12 +14,12 @@ class CubemapUnfoldRenderer;
 class RenderManager
 {
 private:
-    std::shared_ptr<DebugDepthRenderer> debugDepthRenderer;
-    std::shared_ptr<ShadowRenderer> shadowRenderer;
-    std::shared_ptr<SimpleTextureRenderer> simpleTextureRenderer;
-    std::shared_ptr<DepthPassRenderer> depthPassRenderer;
-    std::shared_ptr<GBufferRenderer> gbufferRenderer;
-    std::shared_ptr<CubemapUnfoldRenderer> cubemapUnfoldRenderer;
+    std::shared_ptr<DebugDepthRenderer> debugDepthRenderer = nullptr;
+    std::shared_ptr<ShadowRenderer> shadowRenderer = nullptr;
+    std::shared_ptr<SimpleTextureRenderer> simpleTextureRenderer = nullptr;
+    std::shared_ptr<DepthPassRenderer> depthPassRenderer = nullptr;
+    std::shared_ptr<GBufferRenderer> gbufferRenderer = nullptr;
+    std::shared_ptr<CubemapUnfoldRenderer> cubemapUnfoldRenderer = nullptr;
     std::shared_ptr<Renderer> currentRenderer = nullptr;
     void clearContext();
 

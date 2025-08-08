@@ -114,7 +114,7 @@ public:
         float camZ = static_cast<float>(cos(glfwGetTime()) * radius);
         view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         shaders.setMat4("view", view);
-        shaders.setUniform3fv("eye_pos", cameraPos);
+        shaders.setUniform3fv("eyePos", cameraPos);
     }
     void setPerspectiveMatrix(Shader &shaders, int width, int height)
     {

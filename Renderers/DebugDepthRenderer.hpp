@@ -85,8 +85,8 @@ public:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // 配置光源空间的投影 视图 矩阵
-        float near_plane = 0.1f, far_plane = 70.f;
-        glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+        float nearPlane = 0.1f, farPlane = 700.f;
+        glm::mat4 lightProjection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, nearPlane, farPlane);
         glm::mat4 lightView = glm::lookAt(light.position,
                                           glm::vec3(0.0f, 0.0f, 0.0f),
                                           glm::vec3(0.0f, 1.0f, 0.0f));
@@ -105,8 +105,8 @@ public:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         quadShader.use();
-        quadShader.setFloat("near_plane", near_plane);
-        quadShader.setFloat("far_plane", far_plane);
+        quadShader.setFloat("nearPlane", nearPlane);
+        quadShader.setFloat("farPlane", farPlane);
 
         quadShader.setTextureAuto(depthMap, GL_TEXTURE_2D, 0, "depthMap");
 

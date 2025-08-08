@@ -3,6 +3,8 @@
 #include "../Shader.hpp"
 #include "../utils/Random.hpp"
 
+extern ParallelLight parallelLight; // 临时, 测试用
+
 LightPass::LightPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path)
 {
@@ -43,12 +45,13 @@ void LightPass::render(RenderParameters &renderParameters,
                        unsigned int gNormal,
                        unsigned int gAlbedoSpec,
                        unsigned int ssaoTex,
-                       unsigned int skyBox,
-                       float shadow_far)
+                       unsigned int skybox,
+                       float pointLightFar)
 {
 
     auto &[lights, cam, scene, model, window] = renderParameters;
     auto shadowKernel = Random::GenerateShadowKernel(128);
+    static auto skyboxKernel = Random::GenerateSemiSphereKernel(16);
     generateShadowNoiseTexture();
     shaderUI.render();
     glViewport(0, 0, vp_width, vp_height);
@@ -56,47 +59,67 @@ void LightPass::render(RenderParameters &renderParameters,
 
     shaders.use();
 
-    // 绑定 GBuffer Texture 到Quad
+    /****************************************GBuffer输入**************************************************/
     shaders.setTextureAuto(gPosition, GL_TEXTURE_2D, 0, "gPosition");
     shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 0, "gNormal");
     shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
+
+    /****************************************SSAO输入**************************************************/
+
     shaders.setTextureAuto(ssaoTex, GL_TEXTURE_2D, 0, "ssaoTex");
+    /****************************************阴影噪声输入**************************************************/
     shaders.setTextureAuto(shadowNoiseTex, GL_TEXTURE_2D, 0, "shadowNoiseTex");
-    shaders.setTextureAuto(skyBox, GL_TEXTURE_CUBE_MAP, 0, "skyBox");
+    /****************************************天空盒输入**************************************************/
+    shaders.setTextureAuto(skybox, GL_TEXTURE_CUBE_MAP, 0, "skybox");
+    shaders.setFloat("skyboxScale", shaderUI.skyboxScale);
+    shaders.setInt("n_samples", shaderUI.samplesNumber);
 
-    // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skyBox");
+    /****************************************阴影贴图输入**************************************************/
+    shaders.setTextureAuto(parallelLight.depthMap, GL_TEXTURE_2D, 0, "dirDepthMap");
 
-    shaders.setInt("numLights", static_cast<int>(lights.size()));
     for (size_t i = 0; i < MAX_LIGHTS; ++i)
     {
         shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps[" + std::to_string(i) + "]"); // 给sampler数组赋空
     }
+    // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skybox");
+
+    /****************************************点光源输入**************************************************/
+    shaders.setInt("numLights", static_cast<int>(lights.size()));
     for (size_t i = 0; i < lights.size(); ++i)
     {
-        shaders.setUniform3fv("light_pos[" + std::to_string(i) + "]", lights[i].position);
-        shaders.setUniform3fv("light_intensity[" + std::to_string(i) + "]", lights[i].intensity);
+        shaders.setUniform3fv("lightPos[" + std::to_string(i) + "]", lights[i].position);
+        shaders.setUniform3fv("lightIntensity[" + std::to_string(i) + "]", lights[i].intensity);
         if (lights[i].depthCubemap != 0)
         {
             shaders.setTextureAuto(lights[i].depthCubemap, GL_TEXTURE_CUBE_MAP, i + 3, "shadowCubeMaps[" + std::to_string(i) + "]");
         }
     }
+    /****************************************方向光源设置**************************************************/
+    shaders.setUniform3fv("dirLightPos", parallelLight.position);
+    shaders.setUniform3fv("dirLightIntensity", parallelLight.intensity);
+    shaders.setMat4("dirLightSpaceMatrix", parallelLight.lightSpaceMatrix);
 
-    shaders.setUniform3fv("eye_pos", cam.getPosition());
-    shaders.setUniform3fv("eye_front", cam.getFront());
-    shaders.setUniform3fv("eye_up", cam.getUp());
+    /****************************************摄像机设置**************************************************/
+    shaders.setUniform3fv("eyePos", cam.getPosition());
+    shaders.setUniform3fv("eyeFront", cam.getFront());
+    shaders.setUniform3fv("eyeUp", cam.getUp());
+    shaders.setFloat("farPlane", cam.far);
+    shaders.setFloat("nearPlane", cam.near);
+    shaders.setFloat("pointLightFar", pointLightFar);
+    shaders.setFloat("fov", cam.fov);
     cam.setViewMatrix(shaders);
 
+    /****************************************采样器设置**************************************************/
     for (unsigned int i = 0; i < shadowKernel.size(); ++i)
     {
         shaders.setUniform3fv(std::format("shadowSamples[{}]", i), shadowKernel[i]);
     }
-    shaders.setInt("n_samples", shaderUI.samplesNumber);
-    shaders.setFloat("far_plane", cam.far);
-    shaders.setFloat("near_plane", cam.near);
-    shaders.setFloat("shadow_far", shadow_far);
-    shaders.setFloat("fov", cam.fov);
-    shaders.setFloat("skybox_scale", shaderUI.skyBoxScale);
-    shaders.setUniform3fv("ambient_light", shaderUI.ambientLight);
+    for (unsigned int i = 0; i < skyboxKernel.size(); ++i)
+    {
+        shaders.setUniform3fv(std::format("skyboxSamples[{}]", i), skyboxKernel[i]);
+    }
+    /****************************************环境光设置**************************************************/
+    shaders.setUniform3fv("ambientLight", shaderUI.ambientLight);
 
     Renderer::DrawQuad();
 }

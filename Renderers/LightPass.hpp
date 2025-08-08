@@ -21,6 +21,6 @@ public:
                 unsigned int gNormal,
                 unsigned int gAlbedoSpec,
                 unsigned int ssaoTex,
-                unsigned int skyBox,
-                float shadow_far);
+                unsigned int skybox,
+                float pointLightFar);
 };

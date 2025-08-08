@@ -5,7 +5,7 @@
 #include "../Shader.hpp"
 #include "../Camera.hpp"
 #include "../InputHandler.hpp"
-#include "../LightSource.hpp"
+#include "../LightSource/LightSource.hpp"
 
 #include "../Objects/Object.hpp"
 #include "../Objects/Grid.hpp"

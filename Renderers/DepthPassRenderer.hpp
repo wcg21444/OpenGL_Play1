@@ -27,7 +27,7 @@ public:
         glEnable(GL_DEPTH_TEST); // 深度缓冲
         glViewport(0, 0, width, height);
         shaders.use();
-        shaders.setFloat("far_plane", cam.far);
+        shaders.setFloat("farPlane", cam.far);
         shaders.setUniform3fv("camPos", cam.getPosition());
 
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);

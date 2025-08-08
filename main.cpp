@@ -9,7 +9,7 @@
 #include "Objects/Cube.hpp"
 #include "Objects/Sphere.hpp"
 #include "Objects/Plane.hpp"
-#include "LightSource.hpp"
+#include "LightSource/LightSource.hpp"
 #include "Renderers/RendererManager.hpp"
 #include "utils/DebugOutput.hpp"
 #include "ModelLoader.hpp"
@@ -21,6 +21,8 @@
 
 const int width = 1600;
 const int height = 900;
+
+ParallelLight parallelLight; // 临时, 测试用
 
 int main()
 {
@@ -100,10 +102,10 @@ int main()
     //         lights.emplace_back(glm::vec3(20.f), glm::vec3(10.f + i * i_step, 2.f, 20.f + j * j_step));
     //     }
     // }
-    lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
-    lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(-16.f, 10.f, 24.f));
-    lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(2.f, 10.f, 14.f));
-    lights.emplace_back(glm::vec3(30.f, 20.f, 40.f), glm::vec3(16.f, 4.f, 8.f));
+    // lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
+    // lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(-16.f, 10.f, 24.f));
+    // lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(2.f, 10.f, 14.f));
+    // lights.emplace_back(glm::vec3(30.f, 20.f, 40.f), glm::vec3(16.f, 4.f, 8.f));
 
     // temporary light source variable
     LightSource &light = lights[0]; // Assuming the first light is the one we want to use for shadow
