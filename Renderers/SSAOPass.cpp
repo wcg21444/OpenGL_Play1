@@ -1,14 +1,16 @@
 #include "SSAOPass.hpp"
 #include <glad/glad.h>
 #include "../Shader.hpp"
+#include "../ShaderGUI.hpp"
 #include "../utils/Random.hpp"
 
 SSAOPass::SSAOPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
-    : Pass(_vp_width, _vp_height, _vs_path, _fs_path)
+    : Pass(_vp_width, _vp_height, _vs_path, _fs_path), shaderUI(std::make_unique<SSAOShaderUI>())
 {
     initializeGLResources();
     contextSetup();
 }
+SSAOPass::~SSAOPass() = default;
 void SSAOPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
@@ -48,7 +50,7 @@ void SSAOPass::render(RenderParameters &renderParameters,
                       unsigned int gViewPosition)
 {
     auto &[allLights, cam, scene, model, window] = renderParameters;
-    shaderUI.render();
+    shaderUI->render();
     auto ssaoKernel = Random::GenerateSSAOKernel();
     generateNoiseTexture();
     glViewport(0, 0, vp_width, vp_height);
@@ -56,10 +58,10 @@ void SSAOPass::render(RenderParameters &renderParameters,
 
     shaders.use();
 
-    shaders.setInt("kernelSize", shaderUI.kernelSize);
-    shaders.setFloat("radius", shaderUI.radius);
-    shaders.setFloat("intensity", shaderUI.intensity);
-    shaders.setFloat("bias", shaderUI.bias);
+    shaders.setInt("kernelSize", shaderUI->kernelSize);
+    shaders.setFloat("radius", shaderUI->radius);
+    shaders.setFloat("intensity", shaderUI->intensity);
+    shaders.setFloat("bias", shaderUI->bias);
 
     for (unsigned int i = 0; i < 64; ++i)
     {

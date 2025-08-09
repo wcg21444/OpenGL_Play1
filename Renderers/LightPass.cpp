@@ -1,14 +1,18 @@
 #include "LightPass.hpp"
 #include <glad/glad.h>
 #include "../Shader.hpp"
+#include "../ShaderGUI.hpp"
 #include "../utils/Random.hpp"
 
+/**Comment : This is some change */
+
 LightPass::LightPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
-    : Pass(_vp_width, _vp_height, _vs_path, _fs_path)
+    : Pass(_vp_width, _vp_height, _vs_path, _fs_path), shaderUI(std::make_unique<LightShaderUI>())
 {
     initializeGLResources();
     contextSetup();
 }
+LightPass::~LightPass() = default;
 void LightPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
@@ -53,7 +57,7 @@ void LightPass::render(RenderParameters &renderParameters,
     auto shadowKernel = Random::GenerateShadowKernel(128);
     static auto skyboxKernel = Random::GenerateSemiSphereKernel(16);
     generateShadowNoiseTexture();
-    shaderUI.render();
+    shaderUI->render();
     glViewport(0, 0, vp_width, vp_height);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
@@ -71,7 +75,7 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setTextureAuto(shadowNoiseTex, GL_TEXTURE_2D, 0, "shadowNoiseTex");
     /****************************************天空盒输入**************************************************/
     shaders.setTextureAuto(skybox, GL_TEXTURE_CUBE_MAP, 0, "skybox");
-    shaders.setFloat("skyboxScale", shaderUI.skyboxScale);
+    shaders.setFloat("skyboxScale", shaderUI->skyboxScale);
 
     /****************************************阴影贴图输入**************************************************/
     // TODO Shader 多DirLight 渲染
@@ -121,10 +125,10 @@ void LightPass::render(RenderParameters &renderParameters,
         shaders.setUniform3fv(std::format("skyboxSamples[{}]", i), skyboxKernel[i]);
     }
     /****************************************环境光设置**************************************************/
-    shaders.setUniform3fv("ambientLight", shaderUI.ambientLight);
+    shaders.setUniform3fv("ambientLight", shaderUI->ambientLight);
     /*****************************************阴影设置************************************************* */
-    shaders.setFloat("blurRadius", shaderUI.blurRadius);
-    shaders.setInt("n_samples", shaderUI.samplesNumber);
+    shaders.setFloat("blurRadius", shaderUI->blurRadius);
+    shaders.setInt("n_samples", shaderUI->samplesNumber);
 
     Renderer::DrawQuad();
 }

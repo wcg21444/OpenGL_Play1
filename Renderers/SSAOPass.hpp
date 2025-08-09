@@ -1,17 +1,18 @@
 #pragma once
 #include "Pass.hpp"
-#include "../ShaderGUI.hpp"
+class SSAOShaderUI;
 
 class SSAOPass : public Pass
 {
 private:
     unsigned int SSAOPassTex;
     unsigned int noiseTexture;
-    SSAOShaderUI shaderUI;
+    std::unique_ptr<SSAOShaderUI> shaderUI;
     void initializeGLResources();
 
 public:
     SSAOPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path);
+    ~SSAOPass();
     void contextSetup() override;
     void generateNoiseTexture();
     unsigned int getTextures();
