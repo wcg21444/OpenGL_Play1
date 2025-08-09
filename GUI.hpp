@@ -20,7 +20,6 @@
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
 
-extern ParallelLight parallelLight; // 临时, 测试用
 namespace GUI
 {
     // 状态管理变量
@@ -63,7 +62,7 @@ namespace GUI
             DebugOutput::AddLog("Execute Shaders Reload\n");
         }
     }
-    void LightHandle(LightSource &light_source)
+    void LightHandle(PointLight &light_source)
     {
         static glm::vec3 lightIntensity = light_source.intensity;
         static glm::vec3 lightPosition = light_source.position;
@@ -77,7 +76,7 @@ namespace GUI
         light_source.intensity = lightIntensity;
         light_source.position = lightPosition;
     }
-    void LightHandle(ParallelLight &light_source)
+    void LightHandle(DirectionLight &light_source)
     {
 
         static glm::vec3 lightIntensity = light_source.intensity;
@@ -209,7 +208,7 @@ namespace GUI
         }
     }
 
-    void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, LightSource &light, glm::mat4 &model)
+    void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, PointLight &light, glm::mat4 &model)
     {
         static float sidebar_width = 300.0f;
         static bool is_resizing = false;
@@ -237,7 +236,6 @@ namespace GUI
         if (ImGui::CollapsingHeader("Light Settings", ImGuiTreeNodeFlags_DefaultOpen))
         {
             GUI::LightHandle(light);
-            GUI::LightHandle(parallelLight);
         }
 
         // 2. 模型矩阵控制

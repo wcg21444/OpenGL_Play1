@@ -5,7 +5,6 @@
 #include "../Shader.hpp"
 #include "../utils/Random.hpp"
 #include "Pass.hpp"
-#include "../ShaderGUI.hpp"
 #include "../utils/TextureLoader.hpp"
 
 CubemapUnfoldRenderer::CubemapUnfoldRenderer()
@@ -66,7 +65,8 @@ void CubemapUnfoldRenderer::unfoldCubemap(unsigned int cubemap)
 }
 void CubemapUnfoldRenderer::render(RenderParameters &renderParameters)
 {
-    auto &[lights, cam, scene, model, window] = renderParameters;
+    auto &[allLights, cam, scene, model, window] = renderParameters;
+    auto &[pointLights, dirLights] = allLights;
     static bool initialized = false;
     static std::vector<std::string> faces{
         "Resource/skybox/right.jpg",
@@ -78,7 +78,7 @@ void CubemapUnfoldRenderer::render(RenderParameters &renderParameters)
     static auto skyboxCubemap = LoadCubemap(faces);
     if (!initialized)
         initialized = true;
-    pointShadowPass.render(lights[0], scene, model);
+    pointShadowPass.render(pointLights[0], scene, model);
     unfoldCubemap(skyboxCubemap);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, width, height);

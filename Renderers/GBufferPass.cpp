@@ -59,7 +59,7 @@ void GBufferPass::contextSetup()
 }
 void GBufferPass::render(RenderParameters &renderParameters)
 {
-    auto &[lights, cam, scene, model, window] = renderParameters;
+    auto &[allLights, cam, scene, model, window] = renderParameters;
     glViewport(0, 0, vp_width, vp_height);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);

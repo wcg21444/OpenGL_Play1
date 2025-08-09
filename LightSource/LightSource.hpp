@@ -4,21 +4,39 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+// TODO 阴影开关功能
+// class LightSource
+// {
+// public:
+//     enum LightType
+//     {
+//         point;
+//         direction;
+//         spot;
+//     }
+//     glm::vec3 intensity;
+//     glm::vec3 position;
+//     bool enableShadow;
+//     virtual void generateShadowTexResource();
+// };
+
 // Only PointLight is supported
-class LightSource
+class PointLight
 {
 public:
     glm::vec3 intensity;
     glm::vec3 position;
 
     unsigned int depthCubemap = 0;
+    int texResolution;
 
 public:
-    LightSource(const glm::vec3 &_intensity, const glm::vec3 &_position);
+    PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution = 1024);
     void setToShader(Shader &shaders);
+    void generateShadowTexResource();
 };
 
-class ParallelLight
+class DirectionLight
 {
 private:
     glm::mat4 lightProjection;
@@ -27,20 +45,24 @@ private:
 public:
     glm::vec3 intensity;
     glm::vec3 position;
-    float ortho_scale;
+
     unsigned int depthMap = 0;
+    int texResolution;
+
     float nearPlane;
     float farPlane;
-
-    int depthMapResolution;
+    float ortho_scale;
 
     glm::mat4 lightSpaceMatrix;
 
-    ParallelLight(const glm::vec3 &_intensity = glm::vec3(0.1f), const glm::vec3 &_position = glm::vec3(50.f, 20.f, 60.f), int _depthMapResolution = 2048);
+    DirectionLight(const glm::vec3 &_intensity = glm::vec3(0.1f), const glm::vec3 &_position = glm::vec3(50.f, 20.f, 60.f), int _texResolution = 2048);
 
     void setToShader(Shader &shaders);
     void updatePosition(glm::vec3 &_position);
-    void generateDepthMapResource();
+    void generateShadowTexResource();
 };
-
-using Lights = std::vector<LightSource>;
+struct Lights
+{
+    std::vector<PointLight> pointLights;
+    std::vector<DirectionLight> dirLights;
+};

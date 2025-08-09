@@ -22,7 +22,7 @@
 const int width = 1600;
 const int height = 900;
 
-ParallelLight parallelLight; // 临时, 测试用
+DirectionLight parallelLight; // 临时, 测试用
 
 int main()
 {
@@ -84,13 +84,14 @@ int main()
 
     // ModelLoader::loadFile("Resource/backpack.obj");
 
-    Lights lights;
-    lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
+    Lights allLights;
+    auto &[pointLights, dirLights] = allLights;
+    pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
 
-    // lights.emplace_back(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
+    // pointLights.emplace_back(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
     // define quad light: quad: (0.0f,0.0f)  (4.0f,4.0f)
     // glm::vec2 lb(0.0f, 0.0f);
-    // glm::vec2 rt(1.0f, 2.0f);
+    // glm::vec2 rt(4.0f, 4.0f);
     // int i_samples = 3;
     // int j_samples = 3;
     // float i_step = (rt.x - lb.x) / i_samples;
@@ -99,18 +100,20 @@ int main()
     // {
     //     for (size_t j = 0; j < j_samples; ++j)
     //     {
-    //         lights.emplace_back(glm::vec3(20.f), glm::vec3(10.f + i * i_step, 2.f, 20.f + j * j_step));
+    //         pointLights.emplace_back(glm::vec3(30.f), glm::vec3(10.f + i * i_step, 1.f, 20.f + j * j_step));
     //     }
     // }
-    // lights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
-    // lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(-16.f, 10.f, 24.f));
-    // lights.emplace_back(glm::vec3(50.f, 30.f, 40.f), glm::vec3(2.f, 10.f, 14.f));
-    // lights.emplace_back(glm::vec3(30.f, 20.f, 40.f), glm::vec3(16.f, 4.f, 8.f));
+    // pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
+    // pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(-16.f, 10.f, 24.f));
+    // pointLights.emplace_back(glm::vec3(10.f, 30.f, 20.f), glm::vec3(2.f, 10.f, 14.f));
+    // pointLights.emplace_back(glm::vec3(30.f, 20.f, 40.f), glm::vec3(16.f, 4.f, 8.f));
+
+    dirLights.emplace_back(DirectionLight(glm::vec3(0.4f), glm::vec3(50.f, 20.f, 10.f), 4096));
 
     // temporary light source variable
-    LightSource &light = lights[0]; // Assuming the first light is the one we want to use for shadow
+    PointLight &light = pointLights[0]; // Assuming the first light is the one we want to use for shadow
 
-    RenderParameters renderParameters{lights, cam, scene, model, window};
+    RenderParameters renderParameters{allLights, cam, scene, model, window};
     RenderManager renderManager;
 
     //  main render loop
@@ -137,6 +140,7 @@ int main()
         }
 
         GUI::ShowSidebarToolbar(scene, renderManager, light, model);
+        GUI::LightHandle(dirLights[0]);
 
         if (GUI::modelLoadView)
         {

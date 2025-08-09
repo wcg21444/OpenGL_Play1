@@ -78,9 +78,10 @@ public:
     }
     void render(RenderParameters &renderParameters)
     {
-        auto &[lights, cam, scene, model, window] = renderParameters;
+        auto &[allLights, cam, scene, model, window] = renderParameters;
+        auto &[pointLights, dirLights] = allLights;
         // temporary light source variable
-        LightSource &light = lights[0]; // Assuming the first light is the one we want to use for shadow
+        PointLight &light = pointLights[0]; // Assuming the first light is the one we want to use for shadow
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

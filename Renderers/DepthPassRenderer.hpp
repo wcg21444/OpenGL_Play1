@@ -19,15 +19,15 @@ public:
     }
     void render(RenderParameters &renderParameters)
     {
-        auto &[lights, cam, scene, model, window] = renderParameters;
-
+        auto &[allLights, cam, scene, model, window] = renderParameters;
+        auto &[pointLights, dirLights] = allLights;
         // temporary light source variable
-        LightSource &light = lights[0]; // Assuming the first light is the one we want to use for shadow
+        PointLight &light = pointLights[0]; // Assuming the first light is the one we want to use for shadow
 
         glEnable(GL_DEPTH_TEST); // 深度缓冲
         glViewport(0, 0, width, height);
         shaders.use();
-        shaders.setFloat("farPlane", cam.far);
+        shaders.setFloat("farPlane", cam.farPlane);
         shaders.setUniform3fv("camPos", cam.getPosition());
 
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);

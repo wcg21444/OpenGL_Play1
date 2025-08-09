@@ -47,7 +47,7 @@ void SSAOPass::render(RenderParameters &renderParameters,
                       unsigned int gAlbedoSpec,
                       unsigned int gViewPosition)
 {
-    auto &[lights, cam, scene, model, window] = renderParameters;
+    auto &[allLights, cam, scene, model, window] = renderParameters;
     shaderUI.render();
     auto ssaoKernel = Random::GenerateSSAOKernel();
     generateNoiseTexture();
@@ -72,7 +72,7 @@ void SSAOPass::render(RenderParameters &renderParameters,
     shaders.setTextureAuto(noiseTexture, GL_TEXTURE_2D, 0, "texNoise");
 
     shaders.setUniform3fv("eyePos", cam.getPosition());
-    shaders.setFloat("farPlane", cam.far);
+    shaders.setFloat("farPlane", cam.farPlane);
 
     cam.setPerspectiveMatrix(shaders, vp_width, vp_height);
     cam.setViewMatrix(shaders);

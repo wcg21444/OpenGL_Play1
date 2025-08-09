@@ -29,8 +29,8 @@ private:
 
 public:
     float fov = 60.f;
-    float near = 0.1f;
-    float far = 1000.f;
+    float nearPlane = 0.1f;
+    float farPlane = 1000.f;
 
 public:
     Camera(int width,
@@ -120,8 +120,8 @@ public:
     {
         glm::mat4 projection = glm::perspective(glm::radians(fov),
                                                 (float)width / (float)height,
-                                                near,
-                                                far);
+                                                nearPlane,
+                                                farPlane);
         shaders.setMat4("projection", projection);
     }
     glm::vec3 getPosition() const

@@ -3,7 +3,6 @@
 #include "ShadowRenderer.hpp"
 #include "../utils/Random.hpp"
 #include "Pass.hpp"
-#include "../ShaderGUI.hpp"
 
 class CubemapUnfoldRenderer : public Renderer
 {
@@ -16,7 +15,7 @@ class CubemapUnfoldRenderer : public Renderer
     unsigned int unfoldFBO;
     unsigned int unfoldedCubemap;
     const int CUBEMAP_FACE_SIZE;
-    PointShadowPass pointShadowPass;
+    PointShadowPassDeprecated pointShadowPass;
 
 public:
     CubemapUnfoldRenderer();

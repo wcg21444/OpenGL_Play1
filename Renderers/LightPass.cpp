@@ -3,8 +3,6 @@
 #include "../Shader.hpp"
 #include "../utils/Random.hpp"
 
-extern ParallelLight parallelLight; // 临时, 测试用
-
 LightPass::LightPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path)
 {
@@ -49,7 +47,9 @@ void LightPass::render(RenderParameters &renderParameters,
                        float pointLightFar)
 {
 
-    auto &[lights, cam, scene, model, window] = renderParameters;
+    auto &[allLights, cam, scene, model, window] = renderParameters;
+    auto &[pointLights, dirLights] = allLights;
+
     auto shadowKernel = Random::GenerateShadowKernel(128);
     static auto skyboxKernel = Random::GenerateSemiSphereKernel(16);
     generateShadowNoiseTexture();
@@ -72,10 +72,10 @@ void LightPass::render(RenderParameters &renderParameters,
     /****************************************天空盒输入**************************************************/
     shaders.setTextureAuto(skybox, GL_TEXTURE_CUBE_MAP, 0, "skybox");
     shaders.setFloat("skyboxScale", shaderUI.skyboxScale);
-    shaders.setInt("n_samples", shaderUI.samplesNumber);
 
     /****************************************阴影贴图输入**************************************************/
-    shaders.setTextureAuto(parallelLight.depthMap, GL_TEXTURE_2D, 0, "dirDepthMap");
+    // TODO Shader 多DirLight 渲染
+    shaders.setTextureAuto(dirLights[0].depthMap, GL_TEXTURE_2D, 0, "dirDepthMap");
 
     for (size_t i = 0; i < MAX_LIGHTS; ++i)
     {
@@ -84,27 +84,29 @@ void LightPass::render(RenderParameters &renderParameters,
     // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skybox");
 
     /****************************************点光源输入**************************************************/
-    shaders.setInt("numLights", static_cast<int>(lights.size()));
-    for (size_t i = 0; i < lights.size(); ++i)
+    shaders.setInt("numLights", static_cast<int>(pointLights.size()));
+    for (size_t i = 0; i < pointLights.size(); ++i)
     {
-        shaders.setUniform3fv("lightPos[" + std::to_string(i) + "]", lights[i].position);
-        shaders.setUniform3fv("lightIntensity[" + std::to_string(i) + "]", lights[i].intensity);
-        if (lights[i].depthCubemap != 0)
+        shaders.setUniform3fv("lightPos[" + std::to_string(i) + "]", pointLights[i].position);
+        shaders.setUniform3fv("lightIntensity[" + std::to_string(i) + "]", pointLights[i].intensity);
+        if (pointLights[i].depthCubemap != 0)
         {
-            shaders.setTextureAuto(lights[i].depthCubemap, GL_TEXTURE_CUBE_MAP, i + 3, "shadowCubeMaps[" + std::to_string(i) + "]");
+            shaders.setTextureAuto(pointLights[i].depthCubemap, GL_TEXTURE_CUBE_MAP, i + 3, "shadowCubeMaps[" + std::to_string(i) + "]");
         }
     }
-    /****************************************方向光源设置**************************************************/
-    shaders.setUniform3fv("dirLightPos", parallelLight.position);
-    shaders.setUniform3fv("dirLightIntensity", parallelLight.intensity);
-    shaders.setMat4("dirLightSpaceMatrix", parallelLight.lightSpaceMatrix);
+    /****************************************方向光源输入**************************************************/
+    // TODO Shader 多DirLight 渲染
+
+    shaders.setUniform3fv("dirLightPos", dirLights[0].position);
+    shaders.setUniform3fv("dirLightIntensity", dirLights[0].intensity);
+    shaders.setMat4("dirLightSpaceMatrix", dirLights[0].lightSpaceMatrix);
 
     /****************************************摄像机设置**************************************************/
     shaders.setUniform3fv("eyePos", cam.getPosition());
     shaders.setUniform3fv("eyeFront", cam.getFront());
     shaders.setUniform3fv("eyeUp", cam.getUp());
-    shaders.setFloat("farPlane", cam.far);
-    shaders.setFloat("nearPlane", cam.near);
+    shaders.setFloat("farPlane", cam.farPlane);
+    shaders.setFloat("nearPlane", cam.nearPlane);
     shaders.setFloat("pointLightFar", pointLightFar);
     shaders.setFloat("fov", cam.fov);
     cam.setViewMatrix(shaders);
@@ -120,6 +122,9 @@ void LightPass::render(RenderParameters &renderParameters,
     }
     /****************************************环境光设置**************************************************/
     shaders.setUniform3fv("ambientLight", shaderUI.ambientLight);
+    /*****************************************阴影设置************************************************* */
+    shaders.setFloat("blurRadius", shaderUI.blurRadius);
+    shaders.setInt("n_samples", shaderUI.samplesNumber);
 
     Renderer::DrawQuad();
 }

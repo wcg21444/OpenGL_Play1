@@ -106,7 +106,7 @@ public:
     }
     void render(RenderParameters &renderParameters)
     {
-        auto &[lights, cam, scene, model, window] = renderParameters;
+        auto &[allLights, cam, scene, model, window] = renderParameters;
         // render
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);

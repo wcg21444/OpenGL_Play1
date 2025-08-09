@@ -2,18 +2,15 @@
 #include <tuple>
 
 #include "Renderer.hpp"
-#include "ShadowRenderer.hpp"
 #include "DirShadowPass.hpp"
+#include "PointShadowPass.hpp"
 #include "../utils/Random.hpp"
 #include "Pass.hpp"
-#include "../ShaderGUI.hpp"
 #include "LightPass.hpp"
 #include "GBufferPass.hpp"
 #include "SSAOPass.hpp"
 
 #include "../utils/TextureLoader.hpp"
-
-extern ParallelLight parallelLight; // 临时, 测试用
 
 class GBufferRenderer : public Renderer
 {
@@ -50,13 +47,14 @@ public:
           lightPass(LightPass(width, height, "Shaders/GBuffer/light.vs", "Shaders/GBuffer/light.fs")),
           screenPass(ScreenPass(width, height, "Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs")),
           ssaoPass(SSAOPass(width, height, "Shaders/SSAOPass/ssao.vs", "Shaders/SSAOPass/ssao.fs")),
-          dirShadowPass(DirShadowPass("Shaders/DirShadow/dirShadow.vs", "Shaders/DirShadow/dirShadow.fs"))
+          dirShadowPass(DirShadowPass("Shaders/DirShadow/dirShadow.vs", "Shaders/DirShadow/dirShadow.fs")),
+          pointShadowPass(PointShadowPass("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs"))
     {
     }
     void reloadCurrentShaders()
     {
         quadShader = Shader("Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs");
-        pointShadowPass.reloadCurrentShader();
+        pointShadowPass.reloadCurrentShaders();
         dirShadowPass.reloadCurrentShaders();
         gBufferPass.reloadCurrentShaders();
         lightPass.reloadCurrentShaders();
@@ -127,16 +125,30 @@ private:
 
     void renderLight(RenderParameters &renderParameters)
     {
-        auto &[lights, cam, scene, model, window] = renderParameters;
-
+        auto &[allLights, cam, scene, model, window] = renderParameters;
+        auto &[pointLights, dirLights] = allLights;
         /****************************阴影贴图渲染*********************************************/
-        for (auto &light : lights)
+        for (auto &light : pointLights)
         {
-            pointShadowPass.renderToTexture(light.depthCubemap, light, scene, model);
+            light.generateShadowTexResource();
+            pointShadowPass.renderToTexture(
+                light,
+                scene,
+                model,
+                light.texResolution,
+                light.texResolution);
         }
 
-        parallelLight.generateDepthMapResource();
-        dirShadowPass.renderToTexture(parallelLight.depthMap, parallelLight, scene, model, parallelLight.depthMapResolution, parallelLight.depthMapResolution);
+        for (auto &light : dirLights)
+        {
+            light.generateShadowTexResource();
+            dirShadowPass.renderToTexture(
+                light,
+                scene,
+                model,
+                light.texResolution,
+                light.texResolution);
+        }
 
         /****************************GBuffer渲染*********************************************/
         gBufferPass.render(renderParameters);

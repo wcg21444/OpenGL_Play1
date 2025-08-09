@@ -30,6 +30,7 @@ public:
     glm::vec3 ambientLight{0.2f, 0.2f, 0.2f};
     float skyboxScale = 3.5f;
     int samplesNumber = 32;
+    float blurRadius = 0.1f;
     void render()
     {
         ImGui::Begin("SSAOShaders");
@@ -38,6 +39,8 @@ public:
             ImGui::DragFloat("AmbientLight R", &ambientLight.x, 0.01f);
             ImGui::DragFloat("AmbientLight G", &ambientLight.y, 0.01f);
             ImGui::DragFloat("AmbientLight B", &ambientLight.z, 0.01f);
+            ImGui::SliderInt("Samples", &samplesNumber, 1, 128);
+            ImGui::DragFloat("BlurRadius", &blurRadius, 0.01f);
         }
         ImGui::End();
     }
