@@ -40,7 +40,7 @@ public:
             ImGui::DragFloat("AmbientLight G", &ambientLight.y, 0.01f);
             ImGui::DragFloat("AmbientLight B", &ambientLight.z, 0.01f);
             ImGui::SliderInt("Samples", &samplesNumber, 1, 128);
-            ImGui::DragFloat("BlurRadius", &blurRadius, 0.01f);
+            ImGui::DragFloat("BlurRadius", &blurRadius, 0.01f, 0.0f, 1.0f);
         }
         ImGui::End();
     }

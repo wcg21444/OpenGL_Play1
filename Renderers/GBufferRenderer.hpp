@@ -2,13 +2,13 @@
 #include <tuple>
 
 #include "Renderer.hpp"
-#include "DirShadowPass.hpp"
-#include "PointShadowPass.hpp"
+#include "Passes/DirShadowPass.hpp"
+#include "Passes/PointShadowPass.hpp"
 #include "../utils/Random.hpp"
-#include "Pass.hpp"
-#include "LightPass.hpp"
-#include "GBufferPass.hpp"
-#include "SSAOPass.hpp"
+#include "Passes/Pass.hpp"
+#include "Passes/LightPass.hpp"
+#include "Passes/GBufferPass.hpp"
+#include "Passes/SSAOPass.hpp"
 
 #include "../utils/TextureLoader.hpp"
 
@@ -159,7 +159,13 @@ private:
         auto ssaoPassTexture = ssaoPass.getTextures();
 
         /****************************光照渲染*********************************************/
-        lightPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, ssaoPassTexture, cubemapTexture, pointShadowPass.far);
+        lightPass.render(renderParameters,
+                         gPosition,
+                         gNormal,
+                         gAlbedoSpec,
+                         ssaoPassTexture,
+                         cubemapTexture,
+                         pointShadowPass.far);
         auto lightPassTexture = lightPass.getTextures();
 
         /****************************Screen渲染*********************************************/

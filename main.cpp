@@ -103,7 +103,7 @@ int main()
     //         pointLights.emplace_back(glm::vec3(30.f), glm::vec3(10.f + i * i_step, 1.f, 20.f + j * j_step));
     //     }
     // }
-    // pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
+    pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(8.f, 10.f, 4.f));
     // pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f), glm::vec3(-16.f, 10.f, 24.f));
     // pointLights.emplace_back(glm::vec3(10.f, 30.f, 20.f), glm::vec3(2.f, 10.f, 14.f));
     // pointLights.emplace_back(glm::vec3(30.f, 20.f, 40.f), glm::vec3(16.f, 4.f, 8.f));

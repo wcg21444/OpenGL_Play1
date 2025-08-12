@@ -1,10 +1,8 @@
-#include "LightPass.hpp"
 #include <glad/glad.h>
-#include "../Shader.hpp"
-#include "../ShaderGUI.hpp"
-#include "../utils/Random.hpp"
-
-/**Comment : This is some change */
+#include "../../Shader.hpp"
+#include "../../ShaderGUI.hpp"
+#include "../../utils/Random.hpp"
+#include "LightPass.hpp"
 
 LightPass::LightPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path), shaderUI(std::make_unique<LightShaderUI>())

@@ -4,7 +4,7 @@
 #include <glad/glad.h>
 #include "../Shader.hpp"
 #include "../utils/Random.hpp"
-#include "Pass.hpp"
+#include "Passes/Pass.hpp"
 #include "../utils/TextureLoader.hpp"
 
 CubemapUnfoldRenderer::CubemapUnfoldRenderer()

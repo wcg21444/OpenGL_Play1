@@ -1,23 +1,6 @@
 
 #include "Renderer.hpp"
 
-void ShowGLMMatrixAsTable(const glm::mat4 &matrix, const char *name)
-{
-    if (ImGui::BeginTable(name, 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
-    {
-        for (int row = 0; row < 4; ++row)
-        {
-            ImGui::TableNextRow();
-            for (int col = 0; col < 4; ++col)
-            {
-                ImGui::TableSetColumnIndex(col);
-                ImGui::Text("%.3f", matrix[col][row]);
-            }
-        }
-        ImGui::EndTable();
-    }
-}
-
 // 绘制场景
 void Renderer::DrawScene(std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, Shader &shaders)
 {

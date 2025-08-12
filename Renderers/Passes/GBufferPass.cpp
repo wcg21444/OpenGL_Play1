@@ -1,6 +1,6 @@
-#include "GBufferPass.hpp"
 #include <glad/glad.h>
-#include "../Shader.hpp"
+#include "../../Shader.hpp"
+#include "GBufferPass.hpp"
 
 GBufferPass::GBufferPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path)

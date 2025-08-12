@@ -1,8 +1,8 @@
-#include "SSAOPass.hpp"
 #include <glad/glad.h>
-#include "../Shader.hpp"
-#include "../ShaderGUI.hpp"
-#include "../utils/Random.hpp"
+#include "../../Shader.hpp"
+#include "../../ShaderGUI.hpp"
+#include "../../utils/Random.hpp"
+#include "SSAOPass.hpp"
 
 SSAOPass::SSAOPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path), shaderUI(std::make_unique<SSAOShaderUI>())
@@ -11,6 +11,7 @@ SSAOPass::SSAOPass(int _vp_width, int _vp_height, std::string _vs_path, std::str
     contextSetup();
 }
 SSAOPass::~SSAOPass() = default;
+
 void SSAOPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
@@ -39,6 +40,7 @@ void SSAOPass::generateNoiseTexture()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
+
 unsigned int SSAOPass::getTextures()
 {
     return SSAOPassTex;
@@ -55,7 +57,8 @@ void SSAOPass::render(RenderParameters &renderParameters,
     generateNoiseTexture();
     glViewport(0, 0, vp_width, vp_height);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     shaders.use();
 
     shaders.setInt("kernelSize", shaderUI->kernelSize);

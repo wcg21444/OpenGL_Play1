@@ -1,6 +1,6 @@
 #pragma once
 #include "Renderer.hpp"
-#include "Pass.hpp"
+#include "Passes/Pass.hpp"
 
 class PointShadowPassDeprecated
 {

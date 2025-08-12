@@ -1,5 +1,4 @@
 #include "DirShadowPass.hpp"
-
 DirShadowPass::DirShadowPass(std::string _vs_path, std::string _fs_path)
     : Pass(0, 0, _vs_path, _fs_path)
 {

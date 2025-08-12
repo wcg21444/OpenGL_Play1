@@ -1,6 +1,5 @@
 #pragma once
 #include "Pass.hpp"
-
 class LightShaderUI;
 
 class LightPass : public Pass

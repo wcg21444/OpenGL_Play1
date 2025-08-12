@@ -176,7 +176,7 @@ float computePointLightShadow(vec3 fragPos,vec3 fragNorm,vec3 lightPos,samplerCu
         vec3 dir_sample = sampleOffset+fragPos-lightPos;
         float curr_depth_sample = length(dir_sample);
         float cloest_depth_sample = texture(_depthMap,dir_sample).r;
-        cloest_depth_sample*= pointLightFar;
+        cloest_depth_sample *= pointLightFar;
         factor += (curr_depth_sample-cloest_depth_sample-bias>0.f ? 1.0:0.0);
         // factor = curr_depth_sample;
     }

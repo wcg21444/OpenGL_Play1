@@ -2,7 +2,7 @@
 #include "Renderer.hpp"
 #include "ShadowRenderer.hpp"
 #include "../utils/Random.hpp"
-#include "Pass.hpp"
+#include "Passes/Pass.hpp"
 
 class CubemapUnfoldRenderer : public Renderer
 {

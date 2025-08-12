@@ -1,6 +1,5 @@
 #pragma once
 #include "Pass.hpp"
-
 class GBufferPass : public Pass
 {
 private:

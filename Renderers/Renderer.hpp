@@ -13,8 +13,6 @@
 #include "../Objects/Sphere.hpp"
 #include "../Objects/Plane.hpp"
 
-void ShowGLMMatrixAsTable(const glm::mat4 &matrix, const char *name = "Matrix");
-
 struct RenderParameters
 {
     Lights &lights;

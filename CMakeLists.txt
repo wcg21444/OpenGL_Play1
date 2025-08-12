@@ -21,6 +21,7 @@ file(GLOB_RECURSE IMGUI_SRC
 include_directories(${IMGUI})
 include_directories("Objects")
 include_directories("Renderers")
+include_directories("Renderers/Passes")
 include_directories("utils")
 include_directories("LightSource")
 include_directories(${INCLUDES})
@@ -30,6 +31,7 @@ file(GLOB OBJECTS_SRC
 )
 file(GLOB RENDERERS_SRC
     Renderers/*.cpp
+    Renderers/Passes/*.cpp
 )
 file(GLOB UTILS_SRC
     utils/*.cpp

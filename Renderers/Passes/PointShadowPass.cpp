@@ -1,5 +1,4 @@
 #include "PointShadowPass.hpp"
-
 PointShadowPass::PointShadowPass(std::string _vs_path, std::string _fs_path, std::string _gs_path)
     : Pass(0, 0, _vs_path, _fs_path, _gs_path)
 {

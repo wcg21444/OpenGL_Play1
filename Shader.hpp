@@ -229,7 +229,7 @@ public:
     }
     void setTextureAuto(GLuint textureID, GLenum textureTarget, int shaderTextureLocation, const std::string &samplerUniformName)
     {
-        static bool warnned = false;
+
         if (textureLocationMap.find(samplerUniformName) == textureLocationMap.end())
         {
             textureLocationMap.insert({samplerUniformName, location_ID});
@@ -245,9 +245,8 @@ public:
 
         // 获取 uniform 位置并设置
         GLint samplerLoc = getUniformLocationSafe(samplerUniformName);
-        if (samplerLoc == -1 && !warnned)
+        if (samplerLoc == -1)
         {
-            warnned = true;
             std::cerr << "Warning: Uniform '" << samplerUniformName << "' not found in shader program " << progrm_ID << std::endl;
         }
         else
