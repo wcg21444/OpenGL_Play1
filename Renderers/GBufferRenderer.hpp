@@ -40,6 +40,7 @@ private:
     LightPass lightPass;
     ScreenPass screenPass;
     SSAOPass ssaoPass;
+    SSAOBlurPass ssaoBlurPass;
 
 public:
     GBufferRenderer()
@@ -47,6 +48,7 @@ public:
           lightPass(LightPass(width, height, "Shaders/GBuffer/light.vs", "Shaders/GBuffer/light.fs")),
           screenPass(ScreenPass(width, height, "Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs")),
           ssaoPass(SSAOPass(width, height, "Shaders/SSAOPass/ssao.vs", "Shaders/SSAOPass/ssao.fs")),
+          ssaoBlurPass(SSAOBlurPass(width, height, "Shaders/SSAOPass/blur.vs", "Shaders/SSAOPass/blur.fs")),
           dirShadowPass(DirShadowPass("Shaders/DirShadow/dirShadow.vs", "Shaders/DirShadow/dirShadow.fs")),
           pointShadowPass(PointShadowPass("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs"))
     {
@@ -60,6 +62,7 @@ public:
         lightPass.reloadCurrentShaders();
         screenPass.reloadCurrentShaders();
         ssaoPass.reloadCurrentShaders();
+        ssaoBlurPass.reloadCurrentShaders();
         contextSetup();
     }
     // contextSetup 资源生成应当只生成一次
@@ -155,15 +158,17 @@ private:
         auto [gPosition, gNormal, gAlbedoSpec, gViewPosition] = gBufferPass.getTextures();
 
         /****************************SSAO渲染*********************************************/
+
         ssaoPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, gViewPosition);
         auto ssaoPassTexture = ssaoPass.getTextures();
-
+        ssaoBlurPass.render(ssaoPassTexture);
+        auto ssaoBlurTex = ssaoBlurPass.getTextures();
         /****************************光照渲染*********************************************/
         lightPass.render(renderParameters,
                          gPosition,
                          gNormal,
                          gAlbedoSpec,
-                         ssaoPassTexture,
+                         ssaoBlurTex,
                          cubemapTexture,
                          pointShadowPass.far);
         auto lightPassTexture = lightPass.getTextures();

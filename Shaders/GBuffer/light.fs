@@ -38,7 +38,7 @@ uniform vec3 dirLightPos;
 uniform vec3 dirLightIntensity;
 uniform mat4 dirLightSpaceMatrix;
 /*****************天空盒******************************************************************/
-uniform vec3 skyboxSamples[16];
+uniform vec3 skyboxSamples[32];
 uniform float skyboxScale;
 uniform samplerCube skybox;
 uniform mat4 view;//视图矩阵
@@ -91,11 +91,11 @@ vec3 sampleSkybox(vec2 uv,samplerCube _skybox) {
 vec3 computeSkyboxAmbient(samplerCube _skybox) {
     vec3 ambient = vec3(0.f);
 
-    for(int i =0;i<16;++i) {
+    for(int i =0;i<32;++i) {
         vec3 sample_dir = TBN*vec4(skyboxSamples[i],1.f).xyz;
         ambient += texture(_skybox,normalize(sample_dir)).rgb;
     }
-    return ambient/24;
+    return ambient/32;
 }
 
 float computeDirLightShadow(vec3 fragPos) {

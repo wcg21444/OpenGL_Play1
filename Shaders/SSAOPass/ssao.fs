@@ -71,21 +71,20 @@ float CalculateOcclusion() {
     }
     float occlusion = 0.0;
     for(int i = 0; i < kernelSize; ++i) {
-        vec3 fragPosView = (view*texture(gPosition,TexCoord)).xyz;
+        vec3 fragPosView = (texture(gViewPosition,TexCoord)).xyz;
         vec3 samplePos = TBN * samples[i]; 
-        vec3 samplePosView = fragPosView + samplePos * radius; //view space
-        samplePos = fragPos + samplePos * radius; //World space
+        samplePos = fragPos + samplePos * radius;
 
         vec4 clipPos = projection * view * vec4(samplePos, 1.0f);
         vec3 ndcPos = clipPos.xyz / clipPos.w;
         vec2 screenUV = ndcPos.xy * 0.5 + 0.5;
 
-        vec3 sampleSurface = (view*texture(gPosition,screenUV)).xyz;
+        vec3 sampleSurface = (texture(gViewPosition,screenUV)).xyz;
         float sampleSurfaceDepth =sampleSurface.z;
 
         float rangeCheck = smoothstep(0.0, 1.0, radius/(abs(fragPosView.z  - sampleSurface.z)));
         // float rangeCheck = 1-radius/abs(fragPosView.z  - sampleSurface.z);
-        occlusion += (samplePosView.z<=sampleSurfaceDepth + bias ? 1.0 : 0.0)*pow(rangeCheck,1);
+        occlusion += (fragPosView.z<=sampleSurfaceDepth + bias ? 1.0 : 0.0)*pow(rangeCheck,1);
         // occlusion += rangeCheck;
     }
     occlusion = 1.0 - (occlusion / kernelSize)/(1+depth);
@@ -111,8 +110,9 @@ void main() {
     // vec3 sampleSurface = (view*texture(gPosition,screenUV)).xyz;
     // float sampleSurfaceDepth =sampleSurface.z;
     // vec3 eyePosView = (view*vec4(eyePos,1.0f)).xyz;
-    // // result = vec4((view*texture(gPosition,TexCoord)).z);
     // result = vec4((view*texture(gPosition,TexCoord)).z);
+    // result = vec4((view*texture(gPosition,TexCoord)));
 
     result = vec4(occlusion);
+    // result = vec4(log((texture(gViewPosition,TexCoord).z+50)/100+1.5));
 }

@@ -72,7 +72,7 @@ void SSAOPass::render(RenderParameters &renderParameters,
     }
     shaders.setTextureAuto(gPosition, GL_TEXTURE_2D, 0, "gPosition");
     shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 0, "gNormal");
-    shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
+    // shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
     shaders.setTextureAuto(gViewPosition, GL_TEXTURE_2D, 0, "gViewPosition");
     shaders.setTextureAuto(noiseTexture, GL_TEXTURE_2D, 0, "texNoise");
 

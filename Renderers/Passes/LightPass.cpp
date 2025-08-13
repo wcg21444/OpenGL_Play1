@@ -15,6 +15,7 @@ void LightPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
     glGenTextures(1, &lightPassTex);
+    glGenTextures(1, &shadowNoiseTex);
 }
 void LightPass::contextSetup()
 {
@@ -29,7 +30,9 @@ void LightPass::contextSetup()
 void LightPass::generateShadowNoiseTexture()
 {
     auto noise = Random::GenerateNoise();
+
     glBindTexture(GL_TEXTURE_2D, shadowNoiseTex);
+
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 8, 8, 0, GL_RGB, GL_FLOAT, &noise[0]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -53,7 +56,7 @@ void LightPass::render(RenderParameters &renderParameters,
     auto &[pointLights, dirLights] = allLights;
 
     auto shadowKernel = Random::GenerateShadowKernel(128);
-    static auto skyboxKernel = Random::GenerateSemiSphereKernel(16);
+    static const auto skyboxKernel = Random::GenerateSemiSphereKernel(32);
     generateShadowNoiseTexture();
     shaderUI->render();
     glViewport(0, 0, vp_width, vp_height);
