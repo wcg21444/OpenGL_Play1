@@ -2,7 +2,7 @@
 #include <vector>
 #include <tuple>
 #include <glad/glad.h>
-#include "../Shader.hpp"
+#include "../Shading/Shader.hpp"
 #include "../utils/Random.hpp"
 #include "Passes/Pass.hpp"
 #include "../utils/TextureLoader.hpp"

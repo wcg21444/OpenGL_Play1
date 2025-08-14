@@ -1,5 +1,5 @@
 #include <glad/glad.h>
-#include "../../Shader.hpp"
+#include "../../Shading/Shader.hpp"
 #include "../../ShaderGUI.hpp"
 #include "../../utils/Random.hpp"
 #include "SSAOPass.hpp"
@@ -15,35 +15,20 @@ SSAOPass::~SSAOPass() = default;
 void SSAOPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
-    glGenTextures(1, &SSAOPassTex);
-    glGenTextures(1, &noiseTexture);
+    SSAOPassTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    noiseTex.Generate(8, 8, GL_RGBA16F, GL_RGB, GL_FLOAT, NULL);
 }
 void SSAOPass::contextSetup()
 {
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     {
-        glBindTexture(GL_TEXTURE_2D, SSAOPassTex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSAOPassTex, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSAOPassTex.ID, 0);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
-void SSAOPass::generateNoiseTexture()
-{
-    auto ssaoNoise = Random::GenerateNoise();
-    glBindTexture(GL_TEXTURE_2D, noiseTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 8, 8, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-}
-
 unsigned int SSAOPass::getTextures()
 {
-    return SSAOPassTex;
+    return SSAOPassTex.ID;
 }
 void SSAOPass::render(RenderParameters &renderParameters,
                       unsigned int gPosition,
@@ -52,13 +37,20 @@ void SSAOPass::render(RenderParameters &renderParameters,
                       unsigned int gViewPosition)
 {
     auto &[allLights, cam, scene, model, window] = renderParameters;
-    shaderUI->render();
+
     auto ssaoKernel = Random::GenerateSSAOKernel();
-    generateNoiseTexture();
+
+    auto ssaoNoise = Random::GenerateNoise();
+    noiseTex.SetData(&ssaoNoise[0]);
+
+    shaderUI->render();
+
     glViewport(0, 0, vp_width, vp_height);
+
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
     shaders.use();
 
     shaders.setInt("kernelSize", shaderUI->kernelSize);
@@ -74,7 +66,7 @@ void SSAOPass::render(RenderParameters &renderParameters,
     shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 0, "gNormal");
     // shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
     shaders.setTextureAuto(gViewPosition, GL_TEXTURE_2D, 0, "gViewPosition");
-    shaders.setTextureAuto(noiseTexture, GL_TEXTURE_2D, 0, "texNoise");
+    shaders.setTextureAuto(noiseTex.ID, GL_TEXTURE_2D, 0, "texNoise");
 
     shaders.setUniform3fv("eyePos", cam.getPosition());
     shaders.setFloat("farPlane", cam.farPlane);

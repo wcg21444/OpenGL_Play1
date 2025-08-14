@@ -1,5 +1,5 @@
 #include <glad/glad.h>
-#include "../../Shader.hpp"
+#include "../../Shading/Shader.hpp"
 #include "GBufferPass.hpp"
 
 GBufferPass::GBufferPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
@@ -11,9 +11,10 @@ GBufferPass::GBufferPass(int _vp_width, int _vp_height, std::string _vs_path, st
 void GBufferPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
-    glGenTextures(1, &gPosition);
-    glGenTextures(1, &gNormal);
-    glGenTextures(1, &gAlbedoSpec);
+    // glGenTextures(1, &gPosition);
+    gPosition.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    gNormal.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    gAlbedoSpec.Generate(vp_width, vp_height, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glGenTextures(1, &gViewPosition);
     glGenRenderbuffers(1, &depthMap);
 }
@@ -22,26 +23,15 @@ void GBufferPass::contextSetup()
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     // create depth texture
     // - position color buffer
-    glBindTexture(GL_TEXTURE_2D, gPosition);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition.ID, 0);
 
     // - normal color buffer
-    glBindTexture(GL_TEXTURE_2D, gNormal);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal.ID, 0);
 
     // - color + specular color buffer
-    glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, vp_width, vp_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec.ID, 0);
 
+    // BUG 改为Texture SSAO 通道不正常,有大量噪点
     glBindTexture(GL_TEXTURE_2D, gViewPosition);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

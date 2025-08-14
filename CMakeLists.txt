@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.12)
 
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/Gm->)
+cmake_host_system_information(RESULT CPU_NUMBER_OF_LOGICAL_CORES QUERY NUMBER_OF_LOGICAL_CORES)
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP${CPU_NUMBER_OF_LOGICAL_CORES}>)
+
 set(CMAKE_TOOLCHAIN_FILE "D:/Program Files/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
 project(OpenGL_Play)
@@ -21,6 +25,7 @@ file(GLOB_RECURSE IMGUI_SRC
 include_directories(${IMGUI})
 include_directories("Objects")
 include_directories("Renderers")
+include_directories("Shading")
 include_directories("Renderers/Passes")
 include_directories("utils")
 include_directories("LightSource")
@@ -36,7 +41,10 @@ file(GLOB RENDERERS_SRC
 file(GLOB UTILS_SRC
     utils/*.cpp
 )
-add_executable(${PROJECT_NAME} "main.cpp" "LightSource/LightSource.cpp" ${IMGUI_SRC} ${RENDERERS_SRC} ${OBJECTS_SRC} ${UTILS_SRC})
+file(GLOB SHADING_SRC
+    Shading/*.cpp
+)
+add_executable(${PROJECT_NAME} "main.cpp" "LightSource/LightSource.cpp" ${IMGUI_SRC} ${RENDERERS_SRC} ${OBJECTS_SRC} ${UTILS_SRC} ${SHADING_SRC})
 
 find_package(glfw3 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw)

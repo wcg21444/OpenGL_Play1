@@ -26,7 +26,7 @@ uniform vec3 lightIntensity[MAX_LIGHTS];
 uniform float pointLightFar;
 
 /*****************阴影采样设置******************************************************************/
-const vec2 noiseScale = vec2(1600.0/8.0, 900.0/8.0);
+const vec2 noiseScale = vec2(1600.0/16.0, 900.0/16.0);
 uniform sampler2D shadowNoiseTex;
 uniform vec3 shadowSamples[128];
 uniform int n_samples;
@@ -37,6 +37,10 @@ uniform sampler2D dirDepthMap;
 uniform vec3 dirLightPos;
 uniform vec3 dirLightIntensity;
 uniform mat4 dirLightSpaceMatrix;
+
+/*****************环境光******************************************************************/
+uniform vec3 ambientLight;
+
 /*****************天空盒******************************************************************/
 uniform vec3 skyboxSamples[32];
 uniform float skyboxScale;
@@ -54,8 +58,6 @@ mat3 TBN       = mat3(tangent, bitangent, normal);
 const int width = 1600;
 const int height = 900;
 
-uniform vec3 ambientLight;
-
 /*****************Camera设置******************************************************************/
 uniform float nearPlane;
 uniform float farPlane;
@@ -63,6 +65,11 @@ uniform vec3 eyePos;
 uniform vec3 eyeFront;
 uniform vec3 eyeUp;
 uniform float fov;
+
+/*****************toggle设置******************************************************************/
+uniform int SSAO;
+uniform int DirShadow;
+uniform int PointShadow;
 
 // float computePointLightShadow(vec3 fragPos,vec3 fragNorm,vec3 lightPos,samplerCube _depthMap) {
 //     vec3 dir = fragPos-lightPos;
@@ -90,17 +97,19 @@ vec3 sampleSkybox(vec2 uv,samplerCube _skybox) {
 
 vec3 computeSkyboxAmbient(samplerCube _skybox) {
     vec3 ambient = vec3(0.f);
-
-    for(int i =0;i<32;++i) {
-        vec3 sample_dir = TBN*vec4(skyboxSamples[i],1.f).xyz;
+    int samplesN = 32;
+    for(int i =0;i<samplesN;++i) {
+        vec3 sample_dir = TBN*(skyboxSamples[i]+vec3(0.0,0.0,1.f));
         ambient += texture(_skybox,normalize(sample_dir)).rgb;
     }
-    return ambient/32;
+    return ambient/samplesN;
 }
 
 float computeDirLightShadow(vec3 fragPos) {
     // perform perspective divide
-
+    if(DirShadow==0) {
+        return 0.f;
+    }
     vec4 lightSpaceFragPos = dirLightSpaceMatrix*vec4(fragPos,1.0f);
 
     //计算遮挡物与接受物的平均距离
@@ -147,6 +156,9 @@ float computeDirLightShadow(vec3 fragPos) {
 }
 
 float computePointLightShadow(vec3 fragPos,vec3 fragNorm,vec3 lightPos,samplerCube _depthMap) {
+    if(PointShadow==0) {
+        return 0.f;
+    }
     vec3 dir = fragPos-lightPos;
 
     float curr_depth = length(dir);
@@ -249,26 +261,22 @@ void main() {
     if (length(FragPos)==0) {
         LightResult = vec4(sampleSkybox(TexCoord,skybox),1.0f);
         // LightResult = vec4(0.3f,0.3f,0.3f,1.0f);
-        return;
     }
+    else {
+        vec3 diffuse=
+        pointLightDiffuse(FragPos,n)+
+        dirLightDiffuse(FragPos,n);
 
-    vec3 AO = texture(ssaoTex,TexCoord).rgb;
+        vec3 specular=
+        pointLightSpec(FragPos,n)+
+        dirLightSpec(FragPos,n);
 
-    vec3 diffuse=
-    pointLightDiffuse(FragPos,n)+
-    dirLightDiffuse(FragPos,n);
+        vec3 ambient = (
+            ambientLight+
+            computeSkyboxAmbient(skybox));
 
-    vec3 specular=
-    pointLightSpec(FragPos,n)+
-    dirLightSpec(FragPos,n);
-
-    vec3 ambient = AO*(
-        ambientLight+
-        computeSkyboxAmbient(skybox));
-
-    LightResult += vec4(diffuse*texture(gAlbedoSpec,TexCoord).rgb,1.f);
-    LightResult += vec4(specular*texture(gAlbedoSpec,TexCoord).a,1.f);
-    LightResult += vec4(ambient*texture(gAlbedoSpec,TexCoord).rgb,1.f);  
-    // LightResult = vec4(texture(dirDepthMap,TexCoord));
-    // LightResult = texture(ssaoTex,TexCoord);
+        LightResult += vec4(diffuse*texture(gAlbedoSpec,TexCoord).rgb,1.f);
+        LightResult += vec4(specular*texture(gAlbedoSpec,TexCoord).a,1.f);
+        LightResult += vec4(ambient*texture(gAlbedoSpec,TexCoord).rgb,1.f);
+    }
 }

@@ -1,7 +1,8 @@
 #pragma once
-#include "../../Shader.hpp"
-#include "../Renderer.hpp"
+#include "../../Shading/Shader.hpp"
+#include "../../Shading/Texture.hpp"
 
+#include "../Renderer.hpp"
 /* 1个Pass对应一个FBO , 一个Shader
 [in] Textures , Uniform Varibles , Extra Resources
 [out] Pass Texture
@@ -32,6 +33,11 @@ public:
     {
         shaders = Shader(vs_path.c_str(), fs_path.c_str(), gs_path.c_str());
         contextSetup();
+    }
+    void setToggle(bool status, std::string toggle)
+    {
+        shaders.use();
+        shaders.setInt(toggle, status ? 1 : 0);
     }
 
     // 上下文设置

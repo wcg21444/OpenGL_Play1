@@ -1,5 +1,5 @@
 #include <glad/glad.h>
-#include "../../Shader.hpp"
+#include "../../Shading/Shader.hpp"
 #include "../../ShaderGUI.hpp"
 #include "../../utils/Random.hpp"
 #include "LightPass.hpp"
@@ -14,40 +14,24 @@ LightPass::~LightPass() = default;
 void LightPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
-    glGenTextures(1, &lightPassTex);
-    glGenTextures(1, &shadowNoiseTex);
+
+    lightPassTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    shadowNoiseTex.Generate(8, 8, GL_RGBA16F, GL_RGB, GL_FLOAT, NULL);
 }
 void LightPass::contextSetup()
 {
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-    glBindTexture(GL_TEXTURE_2D, lightPassTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightPassTex, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightPassTex.ID, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-void LightPass::generateShadowNoiseTexture()
-{
-    auto noise = Random::GenerateNoise();
-
-    glBindTexture(GL_TEXTURE_2D, shadowNoiseTex);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 8, 8, 0, GL_RGB, GL_FLOAT, &noise[0]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 unsigned int LightPass::getTextures()
 {
-    return lightPassTex;
+    return lightPassTex.ID;
 }
 void LightPass::render(RenderParameters &renderParameters,
                        unsigned int gPosition,
                        unsigned int gNormal,
                        unsigned int gAlbedoSpec,
-                       unsigned int ssaoTex,
                        unsigned int skybox,
                        float pointLightFar)
 {
@@ -56,9 +40,14 @@ void LightPass::render(RenderParameters &renderParameters,
     auto &[pointLights, dirLights] = allLights;
 
     auto shadowKernel = Random::GenerateShadowKernel(128);
+
     static const auto skyboxKernel = Random::GenerateSemiSphereKernel(32);
-    generateShadowNoiseTexture();
+
+    auto noise = Random::GenerateNoise();
+    shadowNoiseTex.SetData(&noise[0]);
+
     shaderUI->render();
+
     glViewport(0, 0, vp_width, vp_height);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
@@ -69,11 +58,8 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setTextureAuto(gNormal, GL_TEXTURE_2D, 0, "gNormal");
     shaders.setTextureAuto(gAlbedoSpec, GL_TEXTURE_2D, 0, "gAlbedoSpec");
 
-    /****************************************SSAO输入**************************************************/
-
-    shaders.setTextureAuto(ssaoTex, GL_TEXTURE_2D, 0, "ssaoTex");
     /****************************************阴影噪声输入**************************************************/
-    shaders.setTextureAuto(shadowNoiseTex, GL_TEXTURE_2D, 0, "shadowNoiseTex");
+    shaders.setTextureAuto(shadowNoiseTex.ID, GL_TEXTURE_2D, 0, "shadowNoiseTex");
     /****************************************天空盒输入**************************************************/
     shaders.setTextureAuto(skybox, GL_TEXTURE_CUBE_MAP, 0, "skybox");
     shaders.setFloat("skyboxScale", shaderUI->skyboxScale);

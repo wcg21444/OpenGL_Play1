@@ -17,7 +17,7 @@ uniform vec3 eyePos;
 uniform float farPlane;
 
 uniform sampler2D texNoise;
-const vec2 noiseScale = vec2(1600.0/8.0, 900.0/8.0);
+const vec2 noiseScale = vec2(1600.0/32.0, 900.0/32.0);
 
 // vec3 fragPos   = texture(gPosition, TexCoord).xyz;
 vec4 fragPos4 = texture(gPosition, TexCoord);
@@ -32,7 +32,7 @@ mat3 TBN       = mat3(tangent, bitangent, normal);
 uniform int kernelSize =64;
 uniform float radius = 2.f;
 uniform float intensity = 1.f;
- //bias 为什么要给 surface depth 加? 有什么作用?
+//bias 为什么要给 surface depth 加? 有什么作用?
 uniform float bias = 1.f; 
 
 float WorldSpaceDepth(vec3 pos) {
@@ -84,8 +84,9 @@ float CalculateOcclusion() {
 
         float rangeCheck = smoothstep(0.0, 1.0, radius/(abs(fragPosView.z  - sampleSurface.z)));
         // float rangeCheck = 1-radius/abs(fragPosView.z  - sampleSurface.z);
-        occlusion += (fragPosView.z<=sampleSurfaceDepth + bias ? 1.0 : 0.0)*pow(rangeCheck,1);
+        occlusion += (fragPosView.z/1<=sampleSurfaceDepth/1 + bias ? 1.0 : 0.0)*pow(rangeCheck,1);
         // occlusion += rangeCheck;
+        // occlusion += sampleSurfaceDepth;
     }
     occlusion = 1.0 - (occlusion / kernelSize)/(1+depth);
     return occlusion;
@@ -114,5 +115,5 @@ void main() {
     // result = vec4((view*texture(gPosition,TexCoord)));
 
     result = vec4(occlusion);
-    // result = vec4(log((texture(gViewPosition,TexCoord).z+50)/100+1.5));
+    // result = vec4(log((texture(gNormal,TexCoord).z+50)/100+1.5));
 }

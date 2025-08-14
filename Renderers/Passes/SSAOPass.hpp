@@ -5,8 +5,9 @@ class SSAOShaderUI;
 class SSAOPass : public Pass
 {
 private:
-    unsigned int SSAOPassTex;
-    unsigned int noiseTexture;
+    Texture SSAOPassTex;
+    Texture noiseTex;
+
     std::unique_ptr<SSAOShaderUI> shaderUI;
     void initializeGLResources();
 
@@ -14,7 +15,6 @@ public:
     SSAOPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path);
     ~SSAOPass();
     void contextSetup() override;
-    void generateNoiseTexture();
     unsigned int getTextures();
     void render(RenderParameters &renderParameters,
                 unsigned int gPosition,

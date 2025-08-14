@@ -10,7 +10,8 @@
                 "${workspaceFolder}",
                 "-B",
                 "${workspaceFolder}/build",
-                "-DCMAKE_BUILD_TYPE=Debug"
+                "-DCMAKE_BUILD_TYPE=Debug",
+                "-j=8"
             ],
             "group": "build",
             "problemMatcher": [

@@ -12,6 +12,8 @@ inline void DirShadowPass::initializeGLResources()
 inline void DirShadowPass::contextSetup()
 {
 }
+/// @brief 将输入的深度图attach到FBO
+/// @param _depthMap 通道输出纹理对象
 void DirShadowPass::attachDepthMap(const unsigned int _depthMap)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
@@ -20,7 +22,8 @@ void DirShadowPass::attachDepthMap(const unsigned int _depthMap)
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
-// 输入存在的Tex对象,绑定Tex对象到FBO,结果输出到Tex.
+
+/// @brief 输入存在的Tex对象,绑定Tex对象到FBO,结果输出到Tex.
 void DirShadowPass::renderToTexture(
     const DirectionLight &light,
     std::vector<std::unique_ptr<Object>> &scene,

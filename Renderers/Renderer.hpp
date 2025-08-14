@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "../Shader.hpp"
+#include "../Shading/Shader.hpp"
 #include "../Camera.hpp"
 #include "../InputHandler.hpp"
 #include "../LightSource/LightSource.hpp"
