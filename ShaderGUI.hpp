@@ -9,7 +9,7 @@ class SSAOShaderUI
 public:
     float radius = 1.f;
     float intensity = 0.5f;
-    float bias = -0.05f;
+    float bias = -0.2f;
     int kernelSize = 64;
 
     void render()
@@ -19,7 +19,7 @@ public:
             ImGui::SliderInt("KernelSize", &kernelSize, 1, 64);
             ImGui::SliderFloat("radius", &radius, 0.f, 5.f);
             ImGui::SliderFloat("intensity", &intensity, 0.f, 2.f);
-            ImGui::SliderFloat("bias", &bias, -0.2f, 0.2f);
+            ImGui::SliderFloat("bias", &bias, -0.5f, 0.5f);
         }
         ImGui::End();
     }
@@ -28,17 +28,13 @@ class LightShaderUI
 {
 public:
     glm::vec3 ambientLight{0.0f, 0.0f, 0.0f};
-    float skyboxScale = 3.5f;
     int samplesNumber = 32;
     float blurRadius = 0.1f;
     void render()
     {
         ImGui::Begin("SSAOShaders");
         {
-            ImGui::SliderFloat("SkyBoxScale", &skyboxScale, 0.f, 50.f);
-            ImGui::DragFloat("AmbientLight R", &ambientLight.x, 0.01f);
-            ImGui::DragFloat("AmbientLight G", &ambientLight.y, 0.01f);
-            ImGui::DragFloat("AmbientLight B", &ambientLight.z, 0.01f);
+            ImGui::ColorEdit3("AmbientLight", glm::value_ptr(ambientLight));
             ImGui::SliderInt("Samples", &samplesNumber, 1, 128);
             ImGui::DragFloat("BlurRadius", &blurRadius, 0.01f, 0.0f, 1.0f);
         }

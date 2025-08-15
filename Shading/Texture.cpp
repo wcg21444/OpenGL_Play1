@@ -57,3 +57,10 @@ void Texture::SetFilterMax(GLenum filter)
 {
     glTexParameteri(Target, GL_TEXTURE_MAG_FILTER, filter);
 }
+
+void Texture::Resize(unsigned int Width, unsigned int Height)
+{
+    // 设置大小
+    // 删除旧Texture
+    // 重新分配资源
+}

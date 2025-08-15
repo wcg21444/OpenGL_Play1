@@ -159,7 +159,7 @@ private:
         /****************************光照渲染*********************************************/
         lightPass.setToggle(togglePointShadow, "PointShadow");
 
-        lightPass.setToggle(togglePointShadow, "DirShadow");
+        lightPass.setToggle(toggleDirShadow, "DirShadow");
 
         lightPass.render(renderParameters,
                          gPosition,

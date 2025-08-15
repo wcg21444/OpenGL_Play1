@@ -17,7 +17,7 @@
 class Texture
 {
 public:
-    unsigned int ID;
+    unsigned int ID = 0;
     GLenum Target = GL_TEXTURE_2D;   // what type of texture we're dealing with
     GLenum InternalFormat = GL_RGBA; // number of color components
     GLenum Format = GL_RGBA;         // the format each texel is stored in
@@ -31,10 +31,21 @@ public:
 
     unsigned int Width = 0;
     unsigned int Height = 0;
+
     void Generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, void *data);
     void SetData(void *data);
 
     void SetFilterMin(GLenum filter);
 
     void SetFilterMax(GLenum filter);
+
+    void Resize(unsigned int Width, unsigned int Height);
+    Texture()
+    {
+    }
+
+    ~Texture()
+    {
+        glDeleteTextures(1, &ID);
+    }
 };

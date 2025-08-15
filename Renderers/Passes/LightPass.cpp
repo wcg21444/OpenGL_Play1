@@ -62,7 +62,6 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setTextureAuto(shadowNoiseTex.ID, GL_TEXTURE_2D, 0, "shadowNoiseTex");
     /****************************************天空盒输入**************************************************/
     shaders.setTextureAuto(skybox, GL_TEXTURE_CUBE_MAP, 0, "skybox");
-    shaders.setFloat("skyboxScale", shaderUI->skyboxScale);
 
     /****************************************阴影贴图输入**************************************************/
     // TODO Shader 多DirLight 渲染
@@ -91,7 +90,9 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setUniform3fv("dirLightPos", dirLights[0].position);
     shaders.setUniform3fv("dirLightIntensity", dirLights[0].intensity);
     shaders.setMat4("dirLightSpaceMatrix", dirLights[0].lightSpaceMatrix);
-
+    /****************************************视口设置****************************************************/
+    shaders.setInt("widht", vp_width);
+    shaders.setInt("height", vp_height);
     /****************************************摄像机设置**************************************************/
     shaders.setUniform3fv("eyePos", cam.getPosition());
     shaders.setUniform3fv("eyeFront", cam.getFront());

@@ -9,14 +9,14 @@
 
 CubemapUnfoldRenderer::CubemapUnfoldRenderer()
     : unfoldShaders("Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs"),
-      quadShader("Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs"),
+      quadShader("Shaders/screenQuad.vs", "Shaders/GBuffer/texture.fs"),
       width(1600), height(900), quadVAO(0), unfoldFBO(0), unfoldedCubemap(0),
       CUBEMAP_FACE_SIZE(1024) {}
 
 void CubemapUnfoldRenderer::reloadCurrentShaders()
 {
     unfoldShaders = Shader("Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs");
-    quadShader = Shader("Shaders/GBuffer/texture.vs", "Shaders/GBuffer/texture.fs");
+    quadShader = Shader("Shaders/screenQuad.vs", "Shaders/GBuffer/texture.fs");
     pointShadowPass.reloadCurrentShader();
     contextSetup();
 }

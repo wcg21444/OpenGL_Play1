@@ -42,6 +42,11 @@ public:
 
     // 上下文设置
     virtual void contextSetup() = 0;
+
+    virtual ~Pass()
+    {
+        glDeleteFramebuffers(1, &FBO);
+    }
 };
 
 // 将最终通道渲染到屏幕

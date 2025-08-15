@@ -19,10 +19,8 @@
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
 
-const int width = 1600;
-const int height = 900;
-
-DirectionLight parallelLight; // 临时, 测试用
+const int InitWidth = 1600;
+const int InitHeight = 900;
 
 int main()
 {
@@ -31,9 +29,9 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    const char *glsl_version = "#version 130";
+    const char *glsl_version = "#version 330";
     // create window object
-    GLFWwindow *window = glfwCreateWindow(width, height, "OpenGLPlay", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(InitWidth, InitHeight, "OpenGLPlay", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -62,7 +60,7 @@ int main()
 
     // 场景布置
     glm::mat4 model = glm::mat4(1.0f);
-    Camera cam(width, height, 14.f, 0.05f);
+    Camera cam(InitWidth, InitHeight, 14.f, 0.05f);
 
     std::vector<std::unique_ptr<Object>> scene;
     glm::mat4 plane_model = glm::translate(model, glm::vec3(0.f, -1.f, 0.f));

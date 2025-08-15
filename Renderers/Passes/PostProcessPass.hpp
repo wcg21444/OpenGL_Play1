@@ -34,6 +34,10 @@ public:
         glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
         shaders.use();
+
+        shaders.setInt("widht", vp_width);
+        shaders.setInt("height", vp_height);
+
         shaders.setTextureAuto(ssaoTex, GL_TEXTURE_2D, 0, "ssaoTex");
         shaders.setTextureAuto(screenTex, GL_TEXTURE_2D, 0, "screenTex");
 

@@ -64,31 +64,31 @@ namespace GUI
     }
     void LightHandle(PointLight &light_source)
     {
-        static glm::vec3 lightIntensity = light_source.intensity;
+        static glm::vec3 lightColor;
+        static float lightIntensity;
         static glm::vec3 lightPosition = light_source.position;
-        ImGui::DragFloat("LightIntensitiy.R", &lightIntensity.x, 1.f);
-        ImGui::DragFloat("LightIntensitiy.G", &lightIntensity.y, 1.f);
-        ImGui::DragFloat("LightIntensitiy.B", &lightIntensity.z, 1.f);
+
+        ImGui::ColorEdit3("LightColor", glm::value_ptr(lightColor));
+        ImGui::DragFloat("LightIntensitiy", &lightIntensity, 0.1f, 0.f);
 
         ImGui::DragFloat("LightPosition.X", &lightPosition.x, 0.1f);
         ImGui::DragFloat("LightPosition.Y", &lightPosition.y, 0.1f);
         ImGui::DragFloat("LightPosition.Z", &lightPosition.z, 0.1f);
-        light_source.intensity = lightIntensity;
+        light_source.intensity = lightIntensity * lightColor;
         light_source.position = lightPosition;
     }
     void LightHandle(DirectionLight &light_source)
     {
-
-        static glm::vec3 lightIntensity = light_source.intensity;
+        static glm::vec3 lightColor;
+        static float lightIntensity;
         static glm::vec3 lightPosition = light_source.position;
-        ImGui::DragFloat("DirLightIntensitiy.R", &lightIntensity.x, 0.01f);
-        ImGui::DragFloat("DirLightIntensitiy.G", &lightIntensity.y, 0.01f);
-        ImGui::DragFloat("DirLightIntensitiy.B", &lightIntensity.z, 0.01f);
+        ImGui::ColorEdit3("DirLightColor", glm::value_ptr(lightColor));
+        ImGui::DragFloat("DirLightIntensitiy", &lightIntensity, 0.01f, 0.f);
 
         ImGui::DragFloat("DirLightPosition.X", &lightPosition.x, 0.1f);
         ImGui::DragFloat("DirLightPosition.Y", &lightPosition.y, 0.1f);
         ImGui::DragFloat("DirLightPosition.Z", &lightPosition.z, 0.1f);
-        light_source.intensity = lightIntensity;
+        light_source.intensity = lightIntensity * lightColor;
         light_source.updatePosition(lightPosition);
     }
 

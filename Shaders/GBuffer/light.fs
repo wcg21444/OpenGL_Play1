@@ -43,7 +43,6 @@ uniform vec3 ambientLight;
 
 /*****************天空盒******************************************************************/
 uniform vec3 skyboxSamples[32];
-uniform float skyboxScale;
 uniform samplerCube skybox;
 uniform mat4 view;//视图矩阵
 
@@ -71,27 +70,84 @@ uniform int SSAO;
 uniform int DirShadow;
 uniform int PointShadow;
 
-// float computePointLightShadow(vec3 fragPos,vec3 fragNorm,vec3 lightPos,samplerCube _depthMap) {
-//     vec3 dir = fragPos-lightPos;
-//     float cloest_depth = texture(_depthMap,dir).r;
-//     cloest_depth*= pointLightFar;
-//     float curr_depth = length(dir);
-//     float omega = -dot(fragNorm,dir)/curr_depth;
-//     float bias = 0.05f/tan(omega);//idea: bias increase based on center distance 
+/*******************************RayMarching输入**************************************************/
+const vec3 boxMin = vec3(2.0f,-2.0f,-2.0f);
+const vec3 boxMax = vec3(6.0f,2.0f,2.0f);
+/*******************************RayMarching******************************************************/
 
-//     //shadow test
-//     return curr_depth-cloest_depth-bias>0.f ? 1.0:0.0;//return shadow
-// }
-vec3 sampleSkybox(vec2 uv,samplerCube _skybox) {
-    // vec3 uv_centered = vec3(uv-vec2(0.5f,0.5f),0.f);
+vec2 rayBoxDst(vec3 boundsMin, vec3 boundsMax, vec3 rayOrigin, vec3 invRaydir) {
+    vec3 t0 = (boundsMin - rayOrigin) * invRaydir;
+    vec3 t1 = (boundsMax - rayOrigin) * invRaydir;
+    vec3 tmin = min(t0, t1);
+    vec3 tmax = max(t0, t1);
+
+    float dstA = max(max(tmin.x, tmin.y), tmin.z); //进入点
+    float dstB = min(tmax.x, min(tmax.y, tmax.z)); //出去点
+
+    float dstToBox = max(0, dstA);
+    float dstInsideBox = max(0, dstB - dstToBox);
+    return vec2(dstToBox, dstInsideBox);
+}
+vec4 computeCloudRayMarching(vec3 startPoint, vec3 direction,float depthLimit) {
+    vec3 testPoint = startPoint;
+    float sum = 0.0;
+    float interval = 0.01;//每次步进间隔
+    float intensity = 0.2*interval;
+    direction *= interval;
+    for (int i = 0; i < 1024; ++i) {
+        //步进总长度
+        if(i*interval>depthLimit) {
+            break;
+        }
+        testPoint += direction;
+        if (testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
+            testPoint.z < boxMax.z && testPoint.z > boxMin.z &&
+            testPoint.y < boxMax.y && testPoint.y > boxMin.y)
+        sum += intensity;
+    }
+    return sum*vec4(0.2f,0.3f,0.5f,1.0f);
+}
+vec4 cloudRayMarching(vec3 startPoint, vec3 direction,vec3 fragPos) {
+    vec2 rst = rayBoxDst(boxMin,boxMax,startPoint,1.0/direction);
+    float boxDepth = rst.x;
+    float boxInsideDepth = rst.y;
+
+    float fragDepth = length(fragPos-startPoint);
+    // skybox
+    if (length(fragPos)==0) {
+        fragDepth = 10000000.f;
+    }
+
+    if(fragDepth<boxDepth) {
+        //物体阻挡Box
+        return vec4(0.f);
+    }
+    float depthLimit;
+    if((fragDepth-boxDepth)<boxInsideDepth) {
+        //物体嵌入box,步进深度限制减小
+        depthLimit = fragDepth-boxDepth;
+    }
+    else {
+        depthLimit = boxInsideDepth;
+    }
+    return computeCloudRayMarching(startPoint+direction*rst.x,direction,depthLimit);
+}
+/*******************************Lighting******************************************************/
+
+vec3 fragViewSpaceDir(vec2 uv) {
     vec3 dir = vec3(uv-vec2(0.5f,0.5f),0.f);
-    dir.y = dir.y/width*height*tan(radians(fov/2))*skyboxScale;
-    dir.x = dir.x*tan(radians(fov/2))*skyboxScale;
+    dir.y = dir.y*tan(radians(fov/2))*2;
+    dir.x = dir.x*tan(radians(fov/2))*(float(width)/float(height))*2;
     dir.z = -1.0f;
     dir = normalize(inverse(mat3(view)) *dir);
+    return dir;
+}
 
+vec3 sampleSkybox(vec2 uv,samplerCube _skybox) {
+    // vec3 uv_centered = vec3(uv-vec2(0.5f,0.5f),0.f);
+    vec3 dir = fragViewSpaceDir(uv);
     // vec3 dir = normalize(eyeFront+nearPlane*uv_centered*2*tan(radians(fov)/2));
-    return vec3(texture(_skybox,dir.xyz));
+    return vec3(texture(_skybox,dir));
     // return dir;
 }
 
@@ -271,6 +327,7 @@ void main() {
         pointLightSpec(FragPos,n)+
         dirLightSpec(FragPos,n);
 
+        // vec3 ambient = ambientLight;
         vec3 ambient = (
             ambientLight+
             computeSkyboxAmbient(skybox));
@@ -279,4 +336,8 @@ void main() {
         LightResult += vec4(specular*texture(gAlbedoSpec,TexCoord).a,1.f);
         LightResult += vec4(ambient*texture(gAlbedoSpec,TexCoord).rgb,1.f);
     }
+
+    vec3 dir = fragViewSpaceDir(TexCoord);   
+    vec4 cloud = cloudRayMarching(eyePos.xyz, dir,FragPos);       
+    LightResult+=cloud;
 }
