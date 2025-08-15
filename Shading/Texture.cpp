@@ -69,8 +69,11 @@ void Texture::Resize(int ResizeWidth, int ResizeHeight)
     // 设置大小
     // 重新生成Tex
     // ResizeTexture 需要删除原有Texture GL对象
-    assert(ResizeWidth >= 0);
-    assert(ResizeHeight >= 0);
+    // assert(ResizeWidth >= 0);
+    // assert(ResizeHeight >= 0);
+    // clamp
+    ResizeWidth = (ResizeWidth <= 0) ? 1 : ResizeWidth;
+    ResizeHeight = (ResizeHeight <= 0) ? 1 : ResizeHeight;
 
     Width = static_cast<unsigned int>(ResizeWidth);
     Height = static_cast<unsigned int>(ResizeHeight);

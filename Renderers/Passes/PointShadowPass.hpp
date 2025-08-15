@@ -13,14 +13,14 @@ class PointShadowPass : public Pass
 private:
     glm::mat4 shadowProj;
     float aspect;
-    float near;
+    float nearPlane;
 
 private:
     void initializeGLResources();
     void attachDepthMap(const unsigned int _depthCubemap);
 
 public:
-    float far;
+    float farPlane;
 
 public:
     PointShadowPass(std::string _vs_path, std::string _fs_path, std::string _gs_path);

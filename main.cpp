@@ -57,7 +57,7 @@ int main()
         glfwTerminate();
         return -1;
     }
-    InputHandler::bindWindow(window);
+    InputHandler::BindWindow(window);
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -71,11 +71,13 @@ int main()
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
     (void)io;
-    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
-    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+    std::cout << "ImGui Version: " << IMGUI_VERSION << std::endl;
 
     // 场景布置
     glm::mat4 model = glm::mat4(1.0f);
@@ -134,7 +136,7 @@ int main()
     auto ptrRenderParameters = std::make_shared<RenderParameters>(allLights, cam, scene, model, window);
     auto ptrRenderManager = std::make_shared<RenderManager>();
 
-    InputHandler::bindRenderApplication(ptrRenderParameters, ptrRenderManager);
+    InputHandler::BindRenderApplication(ptrRenderParameters, ptrRenderManager);
 
     auto &renderParameters = *ptrRenderParameters;
     auto &renderManager = *ptrRenderManager;
@@ -142,11 +144,15 @@ int main()
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
-        InputHandler::processInput(window, cam);
+        InputHandler::ProcessInput(window, cam);
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+
+        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockspace_flags);
 
         {
             ImGui::BeginMainMenuBar();
@@ -162,6 +168,7 @@ int main()
         }
 
         GUI::ShowSidebarToolbar(scene, renderManager, light, model);
+
         GUI::LightHandle(dirLights[0]);
 
         if (GUI::modelLoadView)
@@ -172,9 +179,18 @@ int main()
         // 渲染顺序
 
         renderManager.render(renderParameters);
+
         ImGui::Render();
+
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            GLFWwindow *backup_current_context = glfwGetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(backup_current_context);
+        }
         glfwSwapBuffers(window);
     }
 

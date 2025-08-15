@@ -4,7 +4,7 @@
 #include "Camera.hpp"
 
 // 内部逻辑实现
-void InputHandler::toggleControlMode(GLFWwindow *window)
+void InputHandler::ToggleControlMode(GLFWwindow *window)
 {
     if (currentMode == APP_CONTROL) // APP TO UI
     {
@@ -30,7 +30,7 @@ void InputHandler::toggleControlMode(GLFWwindow *window)
     }
 }
 
-void InputHandler::windowResizeCallback(GLFWwindow *window, int resizeWidth, int resizeHeight)
+void InputHandler::WindowResizeCallback(GLFWwindow *window, int resizeWidth, int resizeHeight)
 {
     // 在这里调用 ptrRenderManager->resizeViewport(resizeWidth, resizeHeight);
     // 以及 ptrRenderParameters->updateProjectionMatrix(resizeWidth, resizeHeight);
@@ -52,11 +52,11 @@ void InputHandler::windowResizeCallback(GLFWwindow *window, int resizeWidth, int
     }
 }
 
-void InputHandler::keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
+void InputHandler::KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
     {
-        toggleControlMode(window);
+        ToggleControlMode(window);
         if (currentMode == UI_CONTROL)
         {
             // ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
@@ -69,7 +69,7 @@ void InputHandler::keyCallback(GLFWwindow *window, int key, int scancode, int ac
     }
 }
 
-void InputHandler::mouseCallback(GLFWwindow *window, double xpos, double ypos)
+void InputHandler::MouseCallback(GLFWwindow *window, double xpos, double ypos)
 {
     if (currentMode == UI_CONTROL)
     {
@@ -83,7 +83,7 @@ void InputHandler::mouseCallback(GLFWwindow *window, double xpos, double ypos)
     }
 }
 
-void InputHandler::scrollCallback(GLFWwindow *window, double xoffset, double yoffset)
+void InputHandler::ScrollCallback(GLFWwindow *window, double xoffset, double yoffset)
 {
     if (currentMode == UI_CONTROL)
     {
@@ -96,7 +96,7 @@ void InputHandler::scrollCallback(GLFWwindow *window, double xoffset, double yof
     }
 }
 
-void InputHandler::mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
+void InputHandler::MouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 {
     if (currentMode == UI_CONTROL)
     {
@@ -111,7 +111,7 @@ void InputHandler::mouseButtonCallback(GLFWwindow *window, int button, int actio
 }
 
 // 对外开放接口实现
-void InputHandler::processInput(GLFWwindow *window, Camera &cam)
+void InputHandler::ProcessInput(GLFWwindow *window, Camera &cam)
 {
     static int movement;
     if (currentMode != APP_CONTROL)
@@ -134,21 +134,21 @@ void InputHandler::processInput(GLFWwindow *window, Camera &cam)
     scrollState = {0, 0};
 }
 
-void InputHandler::bindWindow(GLFWwindow *window)
+void InputHandler::BindWindow(GLFWwindow *window)
 {
     glfwMakeContextCurrent(window);
-    glfwSetKeyCallback(window, keyCallback);
-    glfwSetCursorPosCallback(window, mouseCallback);
-    glfwSetMouseButtonCallback(window, mouseButtonCallback);
-    glfwSetScrollCallback(window, scrollCallback);
-    glfwSetFramebufferSizeCallback(window, windowResizeCallback);
+    glfwSetKeyCallback(window, KeyCallback);
+    glfwSetCursorPosCallback(window, MouseCallback);
+    glfwSetMouseButtonCallback(window, MouseButtonCallback);
+    glfwSetScrollCallback(window, ScrollCallback);
+    glfwSetFramebufferSizeCallback(window, WindowResizeCallback);
 
     // 初始化鼠标指针
     glfwGetCursorPos(window, &mouseState.appX, &mouseState.appY);
     glfwGetCursorPos(window, &mouseState.uiX, &mouseState.uiY);
 }
 
-void InputHandler::bindRenderApplication(
+void InputHandler::BindRenderApplication(
     std::shared_ptr<RenderParameters> _ptrRenderParameters,
     std::shared_ptr<RenderManager> _ptrRenderManager)
 {
@@ -156,7 +156,7 @@ void InputHandler::bindRenderApplication(
     ptrRenderParameters = _ptrRenderParameters;
 }
 
-void InputHandler::resetInputState()
+void InputHandler::ResetInputState()
 {
     mouseState = {};
     scrollState = {};

@@ -6,9 +6,9 @@ PointShadowPass::PointShadowPass(std::string _vs_path, std::string _fs_path, std
     contextSetup();
 
     aspect = 1.f;
-    near = 0.1f;
-    far = 250.f;
-    shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
+    nearPlane = 0.1f;
+    farPlane = 250.f;
+    shadowProj = glm::perspective(glm::radians(90.0f), aspect, nearPlane, farPlane);
 }
 
 inline void PointShadowPass::initializeGLResources()
@@ -73,7 +73,7 @@ void PointShadowPass::renderToTexture(
         {
             shaders.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
         }
-        shaders.setFloat("farPlane", far);
+        shaders.setFloat("farPlane", farPlane);
         shaders.setUniform3fv("lightPos", light.position);
 
         Renderer::DrawScene(scene, model, shaders);

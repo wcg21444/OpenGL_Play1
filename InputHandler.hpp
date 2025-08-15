@@ -51,19 +51,19 @@ private:
     // 内部逻辑
 private:
     InputHandler() {}
-    static void toggleControlMode(GLFWwindow *window);
-    static void windowResizeCallback(GLFWwindow *window, int resizeWidth, int resizeHeight);
-    static void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);
-    static void mouseCallback(GLFWwindow *window, double xpos, double ypos);
-    static void scrollCallback(GLFWwindow *window, double xoffset, double yoffset);
-    static void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
+    static void ToggleControlMode(GLFWwindow *window);
+    static void WindowResizeCallback(GLFWwindow *window, int resizeWidth, int resizeHeight);
+    static void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);
+    static void MouseCallback(GLFWwindow *window, double xpos, double ypos);
+    static void ScrollCallback(GLFWwindow *window, double xoffset, double yoffset);
+    static void MouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
 
 public:
     // 对外开放接口
-    static void processInput(GLFWwindow *window, Camera &cam);
-    static void bindWindow(GLFWwindow *window);
-    static void bindRenderApplication(
+    static void ProcessInput(GLFWwindow *window, Camera &cam);
+    static void BindWindow(GLFWwindow *window);
+    static void BindRenderApplication(
         std::shared_ptr<RenderParameters> _ptrRenderParameters,
         std::shared_ptr<RenderManager> _ptrRenderManager);
-    static void resetInputState();
+    static void ResetInputState();
 };

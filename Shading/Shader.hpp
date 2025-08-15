@@ -11,6 +11,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <iostream>
 
 #include "../utils/DebugOutput.hpp"
@@ -24,6 +25,7 @@ public:
     unsigned int progrm_ID;
     bool used = false;
     std::unordered_map<std::string, int> textureLocationMap;
+    std::unordered_set<std::string> warningMsgSet;
     int location_ID;
 
 private:

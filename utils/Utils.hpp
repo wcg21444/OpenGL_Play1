@@ -3,7 +3,7 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
-void CheckGLErrors()
+inline void CheckGLErrors()
 {
     GLenum err;
     while ((err = glGetError()) != GL_NO_ERROR)

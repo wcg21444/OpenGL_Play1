@@ -33,7 +33,7 @@ void main() {
 
     //Gamma 矫正
     if(GammaCorrection==1) {
-        float gamma = 1.5;
+        float gamma = 1.8;
         FragColor.rgb = pow(FragColor.rgb, vec3(1.0/gamma));
     }
 

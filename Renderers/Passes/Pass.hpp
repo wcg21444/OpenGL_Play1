@@ -51,6 +51,7 @@ public:
 };
 
 // 将最终通道渲染到屏幕
+// 输出到默认FBO
 class ScreenPass : public Pass
 {
 private:

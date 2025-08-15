@@ -144,7 +144,17 @@ GLint Shader::getUniformLocationSafe(const std::string &name)
     GLint location = glGetUniformLocation(progrm_ID, name.c_str());
     if (location == -1)
     {
-        std::cerr << "Warning: Uniform '" << name << "' not found in shader program " << progrm_ID << std::endl;
+        if (!warningMsgSet.contains(std::format("{}{}", name, progrm_ID)))
+        {
+            warningMsgSet.insert(std::format("{}{}", name, progrm_ID));
+            DebugOutput::AddLog(std::format("Warning: Uniform {} not found in shader program: {} ", name, progrm_ID));
+            DebugOutput::AddLog(std::format("   Vertex Shader Path: {} ", vs_path));
+            DebugOutput::AddLog(std::format("   Fragment Shader Path: {} ", fs_path));
+            if (!(gs_path == ""))
+            {
+                DebugOutput::AddLog(std::format("   Geometry Shader Path: {} ", gs_path));
+            }
+        }
     }
     return location;
 }

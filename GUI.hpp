@@ -78,6 +78,8 @@ namespace GUI
     }
     void LightHandle(DirectionLight &light_source)
     {
+        ImGui::Begin("DirLight");
+
         static glm::vec3 lightColor;
         static float lightIntensity;
         static glm::vec3 lightPosition = light_source.position;
@@ -89,6 +91,7 @@ namespace GUI
         ImGui::DragFloat("DirLightPosition.Z", &lightPosition.z, 0.1f);
         light_source.intensity = lightIntensity * lightColor;
         light_source.updatePosition(lightPosition);
+        ImGui::End();
     }
 
     glm::mat4 MatrixInputWithImGui(const char *label, const glm::mat4 &initial)
@@ -207,7 +210,7 @@ namespace GUI
         }
     }
 
-    void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, PointLight &light, glm::mat4 &model)
+    /*void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, PointLight &light, glm::mat4 &model)
     {
         static float sidebar_width = 300.0f;
         static bool is_resizing = false;
@@ -304,5 +307,52 @@ namespace GUI
         {
             is_resizing = false;
         }
+    }*/
+
+    void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, PointLight &light, glm::mat4 &model)
+    {
+
+        // 开始侧边栏窗口
+        ImGui::Begin("Sidebar", nullptr);
+
+        // 1. 灯光控制部分
+        if (ImGui::CollapsingHeader("Light Settings", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            GUI::LightHandle(light);
+        }
+
+        // 2. 模型矩阵控制
+        if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            model = GUI::MatrixInputWithImGui("Model Matrix", model);
+        }
+
+        // 3. 渲染选项
+        if (ImGui::CollapsingHeader("Render Options"))
+        {
+            GUI::RenderSwitchCombo(renderManager);
+        }
+
+        // 4. 场景层次结构
+        if (ImGui::CollapsingHeader("Scene Hierarchy", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            GUI::displaySceneHierarchy(scene, GUI::selectedIndex);
+        }
+
+        // 5. 着色器管理
+        if (ImGui::CollapsingHeader("Shader Settings"))
+        {
+            // GUI::ShadowRendererShaderManager(renderManager);
+            GUI::RendererShaderManager(renderManager);
+        }
+
+        // 6. 调试输出
+        if (ImGui::CollapsingHeader("Debug Output"))
+        {
+            DebugOutput::Draw();
+        }
+
+        ImGui::Text("FPS: %.2f", ImGui::GetIO().Framerate);
+        ImGui::End();
     }
 }

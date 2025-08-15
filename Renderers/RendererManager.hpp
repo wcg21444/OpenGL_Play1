@@ -24,7 +24,7 @@ private:
     void clearContext();
 
 public:
-    // ³õÊ¼äÖÈ¾Æ÷¿í¸ßÉèÖÃ
+    // åˆå§‹æ¸²æŸ“å™¨å®½é«˜è®¾ç½®
     int rendererWidth = 1600;
     int rendererHeight = 900;
 
