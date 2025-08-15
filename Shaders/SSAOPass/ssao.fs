@@ -4,6 +4,10 @@ out vec4 result;
 
 in vec2 TexCoord;
 
+/********************视口大小*****************************************/
+uniform int width = 1600;
+uniform int height = 900;
+
 uniform sampler2D gPosition;//World Space
 uniform sampler2D gViewPosition;//View Space
 uniform sampler2D gNormal;
@@ -17,7 +21,7 @@ uniform vec3 eyePos;
 uniform float farPlane;
 
 uniform sampler2D texNoise;
-const vec2 noiseScale = vec2(1600.0/16.0, 900.0/16.0);
+vec2 noiseScale = vec2(width/16.0,height/16.0);
 
 // vec3 fragPos   = texture(gPosition, TexCoord).xyz;
 vec4 fragPos4 = texture(gPosition, TexCoord);

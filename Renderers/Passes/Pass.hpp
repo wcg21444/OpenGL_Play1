@@ -43,6 +43,7 @@ public:
     // 上下文设置
     virtual void contextSetup() = 0;
 
+    virtual void resize(int _width, int _height) = 0;
     virtual ~Pass()
     {
         glDeleteFramebuffers(1, &FBO);
@@ -63,7 +64,17 @@ public:
         initializeGLResources();
         contextSetup();
     }
+
     void contextSetup() {}
+
+    void resize(int _width, int _height)
+    {
+        vp_width = _width;
+        vp_height = _height;
+
+        contextSetup();
+    }
+
     void render(unsigned int finalTextureID)
     {
         glViewport(0, 0, vp_width, vp_height);

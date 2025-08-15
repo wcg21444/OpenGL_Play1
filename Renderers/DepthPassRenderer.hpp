@@ -7,17 +7,24 @@ class DepthPassRenderer : public Renderer
     int height = 900;
 
 public:
-    void reloadCurrentShaders()
+    void reloadCurrentShaders() override
     {
         shaders = std::move(Shader("Shaders/DepthPass/depth_pass.vs", "Shaders/DepthPass/depth_pass.fs"));
         contextSetup();
     }
-    void contextSetup()
+    void contextSetup() override
     {
         glEnable(GL_DEPTH_TEST); // 深度缓冲
         glViewport(0, 0, width, height);
     }
-    void render(RenderParameters &renderParameters)
+    void resize(int _width, int _height) override
+    {
+        width = _width;
+        height = _height;
+
+        contextSetup();
+    }
+    void render(RenderParameters &renderParameters) override
     {
         auto &[allLights, cam, scene, model, window] = renderParameters;
         auto &[pointLights, dirLights] = allLights;

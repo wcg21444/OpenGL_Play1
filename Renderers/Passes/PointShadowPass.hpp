@@ -26,7 +26,10 @@ public:
     PointShadowPass(std::string _vs_path, std::string _fs_path, std::string _gs_path);
 
     void contextSetup() override;
+
     void render(PointLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix);
+
+    void resize(int _width, int _height) override;
 
     void renderToTexture(
         const PointLight &light,

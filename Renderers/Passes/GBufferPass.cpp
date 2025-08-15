@@ -39,6 +39,7 @@ void GBufferPass::contextSetup()
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gViewPosition, 0);
 
     // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering
+    // 分配多个写入对象.对应Shader input layout
     unsigned int attachments[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
     glDrawBuffers(4, attachments);
 
@@ -47,16 +48,36 @@ void GBufferPass::contextSetup()
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthMap);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+void GBufferPass::resize(int _width, int _height)
+{
+    vp_width = _width;
+    vp_height = _height;
+
+    gPosition.Resize(vp_width, vp_height);
+    gNormal.Resize(vp_width, vp_height);
+    gAlbedoSpec.Resize(vp_width, vp_height);
+    // TODO non Texure Resize
+    contextSetup();
+}
 void GBufferPass::render(RenderParameters &renderParameters)
 {
     auto &[allLights, cam, scene, model, window] = renderParameters;
+
     glViewport(0, 0, vp_width, vp_height);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
     shaders.use();
+
+    /****************************************视口设置****************************************************/
+    shaders.setInt("width", vp_width);
+    shaders.setInt("height", vp_height);
+
     cam.setViewMatrix(shaders);
     cam.setPerspectiveMatrix(shaders, vp_width, vp_height);
     Renderer::DrawScene(scene, model, shaders);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

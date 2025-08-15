@@ -10,14 +10,22 @@ PointShadowPass::PointShadowPass(std::string _vs_path, std::string _fs_path, std
     far = 250.f;
     shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
 }
+
 inline void PointShadowPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
 }
+
 inline void PointShadowPass::contextSetup()
 {
     glEnable(GL_DEPTH_TEST);
 }
+
+inline void PointShadowPass::resize(int _width, int _height)
+{
+    // void 此处应该是缩放阴影贴图大小
+}
+
 void PointShadowPass::attachDepthMap(const unsigned int _depthCubemap)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
@@ -26,6 +34,7 @@ void PointShadowPass::attachDepthMap(const unsigned int _depthCubemap)
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
 // 输入光源的Tex对象,绑定Tex对象到FBO,结果输出到Tex.
 void PointShadowPass::renderToTexture(
     const PointLight &light,

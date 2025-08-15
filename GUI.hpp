@@ -8,7 +8,6 @@
 
 #include "Shader.hpp"
 #include "Camera.hpp"
-#include "InputHandler.hpp"
 #include "Objects/Object.hpp"
 #include "LightSource/LightSource.hpp"
 #include "Renderers/RendererManager.hpp"

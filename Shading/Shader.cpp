@@ -144,7 +144,7 @@ GLint Shader::getUniformLocationSafe(const std::string &name)
     GLint location = glGetUniformLocation(progrm_ID, name.c_str());
     if (location == -1)
     {
-        // std::cerr << "Warning: Uniform '" << name << "' not found in shader program " << progrm_ID << std::endl;
+        std::cerr << "Warning: Uniform '" << name << "' not found in shader program " << progrm_ID << std::endl;
     }
     return location;
 }

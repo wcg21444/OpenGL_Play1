@@ -14,8 +14,13 @@ private:
 public:
     SSAOPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path);
     ~SSAOPass();
+
     void contextSetup() override;
+
+    void resize(int _width, int _height) override;
+
     unsigned int getTextures();
+
     void render(RenderParameters &renderParameters,
                 unsigned int gPosition,
                 unsigned int gNormal,
@@ -26,42 +31,20 @@ public:
 class SSAOBlurPass : public Pass
 {
 private:
-    unsigned int blurPassTex;
+    unsigned int FBO;
+
+    Texture blurPassTex;
 
 private:
-    void initializeGLResources()
-    {
-        glGenFramebuffers(1, &FBO);
-        glGenTextures(1, &blurPassTex);
-    }
+    void initializeGLResources();
+    void contextSetup();
 
 public:
-    SSAOBlurPass(int _vp_width, int _vp_height, std::string _vs_path,
-                 std::string _fs_path)
-        : Pass(_vp_width, _vp_height, _vs_path, _fs_path)
-    {
-        initializeGLResources();
-        contextSetup();
-    }
-    void contextSetup()
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-        {
-            glBindTexture(GL_TEXTURE_2D, blurPassTex);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurPassTex, 0);
-        }
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-    unsigned int getTextures() { return blurPassTex; }
-    void render(unsigned int SSAOTex)
-    {
-        glViewport(0, 0, vp_width, vp_height);
-        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-        shaders.use();
-        shaders.setTextureAuto(SSAOTex, GL_TEXTURE_2D, 0, "SSAOTex");
-        Renderer::DrawQuad();
-    }
+    SSAOBlurPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path);
+    ~SSAOBlurPass(); // 析构函数，用于释放资源
+
+    void resize(int _width, int _height) override;
+    void render(unsigned int SSAOTex);
+
+    unsigned int getTextures() { return blurPassTex.ID; }
 };

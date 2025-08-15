@@ -9,6 +9,10 @@ in vec3 FragPos;
 in vec3 Normal;
 in vec3 ViewFragPos;
 
+/*****************视口大小******************************************************************/
+uniform int width = 1600;
+uniform int height = 900;
+
 uniform int enable_tex = 0;
 uniform sampler2D texture_diff;  //diff纹理单元句柄
 uniform sampler2D texture_spec;  //spec纹理单元句柄

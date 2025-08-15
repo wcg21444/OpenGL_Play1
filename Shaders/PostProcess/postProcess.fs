@@ -10,8 +10,8 @@ uniform sampler2D screenTex;
 uniform sampler2D ssaoTex;
 
 /*****************视口大小******************************************************************/
-const int width = 1600;
-const int height = 900;
+uniform int width = 1600;
+uniform int height = 900;
 
 /*****************toggle设置******************************************************************/
 uniform int SSAO;

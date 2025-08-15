@@ -15,13 +15,13 @@ class CubemapUnfoldRenderer : public Renderer
     unsigned int unfoldFBO;
     unsigned int unfoldedCubemap;
     const int CUBEMAP_FACE_SIZE;
-    PointShadowPassDeprecated pointShadowPass;
 
 public:
     CubemapUnfoldRenderer();
     void reloadCurrentShaders() override;
     void contextSetup() override;
     void unfoldCubemap(unsigned int cubemap);
+    void resize(int _width, int _height) override;
     void render(RenderParameters &renderParameters) override;
     unsigned int getUnfoldedCubemap() const { return unfoldedCubemap; }
 };

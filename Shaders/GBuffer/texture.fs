@@ -2,11 +2,14 @@
 out vec4 FragColor;
 
 in vec2 TexCoord;
+/********************视口大小*****************************************/
+uniform int width = 1600;
+uniform int height = 900;
+vec2 noiseScale = vec2(width/16.0,height/16.0);
 
 // texture samplers
 uniform sampler2D tex_sampler;
 uniform sampler2D texNoise;
-const vec2 noiseScale = vec2(1600.0/4.0, 900.0/4.0);
 
 void main() {
     FragColor = texture(tex_sampler, TexCoord);  

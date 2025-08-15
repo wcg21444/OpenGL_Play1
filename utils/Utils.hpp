@@ -1,5 +1,7 @@
-#include <glad>
-#include <glm>
+#pragma once
+
+#include <glad/glad.h>
+#include <glm/glm.hpp>
 
 void CheckGLErrors()
 {

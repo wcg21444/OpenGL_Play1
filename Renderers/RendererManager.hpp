@@ -24,6 +24,10 @@ private:
     void clearContext();
 
 public:
+    // ≥ı º‰÷»æ∆˜øÌ∏ﬂ…Ë÷√
+    int rendererWidth = 1600;
+    int rendererHeight = 900;
+
     enum Mode
     {
         point_shadow,
@@ -40,4 +44,5 @@ public:
     void switchMode(Mode _mode);
     void switchContext();
     void render(RenderParameters &renderParameters);
+    void resize(int _width, int _height);
 };

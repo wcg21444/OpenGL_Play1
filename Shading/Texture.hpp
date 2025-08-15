@@ -39,13 +39,9 @@ public:
 
     void SetFilterMax(GLenum filter);
 
-    void Resize(unsigned int Width, unsigned int Height);
-    Texture()
-    {
-    }
+    void Resize(int ResizeWidth, int ResizeHeight);
 
-    ~Texture()
-    {
-        glDeleteTextures(1, &ID);
-    }
+    Texture();
+
+    ~Texture();
 };

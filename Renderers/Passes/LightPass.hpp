@@ -15,9 +15,15 @@ private:
 
 public:
     LightPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path);
+
     ~LightPass();
+
     void contextSetup() override;
+
     unsigned int getTextures();
+
+    void resize(int _width, int _height) override;
+
     void render(RenderParameters &renderParameters,
                 unsigned int gPosition,
                 unsigned int gNormal,

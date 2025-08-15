@@ -12,13 +12,14 @@ class DebugDepthRenderer : public Renderer
     unsigned int quadVBO;
 
 public:
-    void reloadCurrentShaders()
+    void reloadCurrentShaders() override
     {
         depthShader = std::move(Shader("Shaders/shadow_depth.vs", "Shaders/shadow_depth.fs"));
         quadShader = std::move(Shader("Shaders/debug_quad.vs", "Shaders/debug_quad.fs"));
         contextSetup();
     }
-    void contextSetup()
+
+    void contextSetup() override
     {
         glEnable(GL_DEPTH_TEST);
         glGenFramebuffers(1, &depthMapFBO);
@@ -76,7 +77,16 @@ public:
             glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
         }
     }
-    void render(RenderParameters &renderParameters)
+
+    void resize(int _width, int _height) override
+    {
+        SCR_WIDTH = _width;
+        SCR_HEIGHT = _height;
+
+        contextSetup();
+    }
+
+    void render(RenderParameters &renderParameters) override
     {
         auto &[allLights, cam, scene, model, window] = renderParameters;
         auto &[pointLights, dirLights] = allLights;

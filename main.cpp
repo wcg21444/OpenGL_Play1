@@ -22,6 +22,25 @@
 const int InitWidth = 1600;
 const int InitHeight = 900;
 
+// 应用层
+// 将窗口管理与应用管理分离
+class Application
+{
+public:
+    std::shared_ptr<RenderParameters> renderParameters;
+    std::shared_ptr<RenderManager> renderManager;
+
+    Application()
+    {
+    }
+    void Init()
+    {
+    }
+    void Run()
+    {
+    }
+};
+
 int main()
 {
     glfwInit();
@@ -111,9 +130,14 @@ int main()
     // temporary light source variable
     PointLight &light = pointLights[0]; // Assuming the first light is the one we want to use for shadow
 
-    RenderParameters renderParameters{allLights, cam, scene, model, window};
-    RenderManager renderManager;
+    // 应用初始化
+    auto ptrRenderParameters = std::make_shared<RenderParameters>(allLights, cam, scene, model, window);
+    auto ptrRenderManager = std::make_shared<RenderManager>();
 
+    InputHandler::bindRenderApplication(ptrRenderParameters, ptrRenderManager);
+
+    auto &renderParameters = *ptrRenderParameters;
+    auto &renderManager = *ptrRenderManager;
     //  main render loop
     while (!glfwWindowShouldClose(window))
     {

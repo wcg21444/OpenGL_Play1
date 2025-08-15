@@ -18,6 +18,9 @@ public:
     DirShadowPass(std::string _vs_path, std::string _fs_path);
 
     void contextSetup() override;
+
+    void resize(int _width, int _height) override;
+
     void render(PointLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix);
 
     void renderToTexture(

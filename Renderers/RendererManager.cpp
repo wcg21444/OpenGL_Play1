@@ -95,6 +95,8 @@ void RenderManager::switchContext()
     clearContext();
     if (currentRenderer)
     {
+        currentRenderer->resize(rendererWidth, rendererHeight); // äÖÈ¾Æ÷¿í¸ßÍ³Ò»
+
         currentRenderer->contextSetup();
     }
     else
@@ -108,6 +110,20 @@ void RenderManager::render(RenderParameters &renderParameters)
     if (currentRenderer)
     {
         currentRenderer->render(renderParameters);
+    }
+    else
+    {
+        throw(std::exception("No Renderer Selected."));
+    }
+}
+
+void RenderManager::resize(int _width, int _height)
+{
+    if (currentRenderer)
+    {
+        currentRenderer->resize(_width, _height);
+        rendererWidth = _width;
+        rendererHeight = _height;
     }
     else
     {

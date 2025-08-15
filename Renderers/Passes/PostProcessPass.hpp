@@ -7,9 +7,9 @@ private:
     void initializeGLResources()
     {
         glGenFramebuffers(1, &FBO);
-        postProcessTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+        postProcessPassTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
     }
-    Texture postProcessTex;
+    Texture postProcessPassTex;
 
 public:
     PostProcessPass(int _vp_width, int _vp_height, std::string _vs_path,
@@ -19,15 +19,26 @@ public:
         initializeGLResources();
         contextSetup();
     }
+
     void contextSetup()
     {
         glBindFramebuffer(GL_FRAMEBUFFER, FBO);
         {
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postProcessTex.ID, 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postProcessPassTex.ID, 0);
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
-    unsigned int getTextures() { return postProcessTex.ID; }
+
+    void resize(int _width, int _height) override
+    {
+        vp_width = _width;
+        vp_height = _height;
+        postProcessPassTex.Resize(_width, _height);
+        contextSetup();
+    }
+
+    unsigned int getTextures() { return postProcessPassTex.ID; }
+
     void render(unsigned int screenTex, unsigned int ssaoTex)
     {
         glViewport(0, 0, vp_width, vp_height);
@@ -35,7 +46,7 @@ public:
 
         shaders.use();
 
-        shaders.setInt("widht", vp_width);
+        shaders.setInt("width", vp_width);
         shaders.setInt("height", vp_height);
 
         shaders.setTextureAuto(ssaoTex, GL_TEXTURE_2D, 0, "ssaoTex");

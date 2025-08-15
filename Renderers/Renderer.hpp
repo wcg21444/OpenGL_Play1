@@ -13,8 +13,9 @@
 #include "../Objects/Sphere.hpp"
 #include "../Objects/Plane.hpp"
 
-struct RenderParameters
+class RenderParameters
 {
+public:
     Lights &lights;
     Camera &cam;
     std::vector<std::unique_ptr<Object>> &scene;
@@ -39,5 +40,6 @@ public:
     virtual void contextSetup() = 0;
     virtual void render(RenderParameters &renderParameters) = 0;
     virtual void reloadCurrentShaders() = 0;
+    virtual void resize(int _width, int _height) = 0;
     virtual ~Renderer() {}
 };

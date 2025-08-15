@@ -17,7 +17,6 @@ void CubemapUnfoldRenderer::reloadCurrentShaders()
 {
     unfoldShaders = Shader("Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs");
     quadShader = Shader("Shaders/screenQuad.vs", "Shaders/GBuffer/texture.fs");
-    pointShadowPass.reloadCurrentShader();
     contextSetup();
 }
 void CubemapUnfoldRenderer::contextSetup()
@@ -63,11 +62,18 @@ void CubemapUnfoldRenderer::unfoldCubemap(unsigned int cubemap)
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+void CubemapUnfoldRenderer::resize(int _width, int _height)
+{
+    width = _width;
+    height = _height;
+
+    contextSetup();
+}
 void CubemapUnfoldRenderer::render(RenderParameters &renderParameters)
 {
     auto &[allLights, cam, scene, model, window] = renderParameters;
     auto &[pointLights, dirLights] = allLights;
-    static bool initialized = false;
+
     static std::vector<std::string> faces{
         "Resource/skybox/right.jpg",
         "Resource/skybox/left.jpg",
@@ -76,13 +82,14 @@ void CubemapUnfoldRenderer::render(RenderParameters &renderParameters)
         "Resource/skybox/front.jpg",
         "Resource/skybox/back.jpg"};
     static auto skyboxCubemap = LoadCubemap(faces);
-    if (!initialized)
-        initialized = true;
-    pointShadowPass.render(pointLights[0], scene, model);
+
     unfoldCubemap(skyboxCubemap);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, width, height);
     quadShader.use();
+
     quadShader.setTextureAuto(unfoldedCubemap, GL_TEXTURE_2D, 10, "tex_sampler");
+
     Renderer::DrawQuad();
 }

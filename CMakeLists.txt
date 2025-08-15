@@ -44,7 +44,7 @@ file(GLOB UTILS_SRC
 file(GLOB SHADING_SRC
     Shading/*.cpp
 )
-add_executable(${PROJECT_NAME} "main.cpp" "LightSource/LightSource.cpp" ${IMGUI_SRC} ${RENDERERS_SRC} ${OBJECTS_SRC} ${UTILS_SRC} ${SHADING_SRC})
+add_executable(${PROJECT_NAME} "main.cpp" "LightSource/LightSource.cpp" "InputHandler.cpp" ${IMGUI_SRC} ${RENDERERS_SRC} ${OBJECTS_SRC} ${UTILS_SRC} ${SHADING_SRC})
 
 find_package(glfw3 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw)

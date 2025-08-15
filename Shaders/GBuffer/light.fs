@@ -8,6 +8,10 @@
 out vec4 LightResult;
 in vec2 TexCoord;
 
+/*****************视口大小******************************************************************/
+uniform int width = 1600;
+uniform int height = 900;
+
 /*****************GBuffer输入*****************************************************************/
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
@@ -26,7 +30,7 @@ uniform vec3 lightIntensity[MAX_LIGHTS];
 uniform float pointLightFar;
 
 /*****************阴影采样设置******************************************************************/
-const vec2 noiseScale = vec2(1600.0/16.0, 900.0/16.0);
+vec2 noiseScale = vec2(width/16.0,height/16.0);
 uniform sampler2D shadowNoiseTex;
 uniform vec3 shadowSamples[128];
 uniform int n_samples;
@@ -52,10 +56,6 @@ vec3 normal    = texture(gNormal, TexCoord).rgb;
 vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));//WorldSpace 
 vec3 bitangent = cross(normal, tangent);
 mat3 TBN       = mat3(tangent, bitangent, normal);  
-
-/*****************视口大小******************************************************************/
-const int width = 1600;
-const int height = 900;
 
 /*****************Camera设置******************************************************************/
 uniform float nearPlane;

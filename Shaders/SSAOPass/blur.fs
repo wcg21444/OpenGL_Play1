@@ -3,6 +3,10 @@
 out vec4 FragColor;
 in vec2 TexCoord;
 
+/*****************视口大小******************************************************************/
+uniform int width = 1600;
+uniform int height = 900;
+
 uniform sampler2D SSAOTex;
 
 void main() {

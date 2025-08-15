@@ -12,6 +12,10 @@ inline void DirShadowPass::initializeGLResources()
 inline void DirShadowPass::contextSetup()
 {
 }
+void DirShadowPass::resize(int _width, int _height)
+{
+    // void 此处应该是缩放阴影贴图大小
+}
 /// @brief 将输入的深度图attach到FBO
 /// @param _depthMap 通道输出纹理对象
 void DirShadowPass::attachDepthMap(const unsigned int _depthMap)

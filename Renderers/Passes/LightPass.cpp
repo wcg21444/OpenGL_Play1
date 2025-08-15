@@ -28,6 +28,16 @@ unsigned int LightPass::getTextures()
 {
     return lightPassTex.ID;
 }
+void LightPass::resize(int _width, int _height)
+{
+    vp_width = _width;
+    vp_height = _height;
+
+    lightPassTex.Resize(vp_width, vp_height);
+    // shadowNoiseTex.Resize(_width, _height);
+    // TODO non Texure Resize
+    contextSetup();
+}
 void LightPass::render(RenderParameters &renderParameters,
                        unsigned int gPosition,
                        unsigned int gNormal,
@@ -91,7 +101,7 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setUniform3fv("dirLightIntensity", dirLights[0].intensity);
     shaders.setMat4("dirLightSpaceMatrix", dirLights[0].lightSpaceMatrix);
     /****************************************视口设置****************************************************/
-    shaders.setInt("widht", vp_width);
+    shaders.setInt("width", vp_width);
     shaders.setInt("height", vp_height);
     /****************************************摄像机设置**************************************************/
     shaders.setUniform3fv("eyePos", cam.getPosition());

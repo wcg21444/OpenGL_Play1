@@ -14,6 +14,7 @@
 #include "../../RendererGUI.hpp"
 
 #include "../utils/TextureLoader.hpp"
+#include "../utils/Utils.hpp"
 
 class GBufferRenderer : public Renderer
 {
@@ -66,7 +67,7 @@ public:
           postProcessPass(PostProcessPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/postProcess.fs"))
     {
     }
-    void reloadCurrentShaders()
+    void reloadCurrentShaders() override
     {
         pointShadowPass.reloadCurrentShaders();
         dirShadowPass.reloadCurrentShaders();
@@ -79,7 +80,7 @@ public:
         contextSetup();
     }
 
-    void contextSetup()
+    void contextSetup() override
     {
         static bool initialized = false;
         glEnable(GL_DEPTH_TEST); // 深度缓冲
@@ -93,7 +94,25 @@ public:
         }
     }
 
-    void render(RenderParameters &renderParameters)
+    void resize(int _width, int _height) override
+    {
+        // pointShadowPass->resize(_width, _height);
+        // dirShadowPass->resize(_width, _height);
+
+        width = _width;
+        height = _height;
+
+        gBufferPass.resize(_width, _height);
+        lightPass.resize(_width, _height);
+        screenPass.resize(_width, _height);
+        ssaoPass.resize(_width, _height);
+        ssaoBlurPass.resize(_width, _height);
+        postProcessPass.resize(_width, _height);
+
+        CheckGLErrors();
+    }
+
+    void render(RenderParameters &renderParameters) override
     {
         renderLight(renderParameters);
     }
@@ -177,9 +196,9 @@ private:
         postProcessPass.setToggle(toggleVignetting, "Vignetting");
 
         postProcessPass.render(lightPassTexture, ssaoBlurTex);
-        auto postProcessTex = postProcessPass.getTextures();
+        auto postProcessPassTex = postProcessPass.getTextures();
 
         /****************************Screen渲染*********************************************/
-        screenPass.render(postProcessTex);
+        screenPass.render(postProcessPassTex);
     }
 };
