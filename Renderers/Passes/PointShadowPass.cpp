@@ -23,7 +23,7 @@ inline void PointShadowPass::contextSetup()
 
 inline void PointShadowPass::resize(int _width, int _height)
 {
-    // void ´Ë´¦Ó¦¸ÃÊÇËõ·ÅÒõÓ°ÌùÍ¼´óĞ¡
+    // void æ­¤å¤„åº”è¯¥æ˜¯ç¼©æ”¾é˜´å½±è´´å›¾å¤§å°
 }
 
 void PointShadowPass::attachDepthMap(const unsigned int _depthCubemap)
@@ -35,7 +35,7 @@ void PointShadowPass::attachDepthMap(const unsigned int _depthCubemap)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-// ÊäÈë¹âÔ´µÄTex¶ÔÏó,°ó¶¨Tex¶ÔÏóµ½FBO,½á¹ûÊä³öµ½Tex.
+// è¾“å…¥å…‰æºçš„Texå¯¹è±¡,ç»‘å®šTexå¯¹è±¡åˆ°FBO,ç»“æœè¾“å‡ºåˆ°Tex.
 void PointShadowPass::renderToTexture(
     const PointLight &light,
     std::vector<std::unique_ptr<Object>> &scene,
@@ -46,7 +46,7 @@ void PointShadowPass::renderToTexture(
     attachDepthMap(light.depthCubemap);
 
     static std::vector<glm::mat4> shadowTransforms;
-    // ÊÓÍ¼±ä»»ĞèÒªÖªµÀ¹âÔ´Î»ÖÃ
+    // è§†å›¾å˜æ¢éœ€è¦çŸ¥é“å…‰æºä½ç½®
     shadowTransforms.clear();
     shadowTransforms.push_back(shadowProj *
                                glm::lookAt(light.position, light.position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));

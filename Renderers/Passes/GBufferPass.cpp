@@ -31,7 +31,7 @@ void GBufferPass::contextSetup()
     // - color + specular color buffer
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec.ID, 0);
 
-    // BUG ¸ÄÎªTexture SSAO Í¨µÀ²»Õı³£,ÓĞ´óÁ¿Ôëµã
+    // BUG æ”¹ä¸ºTexture SSAO é€šé“ä¸æ­£å¸¸,æœ‰å¤§é‡å™ªç‚¹
     glBindTexture(GL_TEXTURE_2D, gViewPosition);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -39,7 +39,7 @@ void GBufferPass::contextSetup()
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gViewPosition, 0);
 
     // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering
-    // ·ÖÅä¶à¸öĞ´Èë¶ÔÏó.¶ÔÓ¦Shader input layout
+    // åˆ†é…å¤šä¸ªå†™å…¥å¯¹è±¡.å¯¹åº”Shader input layout
     unsigned int attachments[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
     glDrawBuffers(4, attachments);
 
@@ -71,7 +71,7 @@ void GBufferPass::render(RenderParameters &renderParameters)
 
     shaders.use();
 
-    /****************************************ÊÓ¿ÚÉèÖÃ****************************************************/
+    /****************************************è§†å£è®¾ç½®****************************************************/
     shaders.setInt("width", vp_width);
     shaders.setInt("height", vp_height);
 

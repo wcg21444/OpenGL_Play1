@@ -14,10 +14,10 @@ inline void DirShadowPass::contextSetup()
 }
 void DirShadowPass::resize(int _width, int _height)
 {
-    // void ´Ë´¦Ó¦¸ÃÊÇËõ·ÅÒõÓ°ÌùÍ¼´óĞ¡
+    // void æ­¤å¤„åº”è¯¥æ˜¯ç¼©æ”¾é˜´å½±è´´å›¾å¤§å°
 }
-/// @brief ½«ÊäÈëµÄÉî¶ÈÍ¼attachµ½FBO
-/// @param _depthMap Í¨µÀÊä³öÎÆÀí¶ÔÏó
+/// @brief å°†è¾“å…¥çš„æ·±åº¦å›¾attachåˆ°FBO
+/// @param _depthMap é€šé“è¾“å‡ºçº¹ç†å¯¹è±¡
 void DirShadowPass::attachDepthMap(const unsigned int _depthMap)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
@@ -27,7 +27,7 @@ void DirShadowPass::attachDepthMap(const unsigned int _depthMap)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-/// @brief ÊäÈë´æÔÚµÄTex¶ÔÏó,°ó¶¨Tex¶ÔÏóµ½FBO,½á¹ûÊä³öµ½Tex.
+/// @brief è¾“å…¥å­˜åœ¨çš„Texå¯¹è±¡,ç»‘å®šTexå¯¹è±¡åˆ°FBO,ç»“æœè¾“å‡ºåˆ°Tex.
 void DirShadowPass::renderToTexture(
     const DirectionLight &light,
     std::vector<std::unique_ptr<Object>> &scene,

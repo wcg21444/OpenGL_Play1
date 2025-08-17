@@ -21,6 +21,7 @@ public:
     bool toggleHDR = true;
     bool toggleVignetting = true;
     bool toggleGammaCorrection = true;
+    bool toggleBloom = true;
 
     void render()
     {
@@ -32,6 +33,7 @@ public:
             ImGui::Checkbox("HDR", &toggleHDR);
             ImGui::Checkbox("Vignetting", &toggleVignetting);
             ImGui::Checkbox("GammaCorrection", &toggleGammaCorrection);
+            ImGui::Checkbox("Bloom", &toggleBloom);
         }
         ImGui::End();
     }

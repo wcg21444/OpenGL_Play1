@@ -3,10 +3,10 @@
 #include "Pass.hpp"
 /*
 Feature:
-ÊäÈë:Tex¶ÔÏó,Tex·Ö±æÂÊ,dirLight
-Êä³ö:ÒõÓ°ÌùÍ¼
+è¾“å…¥:Texå¯¹è±¡,Texåˆ†è¾¨ç‡,dirLight
+è¾“å‡º:é˜´å½±è´´å›¾
 
-²»¸ºÔğÒõÓ°ÌùÍ¼´´½¨¹ÜÀí.
+ä¸è´Ÿè´£é˜´å½±è´´å›¾åˆ›å»ºç®¡ç†.
 */
 class DirShadowPass : public Pass
 {

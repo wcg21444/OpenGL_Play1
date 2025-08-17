@@ -41,6 +41,8 @@ public:
 
     void Resize(int ResizeWidth, int ResizeHeight);
 
+    void SetWrapMode(GLenum wrapMode);
+
     Texture();
 
     ~Texture();

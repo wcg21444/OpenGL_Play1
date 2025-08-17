@@ -14,10 +14,10 @@ private:
 public:
     PostProcessPass(int _vp_width, int _vp_height, std::string _vs_path,
                     std::string _fs_path);
-    ~PostProcessPass(); // 使用智能指针实现pImpl , 必须声明析构函数
+    ~PostProcessPass(); // 浣跨敤鏅鸿兘鎸囬拡瀹炵幇pImpl , 蹇呴』澹版槑鏋愭瀯鍑芥暟
 
     void contextSetup() override;
     void resize(int _width, int _height) override;
     unsigned int getTextures();
-    void render(unsigned int screenTex, unsigned int ssaoTex);
+    void render(unsigned int screenTex, unsigned int ssaoTex, unsigned int bloomTex);
 };

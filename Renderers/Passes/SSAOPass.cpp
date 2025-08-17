@@ -1,4 +1,4 @@
-﻿#include <glad/glad.h>
+#include <glad/glad.h>
 #include "../../Shading/Shader.hpp"
 #include "../../ShaderGUI.hpp"
 #include "../../utils/Random.hpp"

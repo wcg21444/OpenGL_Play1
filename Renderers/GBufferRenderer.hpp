@@ -10,6 +10,8 @@
 #include "Passes/GBufferPass.hpp"
 #include "Passes/SSAOPass.hpp"
 #include "Passes/PostProcessPass.hpp"
+#include "Passes/GaussianBlurPass.hpp"
+#include "Passes/BloomPass.hpp"
 
 #include "../../RendererGUI.hpp"
 
@@ -42,16 +44,7 @@ private:
     SSAOPass ssaoPass;
     SSAOBlurPass ssaoBlurPass;
     PostProcessPass postProcessPass;
-
-    bool togglePointShadow;
-    bool toggleDirShadow;
-    bool toggleGBuffer;
-    bool toggleLight;
-    bool toggleSSAO;
-    bool toggleSSAOBlur;
-    bool toggleHDR;
-    bool toggleVignetting;
-    bool toggleGammaCorrection;
+    BloomPass bloomPass;
 
     GBufferRendererGUI rendererGUI;
 
@@ -64,7 +57,8 @@ public:
           ssaoBlurPass(SSAOBlurPass(width, height, "Shaders/screenQuad.vs", "Shaders/SSAOPass/blur.fs")),
           dirShadowPass(DirShadowPass("Shaders/DirShadow/dirShadow.vs", "Shaders/DirShadow/dirShadow.fs")),
           pointShadowPass(PointShadowPass("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs")),
-          postProcessPass(PostProcessPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/postProcess.fs"))
+          postProcessPass(PostProcessPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/postProcess.fs")),
+          bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs"))
     {
     }
     void reloadCurrentShaders() override
@@ -77,6 +71,7 @@ public:
         ssaoPass.reloadCurrentShaders();
         ssaoBlurPass.reloadCurrentShaders();
         postProcessPass.reloadCurrentShaders();
+        bloomPass.reloadCurrentShaders();
         contextSetup();
     }
 
@@ -108,8 +103,7 @@ public:
         ssaoPass.resize(_width, _height);
         ssaoBlurPass.resize(_width, _height);
         postProcessPass.resize(_width, _height);
-
-        CheckGLErrors();
+        bloomPass.resize(_width, _height);
     }
 
     void render(RenderParameters &renderParameters) override
@@ -123,20 +117,13 @@ private:
         auto &[allLights, cam, scene, model, window] = renderParameters;
         auto &[pointLights, dirLights] = allLights;
 
-        toggleDirShadow = rendererGUI.toggleDirShadow;
-        togglePointShadow = rendererGUI.togglePointShadow;
-        toggleSSAO = rendererGUI.toggleSSAO;
-        toggleHDR = rendererGUI.toggleHDR;
-        toggleGammaCorrection = rendererGUI.toggleGammaCorrection;
-        toggleVignetting = rendererGUI.toggleVignetting;
-
         rendererGUI.render();
 
         /****************************阴影贴图渲染*********************************************/
         for (auto &light : pointLights)
         {
             light.generateShadowTexResource();
-            if (togglePointShadow)
+            if (rendererGUI.togglePointShadow)
             {
                 pointShadowPass.renderToTexture(
                     light,
@@ -150,7 +137,7 @@ private:
         for (auto &light : dirLights)
         {
             light.generateShadowTexResource();
-            if (toggleDirShadow)
+            if (rendererGUI.toggleDirShadow)
             {
                 dirShadowPass.renderToTexture(
                     light,
@@ -168,7 +155,7 @@ private:
         /****************************SSAO渲染*********************************************/
         unsigned int ssaoPassTexture = 0;
         unsigned int ssaoBlurTex = 0;
-        if (toggleSSAO)
+        if (rendererGUI.toggleSSAO)
         {
             ssaoPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, gViewPosition);
             ssaoPassTexture = ssaoPass.getTextures();
@@ -176,9 +163,9 @@ private:
             ssaoBlurTex = ssaoBlurPass.getTextures();
         }
         /****************************光照渲染*********************************************/
-        lightPass.setToggle(togglePointShadow, "PointShadow");
+        lightPass.setToggle(rendererGUI.togglePointShadow, "PointShadow");
 
-        lightPass.setToggle(toggleDirShadow, "DirShadow");
+        lightPass.setToggle(rendererGUI.toggleDirShadow, "DirShadow");
 
         lightPass.render(renderParameters,
                          gPosition,
@@ -187,15 +174,22 @@ private:
                          skyboxCube,
                          pointShadowPass.farPlane);
         auto lightPassTex = lightPass.getTextures();
-
+        /************************************Bloom*******************************************/
+        unsigned int bloomPassTex = 0;
+        if (rendererGUI.toggleBloom)
+        {
+            bloomPass.render(lightPassTex);
+            auto bloomPassTex = bloomPass.getTextures();
+        }
         /****************************PostProcess*********************************************/
 
-        postProcessPass.setToggle(toggleSSAO, "SSAO");
-        postProcessPass.setToggle(toggleGammaCorrection, "GammaCorrection");
-        postProcessPass.setToggle(toggleHDR, "HDR");
-        postProcessPass.setToggle(toggleVignetting, "Vignetting");
+        postProcessPass.setToggle(rendererGUI.toggleSSAO, "SSAO");
+        postProcessPass.setToggle(rendererGUI.toggleGammaCorrection, "GammaCorrection");
+        postProcessPass.setToggle(rendererGUI.toggleHDR, "HDR");
+        postProcessPass.setToggle(rendererGUI.toggleVignetting, "Vignetting");
+        postProcessPass.setToggle(rendererGUI.toggleBloom, "Bloom");
 
-        postProcessPass.render(lightPassTex, ssaoBlurTex);
+        postProcessPass.render(lightPassTex, ssaoBlurTex, bloomPassTex);
         auto postProcessPassTex = postProcessPass.getTextures();
 
         /****************************Screen渲染*********************************************/

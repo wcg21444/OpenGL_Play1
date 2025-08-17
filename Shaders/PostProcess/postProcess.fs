@@ -8,6 +8,8 @@ uniform sampler2D screenTex;
 
 /*****************SSAO输入******************************************************************/
 uniform sampler2D ssaoTex;
+/*****************Bloom输入******************************************************************/
+uniform sampler2D bloomTex;
 
 /*****************视口大小******************************************************************/
 uniform int width = 1600;
@@ -18,6 +20,7 @@ uniform int SSAO;
 uniform int HDR;
 uniform int Vignetting;
 uniform int GammaCorrection;
+uniform int Bloom;
 
 /*****************效果参数设置******************************************************************/
 
@@ -57,6 +60,7 @@ vec4 drawCircle(vec2 u_center,float u_radius,float u_thickness,vec4 u_color) {
 
 void main() {
     FragColor = texture(screenTex,TexCoord);
+
     if(SSAO == 1) {
         vec3 AO = texture(ssaoTex,TexCoord).rgb;
         FragColor *= vec4(AO,1.0f);
@@ -65,11 +69,16 @@ void main() {
     if(HDR==1) {
         FragColor *= HDRExposure;
     }
+    if(Bloom==1) {
+        vec4 BloomColor = texture(bloomTex,TexCoord);
+        FragColor+=BloomColor;
+    }
 
     //Gamma 矫正
     if(GammaCorrection==1) {
         FragColor.rgb = pow(FragColor.rgb, vec3(1.0/gamma));
     }
+
     // FragColor = vec4(1.f);
     // 暗角
     if(Vignetting==1) {
@@ -90,18 +99,19 @@ void main() {
     // }
     // FragColor = vec4(result / (8.0 * 8.0));
 
-    float kernel[9] = float[](
-        0.111, 0.111, 0.111,
-        0.111,  0.111, 0.111,
-        0.111, 0.111, 0.111);
-    vec2 texelSize = 1.0 / vec2(textureSize(screenTex, 0));
-    vec3 sampleTex[9];
-    for(int i = 0; i < 9; i++) {
-        vec2 offset = vec2(float(i/3), float(i%3)) * texelSize*4;
-        sampleTex[i] = vec3(texture(screenTex, TexCoord + offset));
-    }
-    vec3 col = vec3(0.0);
-    for(int i = 0; i < 9; i++)
-    col += sampleTex[i] * kernel[i];
-    FragColor = vec4(col,1.0f);
+    /**非均匀采样核*****************************************/
+    // float kernel[9] = float[](
+    //     0.111, 0.111, 0.111,
+    //     0.111,  0.111, 0.111,
+    //     0.111, 0.111, 0.111);
+    // vec2 texelSize = 1.0 / vec2(textureSize(screenTex, 0));
+    // vec3 sampleTex[9];
+    // for(int i = 0; i < 9; i++) {
+    //     vec2 offset = vec2(float(i/3), float(i%3)) * texelSize*4;
+    //     sampleTex[i] = vec3(texture(screenTex, TexCoord + offset));
+    // }
+    // vec3 col = vec3(0.0);
+    // for(int i = 0; i < 9; i++)
+    // col += sampleTex[i] * kernel[i];
+    // FragColor = vec4(col,1.0f);
 }

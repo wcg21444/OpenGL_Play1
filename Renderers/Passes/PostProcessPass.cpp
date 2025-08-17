@@ -42,7 +42,7 @@ unsigned int PostProcessPass::getTextures()
     return postProcessPassTex.ID;
 }
 
-void PostProcessPass::render(unsigned int screenTex, unsigned int ssaoTex)
+void PostProcessPass::render(unsigned int screenTex, unsigned int ssaoTex, unsigned int bloomTex)
 {
     shaderUI->render();
     glViewport(0, 0, vp_width, vp_height);
@@ -60,6 +60,7 @@ void PostProcessPass::render(unsigned int screenTex, unsigned int ssaoTex)
 
     shaders.setTextureAuto(ssaoTex, GL_TEXTURE_2D, 0, "ssaoTex");
     shaders.setTextureAuto(screenTex, GL_TEXTURE_2D, 0, "screenTex");
+    shaders.setTextureAuto(bloomTex, GL_TEXTURE_2D, 0, "bloomTex");
 
     Renderer::DrawQuad();
 }

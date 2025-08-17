@@ -82,3 +82,28 @@ public:
         ImGui::End();
     }
 };
+
+class BloomShaderUI
+{
+public:
+    float radius = 2.0f;
+    int blurAmount = 10;
+    float bloomIntensity = 1.0f;
+    float threshold = 0.9f;
+    void render()
+    {
+        ImGui::Begin("ShadersGUI");
+        {
+            if (ImGui::CollapsingHeader("Bloom", ImGuiTreeNodeFlags_None))
+            {
+                ImGui::PushItemWidth(100.f);
+                ImGui::SliderFloat("BloomIntensity", &bloomIntensity, 0.01f, 5.f);
+                ImGui::SliderFloat("Radius", &radius, 0.01f, 5.f);
+                ImGui::SliderFloat("Threshold", &threshold, 0.01f, 1.f);
+                ImGui::SliderInt("BlurAmount", &blurAmount, 1, 30);
+                ImGui::PopItemWidth();
+            }
+        }
+        ImGui::End();
+    }
+};

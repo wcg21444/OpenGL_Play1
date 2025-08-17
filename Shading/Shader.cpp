@@ -291,20 +291,44 @@ void Shader::setUniform(const std::string &name, int i)
     }
 }
 
+/**
+ * @brief 自动管理并绑定纹理到着色器。
+ * * 此函数旨在简化纹理绑定过程。它内部维护一个映射表 (textureLocationMap)，
+ * 将着色器中的采样器 (sampler) 名称与一个唯一的纹理单元 ID (location_ID) 关联起来。
+ * 如果一个采样器是第一次绑定，它会被分配一个新的纹理单元。
+ * 随后，函数会激活对应的纹理单元，将纹理对象绑定到该单元，
+ * 并通过 glUniform1i 将该纹理单元 ID 传递给着色器中的 uniform 变量。
+ * * @param textureID 要绑定的纹理对象的 OpenGL ID。
+ * @param textureTarget 纹理目标类型，例如 GL_TEXTURE_2D、GL_TEXTURE_CUBE_MAP 等。
+ * @param shaderTextureLocation 占位符
+ * @param samplerUniformName 着色器中 sampler uniform 变量的名称，例如 "u_AlbedoMap"。
+ */
 void Shader::setTextureAuto(GLuint textureID, GLenum textureTarget, int shaderTextureLocation, const std::string &samplerUniformName)
 {
+    // 第一次为该采样器 uniform 绑定纹理
     if (textureLocationMap.find(samplerUniformName) == textureLocationMap.end())
     {
+        // 将采样器名称与其唯一的纹理单元 ID 关联起来
         textureLocationMap.insert({samplerUniformName, location_ID});
         location_ID++;
     }
+
+    // 从映射表中获取该采样器对应的纹理单元 ID
     int location = textureLocationMap.at(samplerUniformName);
+
+    // 将纹理单元 ID 转换为 GL_TEXTURE0、GL_TEXTURE1 等枚举值
     GLenum activeTextureUnit = getTextureUnitEnum(location);
+
     glActiveTexture(activeTextureUnit);
+
     glBindTexture(textureTarget, textureID);
+
     GLint samplerLoc = getUniformLocationSafe(samplerUniformName);
+
     if (samplerLoc != -1)
     {
+        // 将纹理单元 ID (location) 传递给着色器中的 uniform 变量
+        // 这样着色器就知道应该从哪个纹理单元读取数据
         glUniform1i(samplerLoc, location);
     }
 }

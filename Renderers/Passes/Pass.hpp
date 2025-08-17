@@ -29,7 +29,7 @@ public:
     {
         shaders = Shader(vs_path.c_str(), fs_path.c_str(), gs_path.c_str());
     }
-    void reloadCurrentShaders()
+    virtual void reloadCurrentShaders()
     {
         shaders = Shader(vs_path.c_str(), fs_path.c_str(), gs_path.c_str());
         contextSetup();

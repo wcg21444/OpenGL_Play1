@@ -1,13 +1,13 @@
 #include "Texture.hpp"
 
-///@brief Éú³É2DTexture¶ÔÏó,ÉèÖÃÊôÐÔ
-///@param width ÎÆÀíµÄ¿í¶È£¬ÒÔÏñËØÎªµ¥Î»¡£
-///@param height ÎÆÀíµÄ¸ß¶È£¬ÒÔÏñËØÎªµ¥Î»¡£
-///@param internalFormat ÎÆÀíÄÚ²¿´æ´¢µÄÑÕÉ«¸ñÊ½£¨ÀýÈç GL_RGBA, GL_RGBA16F£©¡£
-///@param format ÎÆÀíÔ´Êý¾Ý£¨¼´ data Ö¸ÏòµÄÊý¾Ý£©µÄÑÕÉ«¸ñÊ½£¨ÀýÈç GL_RGBA, GL_BGR£©¡£
-///@param type ÎÆÀíÔ´Êý¾ÝµÄÃ¿¸öÑÕÉ«·ÖÁ¿µÄÊý¾ÝÀàÐÍ£¨ÀýÈç GL_UNSIGNED_BYTE, GL_FLOAT£©¡£
-///@param data Ö¸ÏòÎÆÀíÏñËØÊý¾ÝµÄÖ¸Õë¡£Èç¹ûÎª NULL£¬ÔòÖ»·ÖÅäÄÚ´æ¡£
-/// ÔÚinitializeGLResources() µ÷ÓÃ
+///@brief ç”Ÿæˆ2DTextureå¯¹è±¡,è®¾ç½®å±žæ€§
+///@param width çº¹ç†çš„å®½åº¦ï¼Œä»¥åƒç´ ä¸ºå•ä½ã€‚
+///@param height çº¹ç†çš„é«˜åº¦ï¼Œä»¥åƒç´ ä¸ºå•ä½ã€‚
+///@param internalFormat çº¹ç†å†…éƒ¨å­˜å‚¨çš„é¢œè‰²æ ¼å¼ï¼ˆä¾‹å¦‚ GL_RGBA, GL_RGBA16Fï¼‰ã€‚
+///@param format çº¹ç†æºæ•°æ®ï¼ˆå³ data æŒ‡å‘çš„æ•°æ®ï¼‰çš„é¢œè‰²æ ¼å¼ï¼ˆä¾‹å¦‚ GL_RGBA, GL_BGRï¼‰ã€‚
+///@param type çº¹ç†æºæ•°æ®çš„æ¯ä¸ªé¢œè‰²åˆ†é‡çš„æ•°æ®ç±»åž‹ï¼ˆä¾‹å¦‚ GL_UNSIGNED_BYTE, GL_FLOATï¼‰ã€‚
+///@param data æŒ‡å‘çº¹ç†åƒç´ æ•°æ®çš„æŒ‡é’ˆã€‚å¦‚æžœä¸º NULLï¼Œåˆ™åªåˆ†é…å†…å­˜ã€‚
+/// åœ¨initializeGLResources() è°ƒç”¨
 void Texture::Generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, void *data)
 {
     if (ID != 0)
@@ -43,32 +43,40 @@ void Texture::SetData(void *data)
     glBindTexture(Target, 0);
 }
 
-// void Texture::SetWrapMode(GLenum wrapMode)
-// {
-//     if (Target == GL_TEXTURE_2D)
-//     {
-//         WrapS = wrapMode;
-//         WrapT = wrapMode;
-//         glTexParameteri(Target, GL_TEXTURE_WRAP_S, wrapMode);
-//         glTexParameteri(Target, GL_TEXTURE_WRAP_T, wrapMode);
-//     }
-// }
+void Texture::SetWrapMode(GLenum wrapMode)
+{
+    glBindTexture(Target, ID);
+    if (Target == GL_TEXTURE_2D)
+    {
+        WrapS = wrapMode;
+        WrapT = wrapMode;
+        glTexParameteri(Target, GL_TEXTURE_WRAP_S, wrapMode);
+        glTexParameteri(Target, GL_TEXTURE_WRAP_T, wrapMode);
+    }
+    glBindTexture(Target, 0);
+}
 
 void Texture::SetFilterMin(GLenum filter)
 {
-    glTexParameteri(Target, GL_TEXTURE_MIN_FILTER, filter);
+    GLenum FilterMin = filter;
+    glBindTexture(Target, ID);
+    glTexParameteri(Target, GL_TEXTURE_MIN_FILTER, FilterMin);
+    glBindTexture(Target, 0);
 }
 
 void Texture::SetFilterMax(GLenum filter)
 {
-    glTexParameteri(Target, GL_TEXTURE_MAG_FILTER, filter);
+    GLenum FilterMax = filter;
+    glBindTexture(Target, ID);
+    glTexParameteri(Target, GL_TEXTURE_MAG_FILTER, FilterMax);
+    glBindTexture(Target, 0);
 }
 
 void Texture::Resize(int ResizeWidth, int ResizeHeight)
 {
-    // ÉèÖÃ´óÐ¡
-    // ÖØÐÂÉú³ÉTex
-    // ResizeTexture ÐèÒªÉ¾³ýÔ­ÓÐTexture GL¶ÔÏó
+    // è®¾ç½®å¤§å°
+    // é‡æ–°ç”ŸæˆTex
+    // ResizeTexture éœ€è¦åˆ é™¤åŽŸæœ‰Texture GLå¯¹è±¡
     // assert(ResizeWidth >= 0);
     // assert(ResizeHeight >= 0);
     // clamp
