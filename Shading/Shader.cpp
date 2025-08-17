@@ -232,6 +232,65 @@ void Shader::setInt(const std::string &name, int i)
     }
 }
 
+void Shader::setUniform(const std::string &name, const glm::vec4 &vec4)
+{
+    GLint location = getUniformLocationSafe(name);
+    if (location != -1)
+    {
+        glUniform4fv(location, 1, glm::value_ptr(vec4));
+    }
+}
+
+// 为 vec3 编写的重载
+void Shader::setUniform(const std::string &name, const glm::vec3 &vec3)
+{
+    GLint location = getUniformLocationSafe(name);
+    if (location != -1)
+    {
+        glUniform3fv(location, 1, glm::value_ptr(vec3));
+    }
+}
+
+// 为 vec2 编写的重载 (GLM vec2)
+void Shader::setUniform(const std::string &name, const glm::vec2 &vec2)
+{
+    GLint location = getUniformLocationSafe(name);
+    if (location != -1)
+    {
+        glUniform2fv(location, 1, glm::value_ptr(vec2));
+    }
+}
+
+// 为 mat4 编写的重载
+void Shader::setUniform(const std::string &name, const glm::mat4 &mat)
+{
+    GLint location = getUniformLocationSafe(name);
+    if (location != -1)
+    {
+        glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(mat));
+    }
+}
+
+// 为 float 编写的重载
+void Shader::setUniform(const std::string &name, float f)
+{
+    GLint location = getUniformLocationSafe(name);
+    if (location != -1)
+    {
+        glUniform1f(location, f);
+    }
+}
+
+// 为 int 编写的重载
+void Shader::setUniform(const std::string &name, int i)
+{
+    GLint location = getUniformLocationSafe(name);
+    if (location != -1)
+    {
+        glUniform1i(location, i);
+    }
+}
+
 void Shader::setTextureAuto(GLuint textureID, GLenum textureTarget, int shaderTextureLocation, const std::string &samplerUniformName)
 {
     if (textureLocationMap.find(samplerUniformName) == textureLocationMap.end())

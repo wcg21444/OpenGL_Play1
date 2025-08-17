@@ -60,6 +60,14 @@ public:
     void setFloat(const std::string &name, float f);
     void setInt(const std::string &name, int i);
 
+    /*********************统一重载方法*************************************/
+    void setUniform(const std::string &name, const glm::vec4 &vec4);
+    void setUniform(const std::string &name, const glm::vec3 &vec3);
+    void setUniform(const std::string &name, const glm::vec2 &vec2);
+    void setUniform(const std::string &name, const glm::mat4 &mat);
+    void setUniform(const std::string &name, float f);
+    void setUniform(const std::string &name, int i);
+
     void setTextureAuto(GLuint textureID, GLenum textureTarget, int shaderTextureLocation, const std::string &samplerUniformName);
 
     // 静态工具方法

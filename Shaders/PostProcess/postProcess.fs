@@ -19,6 +19,42 @@ uniform int HDR;
 uniform int Vignetting;
 uniform int GammaCorrection;
 
+/*****************效果参数设置******************************************************************/
+
+uniform float gamma;
+
+uniform float HDRExposure;
+
+uniform float vignettingStrength;
+uniform float vignettingPower;
+
+/****************屏幕圆设置*******************************************************************/
+//绘制正圆
+vec4 drawCircle(vec2 u_center,float u_radius,float u_thickness,vec4 u_color) {
+    vec4 color = vec4(0.f);
+    vec2 u_resolution = vec2(width,height);
+    vec2 current_pos = gl_FragCoord.xy - u_resolution.xy / 2.0;
+
+    // 2. 将坐标系除以屏幕的短边，使其成为一个正方形坐标系
+    // min(u_resolution.x, u_resolution.y) 找到短边
+    vec2 scaled_pos = current_pos / min(u_resolution.x, u_resolution.y);
+
+    // 3. 计算距离，所有单位现在都是基于短边归一化的
+    // u_center 和 u_radius 同样是归一化后的值
+    float dist_to_center = length(scaled_pos - u_center);
+
+    // 4. 计算圆环的内半径
+    float inner_radius = u_radius - u_thickness;
+
+    // 5. 使用条件判断来绘制
+    if (dist_to_center >= inner_radius && dist_to_center <= u_radius) {
+        color += u_color;
+    } else {
+        color += vec4(0.0);
+    }
+    return color;
+}
+
 void main() {
     FragColor = texture(screenTex,TexCoord);
     if(SSAO == 1) {
@@ -27,23 +63,45 @@ void main() {
     }
     //HDR
     if(HDR==1) {
-        const float exposure = 1.1;
-        FragColor *= exposure;
+        FragColor *= HDRExposure;
     }
 
     //Gamma 矫正
     if(GammaCorrection==1) {
-        float gamma = 1.8;
         FragColor.rgb = pow(FragColor.rgb, vec3(1.0/gamma));
     }
-
+    // FragColor = vec4(1.f);
     // 暗角
     if(Vignetting==1) {
-        const float strength = 4.0;
-        const float power = 0.1;
         vec2 tuv = TexCoord * (vec2(1.0) - TexCoord.yx);
-        float vign = tuv.x*tuv.y * strength;
-        vign = pow(vign, power);
+        float vign = tuv.x*tuv.y * vignettingStrength;
+        vign = pow(vign, vignettingPower);
         FragColor *= vign;
     }
+
+    /***均匀采样核*****************************************/
+    // vec4 result = vec4(0.0f);
+    // vec2 texelSize = 1.0 / vec2(textureSize(screenTex, 0));
+    // for (int x = -4; x < 4; ++x) {
+    //     for (int y = -4; y < 4; ++y) {
+    //         vec2 offset = vec2(float(x), float(y)) * texelSize*4;
+    //         result += texture(screenTex, TexCoord + offset);
+    //     }
+    // }
+    // FragColor = vec4(result / (8.0 * 8.0));
+
+    float kernel[9] = float[](
+        0.111, 0.111, 0.111,
+        0.111,  0.111, 0.111,
+        0.111, 0.111, 0.111);
+    vec2 texelSize = 1.0 / vec2(textureSize(screenTex, 0));
+    vec3 sampleTex[9];
+    for(int i = 0; i < 9; i++) {
+        vec2 offset = vec2(float(i/3), float(i%3)) * texelSize*4;
+        sampleTex[i] = vec3(texture(screenTex, TexCoord + offset));
+    }
+    vec3 col = vec3(0.0);
+    for(int i = 0; i < 9; i++)
+    col += sampleTex[i] * kernel[i];
+    FragColor = vec4(col,1.0f);
 }

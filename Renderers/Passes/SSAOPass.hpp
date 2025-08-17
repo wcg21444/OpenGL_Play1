@@ -41,7 +41,7 @@ private:
 
 public:
     SSAOBlurPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path);
-    ~SSAOBlurPass(); // 析构函数，用于释放资源
+    ~SSAOBlurPass();
 
     void resize(int _width, int _height) override;
     void render(unsigned int SSAOTex);

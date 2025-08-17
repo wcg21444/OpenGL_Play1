@@ -19,12 +19,45 @@
 //     bool enableShadow;
 //     virtual void generateShadowTexResource();
 // };
+namespace LightSource
+{
+
+    // 光源亮度颜色混合 简陋方法  这样的分离依然做不到颜色 亮度线性无关. 强度置零 转换丢失颜色.
+    // TODO: 优化逻辑
+    struct ColorIntensity
+    {
+        glm::vec3 color;
+        float intensity;
+    };
+    inline ColorIntensity SeparateIntensity(glm::vec3 combined_intensity)
+    {
+        ColorIntensity result;
+
+        float max_intensity = glm::max(combined_intensity.x, glm::max(combined_intensity.y, combined_intensity.z));
+
+        if (max_intensity > 0.0f)
+        {
+            result.color = combined_intensity / max_intensity;
+            result.intensity = max_intensity;
+        }
+        else
+        {
+            result.color = glm::vec3(0.0f);
+            result.intensity = 0.1f; // 钳制数据
+        }
+        return result;
+    }
+    inline glm::vec3 CombineIntensity(const ColorIntensity &combined_data)
+    {
+        return combined_data.color * combined_data.intensity;
+    }
+}
 
 // Only PointLight is supported
 class PointLight
 {
 public:
-    glm::vec3 intensity;
+    glm::vec3 combIntensity;
     glm::vec3 position;
 
     unsigned int depthCubemap = 0;
@@ -43,7 +76,7 @@ private:
     glm::mat4 lightView;
 
 public:
-    glm::vec3 intensity;
+    glm::vec3 combIntensity;
     glm::vec3 position;
 
     unsigned int depthMap = 0;

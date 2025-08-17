@@ -63,17 +63,18 @@ namespace GUI
     }
     void LightHandle(PointLight &light_source)
     {
-        static glm::vec3 lightColor;
-        static float lightIntensity;
-        static glm::vec3 lightPosition = light_source.position;
+        auto [lightColor, lightIntensity] = LightSource::SeparateIntensity(light_source.combIntensity);
+        glm::vec3 lightPosition = light_source.position;
 
         ImGui::ColorEdit3("LightColor", glm::value_ptr(lightColor));
-        ImGui::DragFloat("LightIntensitiy", &lightIntensity, 0.1f, 0.f);
+        ImGui::PushItemWidth(100.f);
+        ImGui::DragFloat("Intensitiy", &lightIntensity, 0.1f, 0.f);
+        ImGui::DragFloat("Position.X", &lightPosition.x, 0.1f);
+        ImGui::DragFloat("Position.Y", &lightPosition.y, 0.1f);
+        ImGui::DragFloat("Position.Z", &lightPosition.z, 0.1f);
+        ImGui::PopItemWidth();
 
-        ImGui::DragFloat("LightPosition.X", &lightPosition.x, 0.1f);
-        ImGui::DragFloat("LightPosition.Y", &lightPosition.y, 0.1f);
-        ImGui::DragFloat("LightPosition.Z", &lightPosition.z, 0.1f);
-        light_source.intensity = lightIntensity * lightColor;
+        light_source.combIntensity = LightSource::CombineIntensity({lightColor, lightIntensity});
         light_source.position = lightPosition;
     }
     void LightHandle(DirectionLight &light_source)
@@ -89,9 +90,44 @@ namespace GUI
         ImGui::DragFloat("DirLightPosition.X", &lightPosition.x, 0.1f);
         ImGui::DragFloat("DirLightPosition.Y", &lightPosition.y, 0.1f);
         ImGui::DragFloat("DirLightPosition.Z", &lightPosition.z, 0.1f);
-        light_source.intensity = lightIntensity * lightColor;
+        light_source.combIntensity = lightIntensity * lightColor;
         light_source.updatePosition(lightPosition);
         ImGui::End();
+    }
+    void LightSourceManage(Lights &lights)
+    {
+        auto &[pointLights, dirLights] = lights;
+        static PointLight *selectedLight = nullptr;
+
+        if (ImGui::BeginChild("##tree", ImVec2(300, 300), ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders))
+        {
+            static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable;
+            if (ImGui::BeginTable("table1", 1, flags))
+            {
+                int i = 0;
+
+                for (auto &pointLight : pointLights)
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    if (ImGui::Selectable(std::format("PL-{}", i).c_str(), selectedLight == &pointLight))
+                    {
+                        selectedLight = &pointLight;
+                    }
+                    ++i;
+                }
+                ImGui::EndTable();
+            }
+            ImGui::EndChild();
+        }
+
+        ImGui::SameLine();
+        ImGui::BeginGroup();
+        if (selectedLight)
+        {
+            LightHandle(*selectedLight);
+        }
+        ImGui::EndGroup();
     }
 
     glm::mat4 MatrixInputWithImGui(const char *label, const glm::mat4 &initial)
@@ -210,106 +246,7 @@ namespace GUI
         }
     }
 
-    /*void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, PointLight &light, glm::mat4 &model)
-    {
-        static float sidebar_width = 300.0f;
-        static bool is_resizing = false;
-
-        const ImGuiViewport *viewport = ImGui::GetMainViewport();
-
-        auto side_bar_x = viewport->WorkPos.x + viewport->WorkSize.x - sidebar_width;
-        auto side_bar_y = viewport->WorkPos.y;
-
-        // 设置侧边栏位置和大小
-        ImGui::SetNextWindowPos(ImVec2(side_bar_x, side_bar_y));
-        ImGui::SetNextWindowSize(ImVec2(sidebar_width, viewport->WorkSize.y));
-        // 设置窗口样式
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);   // 直角窗口
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f); // 无边框
-        // 开始侧边栏窗口
-        ImGui::Begin("Sidebar", nullptr,
-                     ImGuiWindowFlags_NoMove |
-                         ImGuiWindowFlags_NoResize |
-                         ImGuiWindowFlags_NoCollapse |
-                         ImGuiWindowFlags_NoTitleBar);
-        // 恢复样式
-        ImGui::PopStyleVar(2);
-        // 1. 灯光控制部分
-        if (ImGui::CollapsingHeader("Light Settings", ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            GUI::LightHandle(light);
-        }
-
-        // 2. 模型矩阵控制
-        if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            model = GUI::MatrixInputWithImGui("Model Matrix", model);
-        }
-
-        // 3. 渲染选项
-        if (ImGui::CollapsingHeader("Render Options"))
-        {
-            GUI::RenderSwitchCombo(renderManager);
-        }
-
-        // 4. 场景层次结构
-        if (ImGui::CollapsingHeader("Scene Hierarchy", ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            GUI::displaySceneHierarchy(scene, GUI::selectedIndex);
-        }
-
-        // 5. 着色器管理
-        if (ImGui::CollapsingHeader("Shader Settings"))
-        {
-            // GUI::ShadowRendererShaderManager(renderManager);
-            GUI::RendererShaderManager(renderManager);
-        }
-
-        // 6. 调试输出
-        if (ImGui::CollapsingHeader("Debug Output"))
-        {
-            DebugOutput::Draw();
-        }
-
-        ImGui::Text("FPS: %.2f", ImGui::GetIO().Framerate);
-        ImGui::End();
-        // 绘制可拖动的分隔条
-        ImGui::SetNextWindowPos(ImVec2(side_bar_x, side_bar_y));
-        ImGui::SetNextWindowSize(ImVec2(5, viewport->WorkSize.y));
-
-        ImGui::Begin("Sidebar Resizer", nullptr,
-                     ImGuiWindowFlags_NoMove |
-                         ImGuiWindowFlags_NoResize |
-                         ImGuiWindowFlags_NoCollapse |
-                         ImGuiWindowFlags_NoTitleBar |
-                         ImGuiWindowFlags_NoBackground |
-                         ImGuiWindowFlags_NoScrollbar |
-                         ImGuiWindowFlags_NoInputs);
-
-        // 设置鼠标光标样式
-        ImGui::End();
-
-        // 处理拖动逻辑
-        ImVec2 mouse_pos = ImGui::GetMousePos();
-        bool is_hovering = mouse_pos.x >= side_bar_x - 5 &&
-                           mouse_pos.x <= side_bar_x + 5 &&
-                           mouse_pos.y >= side_bar_y &&
-                           mouse_pos.y <= side_bar_y + viewport->WorkSize.y;
-
-        (is_hovering || is_resizing) ? ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW) : ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && (is_hovering || is_resizing))
-        {
-            is_resizing = true;
-            sidebar_width = std::abs(mouse_pos.x - viewport->WorkPos.x - viewport->WorkSize.x);
-        }
-        else
-        {
-            is_resizing = false;
-        }
-    }*/
-
-    void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, PointLight &light, glm::mat4 &model)
+    void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, Lights &lights, glm::mat4 &model)
     {
 
         // 开始侧边栏窗口
@@ -318,7 +255,9 @@ namespace GUI
         // 1. 灯光控制部分
         if (ImGui::CollapsingHeader("Light Settings", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            GUI::LightHandle(light);
+            auto &light = lights.pointLights[0];
+            // GUI::LightHandle(light);
+            GUI::LightSourceManage(lights);
         }
 
         // 2. 模型矩阵控制

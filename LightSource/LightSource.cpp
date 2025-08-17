@@ -2,13 +2,13 @@
 
 /********************************PointLight******************************************************************** */
 PointLight::PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution)
-    : intensity(_intensity), position(_position), texResolution(_texResolution)
+    : combIntensity(_intensity), position(_position), texResolution(_texResolution)
 {
 }
 
 void PointLight::setToShader(Shader &shaders)
 {
-    shaders.setUniform3fv("lightIntensity", intensity);
+    shaders.setUniform3fv("lightIntensity", combIntensity);
     shaders.setUniform3fv("lightPos", position);
 }
 
@@ -30,7 +30,7 @@ void PointLight::generateShadowTexResource()
 }
 /********************************DirectionLight******************************************************************** */
 DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution)
-    : intensity(_intensity), position(_position), ortho_scale(50.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
+    : combIntensity(_intensity), position(_position), ortho_scale(50.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
 {
     lightProjection = glm::ortho(-1.0f * ortho_scale,
                                  1.0f * ortho_scale,

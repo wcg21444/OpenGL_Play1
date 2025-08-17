@@ -5,7 +5,8 @@
 #include "LightPass.hpp"
 
 LightPass::LightPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
-    : Pass(_vp_width, _vp_height, _vs_path, _fs_path), shaderUI(std::make_unique<LightShaderUI>())
+    : Pass(_vp_width, _vp_height, _vs_path, _fs_path),
+      shaderUI(std::make_unique<LightShaderUI>())
 {
     initializeGLResources();
     contextSetup();
@@ -88,7 +89,7 @@ void LightPass::render(RenderParameters &renderParameters,
     for (size_t i = 0; i < pointLights.size(); ++i)
     {
         shaders.setUniform3fv("lightPos[" + std::to_string(i) + "]", pointLights[i].position);
-        shaders.setUniform3fv("lightIntensity[" + std::to_string(i) + "]", pointLights[i].intensity);
+        shaders.setUniform3fv("lightIntensity[" + std::to_string(i) + "]", pointLights[i].combIntensity);
         if (pointLights[i].depthCubemap != 0)
         {
             shaders.setTextureAuto(pointLights[i].depthCubemap, GL_TEXTURE_CUBE_MAP, i + 3, "shadowCubeMaps[" + std::to_string(i) + "]");
@@ -98,7 +99,7 @@ void LightPass::render(RenderParameters &renderParameters,
     // TODO Shader 多DirLight 渲染
 
     shaders.setUniform3fv("dirLightPos", dirLights[0].position);
-    shaders.setUniform3fv("dirLightIntensity", dirLights[0].intensity);
+    shaders.setUniform3fv("dirLightIntensity", dirLights[0].combIntensity);
     shaders.setMat4("dirLightSpaceMatrix", dirLights[0].lightSpaceMatrix);
     /****************************************视口设置****************************************************/
     shaders.setInt("width", vp_width);

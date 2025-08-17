@@ -71,8 +71,7 @@ uniform int DirShadow;
 uniform int PointShadow;
 
 /*******************************RayMarching输入**************************************************/
-const vec3 boxMin = vec3(2.0f,-2.0f,-2.0f);
-const vec3 boxMax = vec3(6.0f,2.0f,2.0f);
+
 /*******************************RayMarching******************************************************/
 
 vec2 rayBoxDst(vec3 boundsMin, vec3 boundsMax, vec3 rayOrigin, vec3 invRaydir) {
@@ -88,26 +87,91 @@ vec2 rayBoxDst(vec3 boundsMin, vec3 boundsMax, vec3 rayOrigin, vec3 invRaydir) {
     float dstInsideBox = max(0, dstB - dstToBox);
     return vec2(dstToBox, dstInsideBox);
 }
-vec4 computeCloudRayMarching(vec3 startPoint, vec3 direction,float depthLimit) {
+
+vec4 lightMarching(
+    vec3 startPoint,
+    vec3 direction,
+    float depthLimit,    
+    vec3 boxMin,
+    vec3 boxMax) {
     vec3 testPoint = startPoint;
-    float sum = 0.0;
+
     float interval = 0.01;//每次步进间隔
-    float intensity = 0.2*interval;
-    direction *= interval;
-    for (int i = 0; i < 1024; ++i) {
+    float intensity = 0.6*interval;
+
+    float density = 0.6;
+
+    int hit = 0;
+    float sum = 0.1;
+    for (int i = 0; i < 1; ++i) {
         //步进总长度
         if(i*interval>depthLimit) {
             break;
         }
-        testPoint += direction;
+        testPoint += direction*interval;
+        float distLight = length(testPoint-lightPos[0]);
+
+        //光线在体积内行进
         if (testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
             testPoint.z < boxMax.z && testPoint.z > boxMin.z &&
-            testPoint.y < boxMax.y && testPoint.y > boxMin.y)
-        sum += intensity;
+            testPoint.y < boxMax.y && testPoint.y > boxMin.y) {
+            hit = 1;
+
+            sum += intensity;
+            sum /=distLight*distLight;
+        }
     }
-    return sum*vec4(0.2f,0.3f,0.5f,1.0f);
+    return -sum*vec4(lightIntensity[0]/length(lightIntensity[0]),1.0f);
 }
-vec4 cloudRayMarching(vec3 startPoint, vec3 direction,vec3 fragPos) {
+
+vec4 computeCloudRayMarching(
+    vec3 startPoint,
+    vec3 direction,
+    float depthLimit,
+    vec3 boxMin,
+    vec3 boxMax,
+    vec4 color) {
+    vec3 testPoint = startPoint;
+
+    float interval = 0.01;//每次步进间隔
+    float intensity = 0.1*interval;
+
+    float density = 0.2;
+
+    int hit = 0;
+    float sum = 0.1;
+    for (int i = 0; i < 256; ++i) {
+        //步进总长度
+        if(i*interval>depthLimit) {
+            break;
+        }
+        testPoint += direction*interval;
+
+        //光线在体积内行进
+        if (testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
+            testPoint.z < boxMax.z && testPoint.z > boxMin.z &&
+            testPoint.y < boxMax.y && testPoint.y > boxMin.y) {
+            hit = 1;
+            sum += intensity;
+            sum *=exp(density*interval);
+
+            vec3 lightDir = lightPos[0]-testPoint;
+            color+=lightMarching(testPoint,lightDir,1000.f,boxMin,boxMax);
+        }
+    }
+    if(hit == 0) {
+        return vec4(0.0f);
+    }
+
+    return sum*color;
+}
+vec4 cloudRayMarching(
+    vec3 startPoint, 
+    vec3 direction,
+    vec3 fragPos,    
+    vec3 boxMin,
+    vec3 boxMax,
+    vec4 color) {
     vec2 rst = rayBoxDst(boxMin,boxMax,startPoint,1.0/direction);
     float boxDepth = rst.x;
     float boxInsideDepth = rst.y;
@@ -130,7 +194,75 @@ vec4 cloudRayMarching(vec3 startPoint, vec3 direction,vec3 fragPos) {
     else {
         depthLimit = boxInsideDepth;
     }
-    return computeCloudRayMarching(startPoint+direction*rst.x,direction,depthLimit);
+    return computeCloudRayMarching(startPoint+direction*rst.x,direction,depthLimit,boxMin,boxMax,color);
+}
+/*********************************LightVolume******************************************************/
+vec4 computeLightVolumeRayMarching(
+    vec3 startPoint,
+    vec3 direction,
+    float depthLimit,
+    vec3 boxMin,
+    vec3 boxMax,
+    vec4 color) {
+    vec3 testPoint = startPoint;
+    float sum = 0.0;
+    float interval = 0.01;//每次步进间隔
+    float intensity = 1.5*interval;
+    float density = 0.1f;
+    for (int i = 0; i < 1024; ++i) {
+        //步进总长度
+        if(i*interval>depthLimit) {
+            break;
+        }
+        testPoint += direction*interval;
+        if (testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
+            testPoint.z < boxMax.z && testPoint.z > boxMin.z &&
+            testPoint.y < boxMax.y && testPoint.y > boxMin.y)
+        sum += intensity;
+        sum *=exp(-density*interval);
+    }
+    return sum*color;
+}
+vec4 lightVolumeRayMarching(
+    vec3 startPoint, 
+    vec3 direction,
+    vec3 fragPos,    
+    vec3 boxMin,
+    vec3 boxMax,
+    vec4 color) {
+    vec2 rst = rayBoxDst(boxMin,boxMax,startPoint,1.0/direction);
+    float boxDepth = rst.x;
+    float boxInsideDepth = rst.y;
+
+    float fragDepth = length(fragPos-startPoint);
+    // skybox
+    if (length(fragPos)==0) {
+        fragDepth = 10000000.f;
+    }
+
+    if(fragDepth<boxDepth) {
+        //物体阻挡Box
+        return vec4(0.f);
+    }
+    float depthLimit;
+    if((fragDepth-boxDepth)<boxInsideDepth) {
+        //物体嵌入box,步进深度限制减小
+        depthLimit = fragDepth-boxDepth;
+    }
+    else {
+        depthLimit = boxInsideDepth;
+    }
+    return computeLightVolumeRayMarching(startPoint+direction*rst.x,direction,depthLimit,boxMin,boxMax,color);
+}
+
+vec4 lightVolume(
+    vec3 startPoint, 
+    vec3 direction,
+    vec3 fragPos,
+    vec3 boxMin,
+    vec3 boxMax,
+    vec4 color) {
+    return lightVolumeRayMarching(startPoint, direction,fragPos,boxMin,boxMax,color);
 }
 /*******************************Lighting******************************************************/
 
@@ -337,7 +469,21 @@ void main() {
         LightResult += vec4(ambient*texture(gAlbedoSpec,TexCoord).rgb,1.f);
     }
 
+    const vec3 BoxMin = vec3(2.0f,-2.0f,-2.0f);
+    const vec3 BoxMax = vec3(6.0f,2.0f,2.0f);
     vec3 dir = fragViewSpaceDir(TexCoord);   
-    vec4 cloud = cloudRayMarching(eyePos.xyz, dir,FragPos);       
-    LightResult+=cloud;
+    vec4 cloud = cloudRayMarching(eyePos.xyz, dir,FragPos,BoxMin,BoxMax,vec4(0.5f,0.5f,0.5f,1.0f));       
+    LightResult-=cloud;//散射吸收,减色
+
+    const vec3 LightVolueBoxMin = vec3(-0.5f,-0.5f,-0.5f);
+    const vec3 LightVolueBoxMax = vec3(0.5f,0.5f,0.5f);
+    for(int i = 0; i < numLights; ++i) {
+        LightResult+=lightVolume(
+            eyePos.xyz,
+            dir,
+            FragPos,
+            LightVolueBoxMin+lightPos[i],
+            LightVolueBoxMax+lightPos[i],
+            vec4(lightIntensity[i],1.0f)/length(lightIntensity[i]));
+    }
 }
