@@ -11,7 +11,8 @@ class GBufferRenderer;
 class CubemapUnfoldRenderer;
 // fwd declaration
 
-class RenderManager {
+class RenderManager
+{
 private:
   std::shared_ptr<DebugDepthRenderer> debugDepthRenderer = nullptr;
   std::shared_ptr<ShadowRenderer> shadowRenderer = nullptr;
@@ -23,11 +24,11 @@ private:
   void clearContext();
 
 public:
-  // ????????????????
   int rendererWidth = 1600;
   int rendererHeight = 900;
 
-  enum Mode {
+  enum Mode
+  {
     point_shadow,
     parallel_shadow,
     debug_depth,

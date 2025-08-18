@@ -76,31 +76,34 @@ void LightPass::render(RenderParameters &renderParameters,
 
     /****************************************阴影贴图输入**************************************************/
     // TODO Shader 多DirLight 渲染
-    shaders.setTextureAuto(dirLights[0].depthMap, GL_TEXTURE_2D, 0, "dirDepthMap");
 
     for (size_t i = 0; i < MAX_LIGHTS; ++i)
     {
         shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps[" + std::to_string(i) + "]"); // 给sampler数组赋空
     }
+    for (size_t i = 0; i < MAX_DIR_LIGHTS; ++i)
+    {
+        shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, "dirDepthMap[" + std::to_string(i) + "]"); // 给sampler数组赋空
+    }
     // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skybox");
 
     /****************************************点光源输入**************************************************/
-    shaders.setInt("numLights", static_cast<int>(pointLights.size()));
+    shaders.setInt("numPointLights", static_cast<int>(pointLights.size()));
     for (size_t i = 0; i < pointLights.size(); ++i)
     {
-        shaders.setUniform3fv("lightPos[" + std::to_string(i) + "]", pointLights[i].position);
-        shaders.setUniform3fv("lightIntensity[" + std::to_string(i) + "]", pointLights[i].combIntensity);
-        if (pointLights[i].depthCubemap != 0)
-        {
-            shaders.setTextureAuto(pointLights[i].depthCubemap, GL_TEXTURE_CUBE_MAP, i + 3, "shadowCubeMaps[" + std::to_string(i) + "]");
-        }
+        pointLights[i].setToShaderLightArray(shaders, i);
     }
     /****************************************方向光源输入**************************************************/
     // TODO Shader 多DirLight 渲染
 
-    shaders.setUniform3fv("dirLightPos", dirLights[0].position);
-    shaders.setUniform3fv("dirLightIntensity", dirLights[0].combIntensity);
-    shaders.setMat4("dirLightSpaceMatrix", dirLights[0].lightSpaceMatrix);
+    // shaders.setUniform3fv("dirLightPos", dirLights[0].position);
+    // shaders.setUniform3fv("dirLightIntensity", dirLights[0].combIntensity);
+    // shaders.setMat4("dirLightSpaceMatrix", dirLights[0].lightSpaceMatrix);
+    shaders.setInt("numDirLights", static_cast<int>(dirLights.size()));
+    for (size_t i = 0; i < dirLights.size(); ++i)
+    {
+        dirLights[i].setToShaderLightArray(shaders, i);
+    }
     /****************************************视口设置****************************************************/
     shaders.setInt("width", vp_width);
     shaders.setInt("height", vp_height);

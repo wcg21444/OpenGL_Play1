@@ -1,6 +1,6 @@
 //TODO: use GBuffer as geometry buffer
 //TODO: render a light pass , summary all the light information, hence this shader will be used many times
-//input: gPosition; gNormal; gAlbedoSpec; lightPos, lightIntensity, eyePos
+//input: gPosition; gNormal; gAlbedoSpec; pointLightPos, pointLightIntensity, eyePos
 //output: LightResult
 //the final result is the summary of all the light rendering results
 
@@ -23,12 +23,19 @@ uniform sampler2D ssaoTex;
 
 /*****************点光源设置******************************************************************/
 const int MAX_LIGHTS = 10; // Maximum number of lights supported
-uniform int numLights; // actual number of lights used
+uniform int numPointLights; // actual number of lights used
 uniform samplerCube shadowCubeMaps[MAX_LIGHTS];
-uniform vec3 lightPos[MAX_LIGHTS];
-uniform vec3 lightIntensity[MAX_LIGHTS];
+uniform vec3 pointLightPos[MAX_LIGHTS];
+uniform vec3 pointLightIntensity[MAX_LIGHTS];
 uniform float pointLightFar;
 
+/*****************定向光源设置******************************************************************/
+const int MAX_DIR_LIGHTS = 5; // Maximum number of lights supported
+uniform int numDirLights; // actual number of lights used
+uniform sampler2D dirDepthMap[MAX_DIR_LIGHTS];
+uniform vec3 dirLightPos[MAX_DIR_LIGHTS];
+uniform vec3 dirLightIntensity[MAX_DIR_LIGHTS];
+uniform mat4 dirLightSpaceMatrix[MAX_DIR_LIGHTS];
 /*****************阴影采样设置******************************************************************/
 vec2 noiseScale = vec2(width/16.0,height/16.0);
 uniform sampler2D shadowNoiseTex;
@@ -36,11 +43,7 @@ uniform vec3 shadowSamples[128];
 uniform int n_samples;
 uniform float blurRadius = 0.1f;
 
-/*****************定向光源******************************************************************/
-uniform sampler2D dirDepthMap;
-uniform vec3 dirLightPos;
-uniform vec3 dirLightIntensity;
-uniform mat4 dirLightSpaceMatrix;
+
 
 /*****************环境光******************************************************************/
 uniform vec3 ambientLight;
@@ -109,7 +112,7 @@ vec4 lightMarching(
             break;
         }
         testPoint += direction*interval;
-        float distLight = length(testPoint-lightPos[0]);
+        float distLight = length(testPoint-pointLightPos[0]);
 
         //光线在体积内行进
         if (testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
@@ -121,7 +124,7 @@ vec4 lightMarching(
             sum /=distLight*distLight;
         }
     }
-    return -sum*vec4(lightIntensity[0]/length(lightIntensity[0]),1.0f);
+    return -sum*vec4(pointLightIntensity[0]/length(pointLightIntensity[0]),1.0f);
 }
 
 vec4 computeCloudRayMarching(
@@ -155,7 +158,7 @@ vec4 computeCloudRayMarching(
             sum += intensity;
             sum *=exp(density*interval);
 
-            vec3 lightDir = lightPos[0]-testPoint;
+            vec3 lightDir = pointLightPos[0]-testPoint;
             color+=lightMarching(testPoint,lightDir,1000.f,boxMin,boxMax);
         }
     }
@@ -293,24 +296,24 @@ vec3 computeSkyboxAmbient(samplerCube _skybox) {
     return ambient/samplesN;
 }
 
-float computeDirLightShadow(vec3 fragPos) {
+float computeDirLightShadow(vec3 fragPos,mat4 _dirLightSpaceMatrix,sampler2D _dirDepthMap) {
     // perform perspective divide
     if(DirShadow==0) {
         return 0.f;
     }
-    vec4 lightSpaceFragPos = dirLightSpaceMatrix*vec4(fragPos,1.0f);
+    vec4 lightSpaceFragPos = _dirLightSpaceMatrix*vec4(fragPos,1.0f);
 
     //计算遮挡物与接受物的平均距离
     float d=0.f;
     int occlusion_times = 0;
     for(int k =0;k<n_samples;++k) {
-        vec4 sampleOffset = dirLightSpaceMatrix*vec4(TBN*shadowSamples[k]*blurRadius*60,0.0f); 
+        vec4 sampleOffset = _dirLightSpaceMatrix*vec4(TBN*shadowSamples[k]*blurRadius*60,0.0f); 
         vec4 fragPosLightSpace =lightSpaceFragPos +sampleOffset; // Dir Light View Space
         vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
         // transform to [0,1] range
         projCoords = projCoords * 0.5 + 0.5;
         // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-        float closestDepth = texture(dirDepthMap, projCoords.xy).r; 
+        float closestDepth = texture(_dirDepthMap, projCoords.xy).r; 
         // get depth of current fragment from light's perspective
         float currentDepth = projCoords.z;
         float bias = 0.000005f;
@@ -322,7 +325,7 @@ float computeDirLightShadow(vec3 fragPos) {
     d= d/occlusion_times;
     float factor = 0.f;
     for(int j =0;j<n_samples;++j) {
-        vec4 sampleOffset = dirLightSpaceMatrix*vec4(
+        vec4 sampleOffset =_dirLightSpaceMatrix*vec4(
             TBN*
             shadowSamples[j]*
             blurRadius*20
@@ -332,7 +335,7 @@ float computeDirLightShadow(vec3 fragPos) {
         // transform to [0,1] range
         projCoords = projCoords * 0.5 + 0.5;
         // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-        float closestDepth = texture(dirDepthMap, projCoords.xy).r; 
+        float closestDepth = texture(_dirDepthMap, projCoords.xy).r; 
         // get depth of current fragment from light's perspective
         float currentDepth = projCoords.z;
         float bias = 0.000005f;
@@ -343,11 +346,11 @@ float computeDirLightShadow(vec3 fragPos) {
     return factor/n_samples;
 }
 
-float computePointLightShadow(vec3 fragPos,vec3 fragNorm,vec3 lightPos,samplerCube _depthMap) {
+float computePointLightShadow(vec3 fragPos,vec3 fragNorm,vec3 pointLightPos,samplerCube _depthMap) {
     if(PointShadow==0) {
         return 0.f;
     }
-    vec3 dir = fragPos-lightPos;
+    vec3 dir = fragPos-pointLightPos;
 
     float curr_depth = length(dir);
     float omega = -dot(fragNorm,dir)/curr_depth;
@@ -359,7 +362,7 @@ float computePointLightShadow(vec3 fragPos,vec3 fragNorm,vec3 lightPos,samplerCu
     int occlusion_times = 0;
     for(int k =0;k<n_samples;++k) {
         vec3 sampleOffset = TBN*shadowSamples[k]*4.f; 
-        vec3 dir_sample = sampleOffset+fragPos-lightPos;
+        vec3 dir_sample = sampleOffset+fragPos-pointLightPos;
         float curr_depth_sample = length(dir_sample);
         float cloest_depth_sample = texture(_depthMap,dir_sample).r;
 
@@ -373,7 +376,7 @@ float computePointLightShadow(vec3 fragPos,vec3 fragNorm,vec3 lightPos,samplerCu
     float factor = 0.f;
     for(int j =0;j<n_samples;++j) {
         vec3 sampleOffset = TBN*shadowSamples[j]*blurRadius*pow(curr_depth/12,2)*d/n_samples*64; 
-        vec3 dir_sample = sampleOffset+fragPos-lightPos;
+        vec3 dir_sample = sampleOffset+fragPos-pointLightPos;
         float curr_depth_sample = length(dir_sample);
         float cloest_depth_sample = texture(_depthMap,dir_sample).r;
         cloest_depth_sample *= pointLightFar;
@@ -384,35 +387,43 @@ float computePointLightShadow(vec3 fragPos,vec3 fragNorm,vec3 lightPos,samplerCu
 }
 
 vec3 dirLightDiffuse(vec3 fragPos,vec3 n) {
-    vec3 l = normalize(dirLightPos);
+
+    vec3 diffuse = vec3(0.0f);
+    for(int i = 0; i < numDirLights; ++i) {
+
+    vec3 l = normalize(dirLightPos[i]);
     float rr = dot(l,l);
-    float shadowFactor = 1-computeDirLightShadow(fragPos);
-    vec3 diffuse = 
-    shadowFactor*dirLightIntensity/rr*max(0.f,dot(n,l));
+    float shadowFactor = 1-computeDirLightShadow(fragPos,dirLightSpaceMatrix[i],dirDepthMap[i]);
+    diffuse += 
+    shadowFactor*dirLightIntensity[i]/rr*max(0.f,dot(n,l));
+    }
     return diffuse;
 }
 
 vec3 dirLightSpec(vec3 fragPos,vec3 n) {
-    vec3 l = normalize(dirLightPos);
+    vec3 specular = vec3(0.0f);
+    for(int i = 0; i < numDirLights; ++i) {
+    vec3 l = normalize(dirLightPos[i]);
     float specularStrength = 0.01f;
     vec3 viewDir = normalize(eyePos - fragPos);
     vec3 reflectDir = reflect(-l, n);  
-    float shadowFactor = 1-computeDirLightShadow(fragPos);
+    float shadowFactor = 1-computeDirLightShadow(fragPos,dirLightSpaceMatrix[i],dirDepthMap[i]);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 128);
-    vec3 specular = shadowFactor*specularStrength * spec * dirLightIntensity*160;  
+    specular += shadowFactor*specularStrength * spec * dirLightIntensity[i]*160;
+    }
     return specular;
 }
 
 vec3 pointLightDiffuse(vec3 fragPos,vec3 n) {
     vec3 diffuse=vec3(0.f,0.f,0.f);
 
-    for(int i = 0; i < numLights; ++i) {
-        vec3 l = lightPos[i] - fragPos;
+    for(int i = 0; i < numPointLights; ++i) {
+        vec3 l = pointLightPos[i] - fragPos;
         float rr = pow(dot(l,l),0.6)*10;
         l = normalize(l);   
 
-        float shadow_factor = 1-computePointLightShadow(fragPos,n,lightPos[i],shadowCubeMaps[i]); 
-        diffuse += lightIntensity[i]/rr*max(0.f,dot(n,l))*shadow_factor;
+        float shadow_factor = 1-computePointLightShadow(fragPos,n,pointLightPos[i],shadowCubeMaps[i]); 
+        diffuse += pointLightIntensity[i]/rr*max(0.f,dot(n,l))*shadow_factor;
     }
     return diffuse;
 }
@@ -420,19 +431,19 @@ vec3 pointLightDiffuse(vec3 fragPos,vec3 n) {
 vec3 pointLightSpec(vec3 fragPos,vec3 n) {
     vec3 specular=vec3(0.f,0.f,0.f);
 
-    for(int i = 0; i < numLights; ++i) {
-        vec3 l = lightPos[i] - fragPos;
+    for(int i = 0; i < numPointLights; ++i) {
+        vec3 l = pointLightPos[i] - fragPos;
         float rr = pow(dot(l,l),0.6)*10;
         l = normalize(l);   
         float spec=0.f;
         float specularStrength = 0.005f;
 
-        float shadow_factor = 1-computePointLightShadow(fragPos,n,lightPos[i],shadowCubeMaps[i]); 
+        float shadow_factor = 1-computePointLightShadow(fragPos,n,pointLightPos[i],shadowCubeMaps[i]); 
 
         vec3 viewDir = normalize(eyePos - fragPos);
         vec3 reflectDir = reflect(-l, n);  
         spec = pow(max(dot(viewDir, reflectDir), 0.0), 64);
-        specular += specularStrength * spec * lightIntensity[i]*shadow_factor;
+        specular += specularStrength * spec * pointLightIntensity[i]*shadow_factor;
     }
     return specular;
 }
@@ -477,13 +488,13 @@ void main() {
 
     const vec3 LightVolueBoxMin = vec3(-0.5f,-0.5f,-0.5f);
     const vec3 LightVolueBoxMax = vec3(0.5f,0.5f,0.5f);
-    for(int i = 0; i < numLights; ++i) {
+    for(int i = 0; i < numPointLights; ++i) {
         LightResult+=lightVolume(
             eyePos.xyz,
             dir,
             FragPos,
-            LightVolueBoxMin+lightPos[i],
-            LightVolueBoxMax+lightPos[i],
-            vec4(lightIntensity[i],1.0f)/length(lightIntensity[i]));
+            LightVolueBoxMin+pointLightPos[i],
+            LightVolueBoxMax+pointLightPos[i],
+            vec4(pointLightIntensity[i],1.0f)/length(pointLightIntensity[i]));
     }
 }

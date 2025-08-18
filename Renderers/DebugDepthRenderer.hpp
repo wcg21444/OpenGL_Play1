@@ -80,6 +80,11 @@ public:
 
     void resize(int _width, int _height) override
     {
+        if (SCR_WIDTH == _width &&
+            SCR_HEIGHT == _height)
+        {
+            return;
+        }
         SCR_WIDTH = _width;
         SCR_HEIGHT = _height;
 
@@ -98,7 +103,7 @@ public:
         // 配置光源空间的投影 视图 矩阵
         float nearPlane = 0.1f, farPlane = 700.f;
         glm::mat4 lightProjection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, nearPlane, farPlane);
-        glm::mat4 lightView = glm::lookAt(light.position,
+        glm::mat4 lightView = glm::lookAt(light.getPosition(),
                                           glm::vec3(0.0f, 0.0f, 0.0f),
                                           glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;

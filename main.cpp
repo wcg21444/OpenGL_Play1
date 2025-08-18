@@ -189,8 +189,6 @@ int main()
 
         GUI::ShowSidebarToolbar(scene, renderManager, allLights, model);
 
-        GUI::LightHandle(dirLights[0]);
-
         if (GUI::modelLoadView)
         {
             GUI::ModelLoadView();

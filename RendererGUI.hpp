@@ -37,4 +37,38 @@ public:
         }
         ImGui::End();
     }
+
+    ImVec2 getRenderWindowSize()
+    {
+        static ImVec2 size;
+        ImGui::Begin("Scene");
+        {
+            ImGui::BeginChild("GameRender");
+            size = ImGui::GetContentRegionAvail();
+            ImGui::EndChild();
+            ImGui::End();
+        }
+        return size;
+    }
+    void renderToDockingWindow(GLuint postProcessPassTex)
+    {
+        static ImVec2 size;
+        ImGui::Begin("Scene");
+        {
+            ImGui::BeginChild("GameRender");
+
+            size = ImGui::GetContentRegionAvail();
+
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+
+            ImGui::GetWindowDrawList()->AddImage(
+                (ImTextureID)(intptr_t)postProcessPassTex,
+                ImVec2(pos.x, pos.y),
+                ImVec2(pos.x + size.x, pos.y + size.y),
+                ImVec2(0, 1),
+                ImVec2(1, 0));
+        }
+        ImGui::EndChild();
+        ImGui::End();
+    }
 };
