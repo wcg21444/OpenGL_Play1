@@ -107,6 +107,10 @@ void RenderManager::switchContext()
 
 void RenderManager::render(RenderParameters &renderParameters)
 {
+    if (rendererWidth == 0 || rendererHeight == 0)
+    {
+        return; // minimized
+    }
     if (currentRenderer)
     {
         currentRenderer->render(renderParameters);

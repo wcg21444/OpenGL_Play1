@@ -61,10 +61,10 @@ namespace GUI
             DebugOutput::AddLog("Execute Shaders Reload\n");
         }
     }
-    void LightHandle(PointLight &light_source)
+    void LightHandle(LightSource &light_source)
     {
-        auto [lightColor, lightIntensity] = LightSource::SeparateIntensity(light_source.combIntensity);
-        glm::vec3 lightPosition = light_source.position;
+        auto &[lightColor, lightIntensity] = light_source.colorIntensity;
+        glm::vec3 lightPosition = light_source.getPosition();
 
         ImGui::ColorEdit3("LightColor", glm::value_ptr(lightColor));
         ImGui::PushItemWidth(100.f);
@@ -73,31 +73,12 @@ namespace GUI
         ImGui::DragFloat("Position.Y", &lightPosition.y, 0.1f);
         ImGui::DragFloat("Position.Z", &lightPosition.z, 0.1f);
         ImGui::PopItemWidth();
-
-        light_source.combIntensity = LightSource::CombineIntensity({lightColor, lightIntensity});
-        light_source.position = lightPosition;
-    }
-    void LightHandle(DirectionLight &light_source)
-    {
-        ImGui::Begin("DirLight");
-
-        static glm::vec3 lightColor;
-        static float lightIntensity;
-        static glm::vec3 lightPosition = light_source.position;
-        ImGui::ColorEdit3("DirLightColor", glm::value_ptr(lightColor));
-        ImGui::DragFloat("DirLightIntensitiy", &lightIntensity, 0.01f, 0.f);
-
-        ImGui::DragFloat("DirLightPosition.X", &lightPosition.x, 0.1f);
-        ImGui::DragFloat("DirLightPosition.Y", &lightPosition.y, 0.1f);
-        ImGui::DragFloat("DirLightPosition.Z", &lightPosition.z, 0.1f);
-        light_source.combIntensity = lightIntensity * lightColor;
-        light_source.updatePosition(lightPosition);
-        ImGui::End();
+        light_source.setPosition(lightPosition);
     }
     void LightSourceManage(Lights &lights)
     {
         auto &[pointLights, dirLights] = lights;
-        static PointLight *selectedLight = nullptr;
+        static LightSource *selectedLight = nullptr;
 
         if (ImGui::BeginChild("##tree", ImVec2(300, 300), ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders))
         {
@@ -113,6 +94,17 @@ namespace GUI
                     if (ImGui::Selectable(std::format("PL-{}", i).c_str(), selectedLight == &pointLight))
                     {
                         selectedLight = &pointLight;
+                    }
+                    ++i;
+                }
+                i = 0;
+                for (auto &dirLight : dirLights)
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    if (ImGui::Selectable(std::format("DL-{}", i).c_str(), selectedLight == &dirLight))
+                    {
+                        selectedLight = &dirLight;
                     }
                     ++i;
                 }

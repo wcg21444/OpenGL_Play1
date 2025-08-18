@@ -1,15 +1,41 @@
 #include "LightSource.hpp"
 
+LightSource::LightSource(const glm::vec3 &_intensity, const glm::vec3 &_position)
+    : combIntensity(_intensity),
+      position(_position),
+      colorIntensity(SeparateIntensity(_intensity))
+{
+}
+
 /********************************PointLight******************************************************************** */
 PointLight::PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution)
-    : combIntensity(_intensity), position(_position), texResolution(_texResolution)
+    : LightSource(_intensity, _position), texResolution(_texResolution)
 {
 }
 
 void PointLight::setToShader(Shader &shaders)
 {
-    shaders.setUniform3fv("lightIntensity", combIntensity);
-    shaders.setUniform3fv("lightPos", position);
+    combIntensity = CombineIntensity(colorIntensity);
+    shaders.setUniform3fv("pointLightPos", position);
+    shaders.setUniform3fv("pointLightIntensity", combIntensity);
+
+    if (depthCubemap != 0)
+    {
+        shaders.setTextureAuto(depthCubemap, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps");
+    }
+}
+
+void PointLight::setToShaderLightArray(Shader &shaders, size_t index)
+{
+    combIntensity = CombineIntensity(colorIntensity);
+    shaders.setUniform3fv("pointLightPos[" + std::to_string(index) + "]", position);
+    shaders.setUniform3fv("pointLightIntensity[" + std::to_string(index) + "]", combIntensity);
+
+    // 阴影贴图绑定
+    if (depthCubemap != 0)
+    {
+        shaders.setTextureAuto(depthCubemap, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps[" + std::to_string(index) + "]");
+    }
 }
 
 void PointLight::generateShadowTexResource()
@@ -28,9 +54,19 @@ void PointLight::generateShadowTexResource()
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     }
 }
+
+void PointLight::setPosition(glm::vec3 &_position)
+{
+    position = _position;
+}
+
+glm::vec3 PointLight::getPosition() const
+{
+    return position;
+}
 /********************************DirectionLight******************************************************************** */
 DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution)
-    : combIntensity(_intensity), position(_position), ortho_scale(50.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
+    : LightSource(_intensity, _position), ortho_scale(50.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
 {
     lightProjection = glm::ortho(-1.0f * ortho_scale,
                                  1.0f * ortho_scale,
@@ -45,16 +81,34 @@ DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_po
 
 void DirectionLight::setToShader(Shader &shaders)
 {
-    shaders.setUniform3fv("lightPos", position);
-}
+    combIntensity = CombineIntensity(colorIntensity);
 
-void DirectionLight::updatePosition(glm::vec3 &_position)
+    shaders.setTextureAuto(depthMap, GL_TEXTURE_2D, 0, "dirDepthMap");
+    shaders.setUniform3fv("dirLightPos", position);
+    shaders.setUniform3fv("dirLightIntensity", combIntensity);
+    shaders.setMat4("dirLightSpaceMatrix", lightSpaceMatrix);
+}
+void DirectionLight::setToShaderLightArray(Shader &shaders, size_t index)
+{
+    combIntensity = CombineIntensity(colorIntensity);
+
+    shaders.setTextureAuto(depthMap, GL_TEXTURE_2D, 0, std::format("dirDepthMap[{}]", index));
+    shaders.setUniform3fv(std::format("dirLightPos[{}]", index), position);
+    shaders.setUniform3fv(std::format("dirLightIntensity[{}]", index), combIntensity);
+    shaders.setMat4(std::format("dirLightSpaceMatrix[{}]", index), lightSpaceMatrix);
+}
+void DirectionLight::setPosition(glm::vec3 &_position)
 {
     position = _position;
     lightView = glm::lookAt(position,
                             glm::vec3(0.0f, 0.0f, 0.0f),
                             glm::vec3(0.0f, 1.0f, 0.0f));
     lightSpaceMatrix = lightProjection * lightView;
+}
+
+glm::vec3 DirectionLight::getPosition() const
+{
+    return position;
 }
 
 // 在渲染器中调用,等待GL上下文

@@ -44,6 +44,11 @@ public:
 
     void resize(int _width, int _height) override
     {
+        if (vp_width == _width &&
+            vp_height == _height)
+        {
+            return;
+        }
         vp_width = _width;
         vp_height = _height;
 

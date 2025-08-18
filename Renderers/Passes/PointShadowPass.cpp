@@ -47,18 +47,19 @@ void PointShadowPass::renderToTexture(
 
     static std::vector<glm::mat4> shadowTransforms;
     // 视图变换需要知道光源位置
+    auto position = light.getPosition();
     shadowTransforms.clear();
     shadowTransforms.push_back(shadowProj *
-                               glm::lookAt(light.position, light.position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+                               glm::lookAt(position, position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
     shadowTransforms.push_back(shadowProj *
-                               glm::lookAt(light.position, light.position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+                               glm::lookAt(position, position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
     shadowTransforms.push_back(shadowProj *
-                               glm::lookAt(light.position, light.position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+                               glm::lookAt(position, position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
     shadowTransforms.push_back(shadowProj *
-                               glm::lookAt(light.position, light.position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+                               glm::lookAt(position, position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
     shadowTransforms.push_back(shadowProj *
-                               glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
-    shadowTransforms.push_back(shadowProj * glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+                               glm::lookAt(position, position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+    shadowTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
 
     glViewport(0, 0, width, height);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
@@ -74,7 +75,7 @@ void PointShadowPass::renderToTexture(
             shaders.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
         }
         shaders.setFloat("farPlane", farPlane);
-        shaders.setUniform3fv("lightPos", light.position);
+        shaders.setUniform3fv("lightPos", position);
 
         Renderer::DrawScene(scene, model, shaders);
     }

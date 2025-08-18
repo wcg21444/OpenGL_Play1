@@ -66,18 +66,19 @@ public:
     {
         static std::vector<glm::mat4> shadowTransforms;
         // 视图变换需要知道光源位置
+        auto position = light.getPosition();
         shadowTransforms.clear();
         shadowTransforms.push_back(shadowProj *
-                                   glm::lookAt(light.position, light.position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+                                   glm::lookAt(position, position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
         shadowTransforms.push_back(shadowProj *
-                                   glm::lookAt(light.position, light.position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+                                   glm::lookAt(position, position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
         shadowTransforms.push_back(shadowProj *
-                                   glm::lookAt(light.position, light.position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+                                   glm::lookAt(position, position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
         shadowTransforms.push_back(shadowProj *
-                                   glm::lookAt(light.position, light.position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+                                   glm::lookAt(position, position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
         shadowTransforms.push_back(shadowProj *
-                                   glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+                                   glm::lookAt(position, position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
 
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
@@ -93,7 +94,7 @@ public:
                 depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
             }
             depthShader.setFloat("farPlane", far);
-            depthShader.setUniform3fv("lightPos", light.position);
+            depthShader.setUniform3fv("lightPos", position);
 
             Renderer::DrawScene(scene, model, depthShader);
         }
@@ -253,7 +254,11 @@ public:
 
     void resize(int _width, int _height) override
     {
-
+        if (width == _width &&
+            height == _height)
+        {
+            return;
+        }
         width = _width;
         height = _height;
 
@@ -320,7 +325,7 @@ private:
         ImGui::End();
         static float nearPlane = 0.1f, farPlane = 1000.f;
         glm::mat4 lightProjection = glm::ortho(-1.0f * ortho_scale, 1.0f * ortho_scale, -1.0f * ortho_scale, 1.0f * ortho_scale, nearPlane, farPlane); //
-        glm::mat4 lightView = glm::lookAt(light.position,
+        glm::mat4 lightView = glm::lookAt(light.getPosition(),
                                           glm::vec3(0.0f, 0.0f, 0.0f),
                                           glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;

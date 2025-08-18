@@ -93,7 +93,11 @@ public:
     {
         // pointShadowPass->resize(_width, _height);
         // dirShadowPass->resize(_width, _height);
-
+        if (width == _width &&
+            height == _height)
+        {
+            return;
+        }
         width = _width;
         height = _height;
 
@@ -179,7 +183,7 @@ private:
         if (rendererGUI.toggleBloom)
         {
             bloomPass.render(lightPassTex);
-            auto bloomPassTex = bloomPass.getTextures();
+            bloomPassTex = bloomPass.getTextures();
         }
         /****************************PostProcess*********************************************/
 
@@ -194,34 +198,10 @@ private:
 
         /****************************Screen渲染*********************************************/
         // screenPass.render(lightPassTex); // 渲染到底层窗口
-
-        // 渲染到 imgui docking窗口
-        glViewport(0, 0, width, height);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        ImGui::Begin("Scene");
-        {
-            ImGui::BeginChild("GameRender");
 
-            static ImVec2 size = ImGui::GetContentRegionAvail();
-            static ImVec2 lastSize = size;
-
-            size = ImGui::GetContentRegionAvail();
-            if (size.x != lastSize.x || size.y != lastSize.y)
-            {
-                this->resize(static_cast<int>(size.x), static_cast<int>(size.y));
-                lastSize = size;
-            }
-
-            ImVec2 pos = ImGui::GetCursorScreenPos();
-
-            ImGui::GetWindowDrawList()->AddImage(
-                (ImTextureID)(intptr_t)postProcessPassTex,
-                ImVec2(pos.x, pos.y),
-                ImVec2(pos.x + width, pos.y + height),
-                ImVec2(0, 1),
-                ImVec2(1, 0));
-        }
-        ImGui::EndChild();
-        ImGui::End();
+        auto renderWindowSize = rendererGUI.getRenderWindowSize();
+        resize(renderWindowSize.x, renderWindowSize.y);
+        rendererGUI.renderToDockingWindow(postProcessPassTex);
     }
 };

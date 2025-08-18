@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 // TODO 阴影开关功能
+// TODO 运行时类型切换
 // class LightSource
 // {
 // public:
@@ -19,66 +20,81 @@
 //     bool enableShadow;
 //     virtual void generateShadowTexResource();
 // };
-namespace LightSource
+struct ColorIntensity
 {
+    glm::vec3 color;
+    float intensity;
+};
+inline ColorIntensity SeparateIntensity(glm::vec3 combined_intensity)
+{
+    ColorIntensity result;
 
-    // 光源亮度颜色混合 简陋方法  这样的分离依然做不到颜色 亮度线性无关. 强度置零 转换丢失颜色.
-    // TODO: 优化逻辑
-    struct ColorIntensity
+    float max_intensity = glm::max(combined_intensity.x, glm::max(combined_intensity.y, combined_intensity.z));
+
+    if (max_intensity > 0.0f)
     {
-        glm::vec3 color;
-        float intensity;
-    };
-    inline ColorIntensity SeparateIntensity(glm::vec3 combined_intensity)
-    {
-        ColorIntensity result;
-
-        float max_intensity = glm::max(combined_intensity.x, glm::max(combined_intensity.y, combined_intensity.z));
-
-        if (max_intensity > 0.0f)
-        {
-            result.color = combined_intensity / max_intensity;
-            result.intensity = max_intensity;
-        }
-        else
-        {
-            result.color = glm::vec3(0.0f);
-            result.intensity = 0.1f; // 钳制数据
-        }
-        return result;
+        result.color = combined_intensity / max_intensity;
+        result.intensity = max_intensity;
     }
-    inline glm::vec3 CombineIntensity(const ColorIntensity &combined_data)
+    else
     {
-        return combined_data.color * combined_data.intensity;
+        result.color = glm::vec3(0.0f);
+        result.intensity = 0.1f; // 钳制数据
     }
+    return result;
 }
-
-// Only PointLight is supported
-class PointLight
+inline glm::vec3 CombineIntensity(const ColorIntensity &separatedData)
 {
-public:
+    return separatedData.color * separatedData.intensity;
+}
+enum LightType
+{
+    TypePointLight,
+    TypeDirLight,
+    TypeSpotLight,
+};
+class LightSource
+{
+protected:
     glm::vec3 combIntensity;
     glm::vec3 position;
 
+public:
+    ColorIntensity colorIntensity;
+
+public:
+    LightSource(const glm::vec3 &_intensity, const glm::vec3 &_position);
+    virtual void setToShader(Shader &shaders) = 0;
+    virtual void setToShaderLightArray(Shader &shaders, size_t index) = 0;
+    virtual void setPosition(glm::vec3 &_position) = 0;
+    virtual glm::vec3 getPosition() const = 0;
+    virtual ~LightSource() = default;
+};
+
+class PointLight : public LightSource
+{
+private:
+public:
     unsigned int depthCubemap = 0;
     int texResolution;
 
 public:
     PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution = 1024);
-    void setToShader(Shader &shaders);
+    void setToShader(Shader &shaders) override;
+    void setToShaderLightArray(Shader &shaders, size_t index) override;
+    void setPosition(glm::vec3 &_position) override;
+    glm::vec3 getPosition() const override;
+
     void generateShadowTexResource();
 };
 
-class DirectionLight
+class DirectionLight : public LightSource
 {
 private:
     glm::mat4 lightProjection;
     glm::mat4 lightView;
 
 public:
-    glm::vec3 combIntensity;
-    glm::vec3 position;
-
     unsigned int depthMap = 0;
     int texResolution;
 
@@ -90,8 +106,11 @@ public:
 
     DirectionLight(const glm::vec3 &_intensity = glm::vec3(0.1f), const glm::vec3 &_position = glm::vec3(50.f, 20.f, 60.f), int _texResolution = 2048);
 
-    void setToShader(Shader &shaders);
-    void updatePosition(glm::vec3 &_position);
+    void setToShader(Shader &shaders) override;
+    void setToShaderLightArray(Shader &shaders, size_t index) override;
+    void setPosition(glm::vec3 &_position) override;
+    glm::vec3 getPosition() const override;
+
     void generateShadowTexResource();
 };
 struct Lights

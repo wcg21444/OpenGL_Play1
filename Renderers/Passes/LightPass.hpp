@@ -6,6 +6,7 @@ class LightPass : public Pass
 {
 private:
     const int MAX_LIGHTS = 10;
+    const int MAX_DIR_LIGHTS = 5;
 
     Texture lightPassTex;
     Texture shadowNoiseTex;
