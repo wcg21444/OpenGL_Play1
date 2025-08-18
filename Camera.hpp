@@ -29,8 +29,8 @@ private:
 
 public:
     float fov = 60.f;
-    float near = 0.1f;
-    float far = 1000.f;
+    float nearPlane = 0.1f;
+    float farPlane = 1000.f;
 
 public:
     Camera(int width,
@@ -48,15 +48,15 @@ public:
     {
         if (firstMouse)
         {
-            lastX = xpos;
-            lastY = ypos;
+            lastX = static_cast<float>(xpos);
+            lastY = static_cast<float>(ypos);
             firstMouse = false;
         }
 
-        float xoffset = xpos - lastX;
-        float yoffset = lastY - ypos;
-        lastX = xpos;
-        lastY = ypos;
+        float xoffset = static_cast<float>(xpos - lastX);
+        float yoffset = static_cast<float>(lastY - ypos);
+        lastX = static_cast<float>(xpos);
+        lastY = static_cast<float>(ypos);
 
         xoffset *= sensitivity;
         yoffset *= sensitivity;
@@ -114,14 +114,14 @@ public:
         float camZ = static_cast<float>(cos(glfwGetTime()) * radius);
         view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         shaders.setMat4("view", view);
-        shaders.setUniform3fv("eye_pos", cameraPos);
+        shaders.setUniform3fv("eyePos", cameraPos);
     }
     void setPerspectiveMatrix(Shader &shaders, int width, int height)
     {
         glm::mat4 projection = glm::perspective(glm::radians(fov),
                                                 (float)width / (float)height,
-                                                near,
-                                                far);
+                                                nearPlane,
+                                                farPlane);
         shaders.setMat4("projection", projection);
     }
     glm::vec3 getPosition() const

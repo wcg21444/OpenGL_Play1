@@ -1,6 +1,8 @@
-#include "Shader.hpp"
-#include "Renderer.hpp"
+#pragma once
+#include "../../Shading/Shader.hpp"
+#include "../../Shading/Texture.hpp"
 
+#include "../Renderer.hpp"
 /* 1个Pass对应一个FBO , 一个Shader
 [in] Textures , Uniform Varibles , Extra Resources
 [out] Pass Texture
@@ -27,17 +29,29 @@ public:
     {
         shaders = Shader(vs_path.c_str(), fs_path.c_str(), gs_path.c_str());
     }
-    void reloadCurrentShaders()
+    virtual void reloadCurrentShaders()
     {
         shaders = Shader(vs_path.c_str(), fs_path.c_str(), gs_path.c_str());
         contextSetup();
     }
+    void setToggle(bool status, std::string toggle)
+    {
+        shaders.use();
+        shaders.setInt(toggle, status ? 1 : 0);
+    }
 
     // 上下文设置
     virtual void contextSetup() = 0;
+
+    virtual void resize(int _width, int _height) = 0;
+    virtual ~Pass()
+    {
+        glDeleteFramebuffers(1, &FBO);
+    }
 };
 
 // 将最终通道渲染到屏幕
+// 输出到默认FBO
 class ScreenPass : public Pass
 {
 private:
@@ -51,7 +65,22 @@ public:
         initializeGLResources();
         contextSetup();
     }
+
     void contextSetup() {}
+
+    void resize(int _width, int _height)
+    {
+        if (vp_width == _width &&
+            vp_height == _height)
+        {
+            return;
+        }
+        vp_width = _width;
+        vp_height = _height;
+
+        contextSetup();
+    }
+
     void render(unsigned int finalTextureID)
     {
         glViewport(0, 0, vp_width, vp_height);
@@ -59,6 +88,6 @@ public:
         // 设置着色器参数
         shaders.use();
         shaders.setTextureAuto(finalTextureID, GL_TEXTURE_2D, 0, "tex_sampler");
-        DrawQuad();
+        Renderer::DrawQuad();
     }
 };

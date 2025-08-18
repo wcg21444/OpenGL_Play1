@@ -1,6 +1,6 @@
 #pragma once
-#include "RendererManager.hpp"
 #include "Renderer.hpp"
+#include "../utils/TextureLoader.hpp"
 class SimpleTextureRenderer : public Renderer
 {
     Shader shaders = Shader("Shaders/texture.vs", "Shaders/texture.fs");
@@ -10,12 +10,13 @@ class SimpleTextureRenderer : public Renderer
     unsigned int texture1, texture2;
 
 public:
-    void reloadCurrentShaders()
+    void reloadCurrentShaders() override
     {
         shaders = std::move(Shader("Shaders/texture.vs", "Shaders/texture.fs"));
         contextSetup();
     }
-    void contextSetup()
+
+    void contextSetup() override
     {
         static float vertices[] = {
             // positions          // colors           // texture coords
@@ -104,9 +105,23 @@ public:
         shaders.setInt("texture1", 0);
         shaders.setInt("texture2", 1);
     }
-    void render(RenderParameters &renderParameters)
+
+    void resize(int _width, int _height) override
     {
-        auto &[lights, cam, scene, model, window] = renderParameters;
+        if (width == _width &&
+            height == _height)
+        {
+            return;
+        }
+        width = _width;
+        height = _height;
+
+        contextSetup();
+    }
+
+    void render(RenderParameters &renderParameters) override
+    {
+        auto &[allLights, cam, scene, model, window] = renderParameters;
         // render
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);

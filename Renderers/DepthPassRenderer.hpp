@@ -1,5 +1,4 @@
 #pragma once
-#include "RendererManager.hpp"
 #include "Renderer.hpp"
 class DepthPassRenderer : public Renderer
 {
@@ -8,27 +7,39 @@ class DepthPassRenderer : public Renderer
     int height = 900;
 
 public:
-    void reloadCurrentShaders()
+    void reloadCurrentShaders() override
     {
         shaders = std::move(Shader("Shaders/DepthPass/depth_pass.vs", "Shaders/DepthPass/depth_pass.fs"));
         contextSetup();
     }
-    void contextSetup()
+    void contextSetup() override
     {
         glEnable(GL_DEPTH_TEST); // 深度缓冲
         glViewport(0, 0, width, height);
     }
-    void render(RenderParameters &renderParameters)
+    void resize(int _width, int _height) override
     {
-        auto &[lights, cam, scene, model, window] = renderParameters;
+        if (width == _width &&
+            height == _height)
+        {
+            return;
+        }
+        width = _width;
+        height = _height;
 
+        contextSetup();
+    }
+    void render(RenderParameters &renderParameters) override
+    {
+        auto &[allLights, cam, scene, model, window] = renderParameters;
+        auto &[pointLights, dirLights] = allLights;
         // temporary light source variable
-        LightSource &light = lights[0]; // Assuming the first light is the one we want to use for shadow
+        PointLight &light = pointLights[0]; // Assuming the first light is the one we want to use for shadow
 
         glEnable(GL_DEPTH_TEST); // 深度缓冲
         glViewport(0, 0, width, height);
         shaders.use();
-        shaders.setFloat("far_plane", cam.far);
+        shaders.setFloat("farPlane", cam.farPlane);
         shaders.setUniform3fv("camPos", cam.getPosition());
 
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
@@ -40,6 +51,6 @@ public:
         cam.setViewMatrix(shaders);
         cam.setPerspectiveMatrix(shaders, width, height);
 
-        DrawScene(scene, model, shaders);
+        Renderer::DrawScene(scene, model, shaders);
     }
 };

@@ -4,7 +4,12 @@ out vec4 result;
 
 in vec2 TexCoord;
 
+/********************视口大小*****************************************/
+uniform int width = 1600;
+uniform int height = 900;
+
 uniform sampler2D gPosition;//World Space
+uniform sampler2D gViewPosition;//View Space
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoSpec;
 
@@ -12,13 +17,15 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform vec3 samples[64];
 
-uniform vec3 eye_pos;
-uniform float far_plane;
+uniform vec3 eyePos;
+uniform float farPlane;
 
 uniform sampler2D texNoise;
-const vec2 noiseScale = vec2(1600.0/8.0, 900.0/8.0);
+vec2 noiseScale = vec2(width/16.0,height/16.0);
 
-vec3 fragPos   = texture(gPosition, TexCoord).xyz;
+// vec3 fragPos   = texture(gPosition, TexCoord).xyz;
+vec4 fragPos4 = texture(gPosition, TexCoord);
+vec3 fragPos   = (texture(gPosition, TexCoord)).xyz;
 vec3 normal    = texture(gNormal, TexCoord).rgb;
 vec3 randomVec = texture(texNoise, TexCoord * noiseScale).xyz;  
 
@@ -26,44 +33,68 @@ vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));//WorldS
 vec3 bitangent = cross(normal, tangent);
 mat3 TBN       = mat3(tangent, bitangent, normal);  
 
-int kernelSize = 64;
-float radius = 0.6f;
+uniform int kernelSize =64;
+uniform float radius = 2.f;
+uniform float intensity = 1.f;
+//bias 为什么要给 surface depth 加? 有什么作用?
+uniform float bias = 1.f; 
 
-float WorldSpaceDepth(vec3 pos)
-{
-    return length(pos-eye_pos)/far_plane*20;
+float WorldSpaceDepth(vec3 pos) {
+    return length(pos-eyePos)/farPlane/pow(intensity,2);
 }
 
-vec3 skyClamp(vec3 pos)
-{
-    return pos == vec3(0.f)?vec3(1.0/0.0):pos;
-}
+// float CalculateOcclusion() {
+//     float depth =WorldSpaceDepth(fragPos);
+//     if(depth>10.f) {
+//         return 1.0f;
+//     }
+//     float occlusion = 0.0;
+//     float bias = 0.001f;
+//     for(int i = 0; i < kernelSize; ++i) {
+//         // get sample position
+//         vec3 samplePos = TBN * samples[i]; 
+//         samplePos = fragPos + samplePos * radius; 
 
-float CalculateOcclusion()
-{
-    fragPos = skyClamp(fragPos);
+//         float sampleDepth = WorldSpaceDepth(samplePos);
+
+//         vec4 clipPos = projection * view * vec4(samplePos, 1.0f);
+//         vec3 ndcPos = clipPos.xyz / clipPos.w;
+//         vec2 screenUV = ndcPos.xy * 0.5 + 0.5;
+//         float sampleSurfaceDepth = WorldSpaceDepth(texture(gPosition, screenUV).xyz);
+//         float rangeCheck = smoothstep(0.0, 1.0, radius / (abs(depth - sampleSurfaceDepth)));
+//         occlusion += (sampleDepth >= sampleSurfaceDepth + bias ? 1.0 : 0.0)*pow(rangeCheck,2);
+//     }
+//     occlusion = 1.0 - (occlusion / kernelSize)/(1+depth);
+//     return occlusion;
+// }
+
+float CalculateOcclusion() {
+    float depth =WorldSpaceDepth(fragPos);
+    if(depth>100.f) {
+        return 1.0f;
+    }
     float occlusion = 0.0;
-    float bias = 0.001f;
-        for(int i = 0; i < kernelSize; ++i)
-    {
-        // get sample position
-        vec3 samplePos = TBN * samples[i]*4; 
-        samplePos = fragPos + samplePos * radius; 
- 
-        float sampleDepth = WorldSpaceDepth(samplePos);
-        
+    for(int i = 0; i < kernelSize; ++i) {
+        vec3 fragPosView = (texture(gViewPosition,TexCoord)).xyz;
+        vec3 samplePos = TBN * samples[i]; 
+        samplePos = fragPos + samplePos * radius;
+
         vec4 clipPos = projection * view * vec4(samplePos, 1.0f);
         vec3 ndcPos = clipPos.xyz / clipPos.w;
         vec2 screenUV = ndcPos.xy * 0.5 + 0.5;
-        float sampleSurfaceDepth = WorldSpaceDepth(texture(gPosition, screenUV ).xyz);
-        float rangeCheck = smoothstep(0.0, 1.0, radius / pow(abs(fragPos.z - sampleDepth),2));
-        occlusion += (sampleDepth >= sampleSurfaceDepth + bias ? 1.0 : 0.0) * rangeCheck;   
+
+        vec3 sampleSurface = (texture(gViewPosition,screenUV)).xyz;
+        float sampleSurfaceDepth =sampleSurface.z;
+
+        float rangeCheck = smoothstep(0.0, 1.0, radius/(abs(fragPosView.z  - sampleSurface.z)));
+        // float rangeCheck = 1-radius/abs(fragPosView.z  - sampleSurface.z);
+        occlusion += (fragPosView.z/1<=sampleSurfaceDepth/1 + bias ? 1.0 : 0.0)*pow(rangeCheck,1);
+        // occlusion += rangeCheck;
+        // occlusion += sampleSurfaceDepth;
     }
-    occlusion = 1.0 - (occlusion / kernelSize);
+    occlusion = 1.0 - (occlusion / kernelSize)/(1+depth);
     return occlusion;
 }
-
-
 
 void main() {
     float occlusion = CalculateOcclusion();
@@ -72,6 +103,21 @@ void main() {
     // vec3 ndcPos = clipPos.xyz / clipPos.w;
     // vec2 screenUV = ndcPos.xy * 0.5 + 0.5;
 
-    // result = vec4(WorldSpaceDepth(texture(gPosition, screenUV ).xyz));
+    // vec3 fragPosView = (view*texture(gPosition,TexCoord)).xyz;
+    // vec3 samplePos = TBN * samples[0]; 
+    // vec3 samplePosView = fragPosView + samplePos * radius; //view space
+    // samplePos = fragPos + samplePos * radius; //World space
+
+    // vec4 clipPos = projection * view * vec4(samplePos, 1.0f);
+    // vec3 ndcPos = clipPos.xyz / clipPos.w;
+    // vec2 screenUV = ndcPos.xy * 0.5 + 0.5;
+
+    // vec3 sampleSurface = (view*texture(gPosition,screenUV)).xyz;
+    // float sampleSurfaceDepth =sampleSurface.z;
+    // vec3 eyePosView = (view*vec4(eyePos,1.0f)).xyz;
+    // result = vec4((view*texture(gPosition,TexCoord)).z);
+    // result = vec4((view*texture(gPosition,TexCoord)));
+
     result = vec4(occlusion);
+    // result = vec4(log((texture(gNormal,TexCoord).z+50)/100+1.5));
 }

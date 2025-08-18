@@ -2,7 +2,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug with MSVC",
+            "name": "Launch Without Build",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Debug/OpenGL_Play.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "console": "integratedTerminal",
+        },
+        {
+            "name": "Build And Launch",
             "type": "cppvsdbg", // MSVC 调试器
             "request": "launch",
             "program": "${workspaceFolder}/build/Debug/OpenGL_Play.exe", // 可执行文件路径

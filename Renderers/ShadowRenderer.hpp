@@ -1,8 +1,9 @@
 #pragma once
-#include "RendererManager.hpp"
 #include "Renderer.hpp"
+#include "Passes/Pass.hpp"
+#include "PointShadowPass.hpp"
 
-class PointShadowPass
+class PointShadowPassDeprecated
 {
     Shader depthShader = Shader("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs");
 
@@ -45,7 +46,7 @@ private:
     }
 
 public:
-    PointShadowPass(int _SHADOW_WIDTH = 1024, int _SHADOW_HEIGHT = 1024, float _near = 1.0f, float _far = 250.f)
+    PointShadowPassDeprecated(int _SHADOW_WIDTH = 1024, int _SHADOW_HEIGHT = 1024, float _near = 1.0f, float _far = 250.f)
         : SHADOW_WIDTH(_SHADOW_WIDTH), SHADOW_HEIGHT(_SHADOW_HEIGHT), aspect((float)_SHADOW_WIDTH / (float)_SHADOW_HEIGHT),
           near(_near), far(_far)
     {
@@ -61,22 +62,23 @@ public:
         depthShader = Shader("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs");
     }
 
-    void render(LightSource &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
+    void render(PointLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
     {
         static std::vector<glm::mat4> shadowTransforms;
         // 视图变换需要知道光源位置
+        auto position = light.getPosition();
         shadowTransforms.clear();
         shadowTransforms.push_back(shadowProj *
-                                   glm::lookAt(light.position, light.position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+                                   glm::lookAt(position, position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
         shadowTransforms.push_back(shadowProj *
-                                   glm::lookAt(light.position, light.position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+                                   glm::lookAt(position, position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
         shadowTransforms.push_back(shadowProj *
-                                   glm::lookAt(light.position, light.position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+                                   glm::lookAt(position, position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
         shadowTransforms.push_back(shadowProj *
-                                   glm::lookAt(light.position, light.position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+                                   glm::lookAt(position, position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
         shadowTransforms.push_back(shadowProj *
-                                   glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(light.position, light.position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+                                   glm::lookAt(position, position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
 
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
@@ -91,10 +93,10 @@ public:
             {
                 depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
             }
-            depthShader.setFloat("far_plane", far);
-            depthShader.setUniform3fv("lightPos", light.position);
+            depthShader.setFloat("farPlane", far);
+            depthShader.setUniform3fv("lightPos", position);
 
-            DrawScene(scene, model, depthShader);
+            Renderer::DrawScene(scene, model, depthShader);
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
@@ -103,7 +105,7 @@ public:
     // [in] depthCubemap,light, scene, model
     // [out] a new depthCubemap
     // [side effect] **change current viewport size**
-    void renderToTexture(unsigned int &_depthCubemap, LightSource &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
+    void renderToTexture(unsigned int &_depthCubemap, PointLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
     {
         // initialize
         if (_depthCubemap == 0)
@@ -119,7 +121,7 @@ public:
 class ParrllelShadowPass
 {
     Shader depthShader = Shader("Shaders/shadow_depth.vs", "Shaders/shadow_depth.fs");
-    int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+    int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 
     unsigned int depthMapFBO;
 
@@ -146,7 +148,7 @@ public:
         glReadBuffer(GL_NONE);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
-    void render(LightSource &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix)
+    void render(PointLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix)
     {
         glClearColor(0.f, 0.f, 0.f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -158,7 +160,49 @@ public:
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        DrawScene(scene, model, depthShader);
+        Renderer::DrawScene(scene, model, depthShader);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+    unsigned int generateDepthMap()
+    {
+        unsigned int _depthMap;
+        glGenTextures(1, &_depthMap);
+        glBindTexture(GL_TEXTURE_2D, _depthMap);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        return _depthMap;
+    }
+    void attachDepthMap(unsigned int _depthMap, unsigned int &_depthMapFBO)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, _depthMap, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+    void renderToTexture(unsigned int &_depthMap, DirectionLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
+    {
+        // initialize
+        if (_depthMap == 0)
+        {
+            _depthMap = generateDepthMap();
+        }
+        attachDepthMap(_depthMap, depthMapFBO);
+
+        glClearColor(0.f, 0.f, 0.f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        depthShader.use();
+        depthShader.setMat4("lightSpaceMatrix", light.lightSpaceMatrix);
+
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        Renderer::DrawScene(scene, model, depthShader);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 };
@@ -176,14 +220,14 @@ public:
 private:
     Shader pls_shaders = Shader("Shaders/VertShader.vs", "Shaders/FragmShader.fs");
     Shader ps_shaders = Shader("Shaders/PointShadow/point_shadow.vs", "Shaders/PointShadow/point_shadow.fs");
-    PointShadowPass pointShadowPass;
+    PointShadowPassDeprecated pointShadowPass;
     ParrllelShadowPass parrllelShadowPass;
     int width = 1600;
     int height = 900;
 
 public:
     ShadowMode render_mode;
-    void reloadCurrentShaders()
+    void reloadCurrentShaders() override
     {
         if (render_mode == ShadowMode::parallel_shadow)
             pls_shaders = std::move(Shader("Shaders/VertShader.vs", "Shaders/FragmShader.fs"));
@@ -192,6 +236,7 @@ public:
         pointShadowPass.reloadCurrentShader();
         contextSetup();
     }
+
     void reloadShaders(Shader &&_shaders, Shader &&_ps_shaders)
     {
         if (render_mode == ShadowMode::parallel_shadow)
@@ -200,13 +245,27 @@ public:
             ps_shaders = std::move(_ps_shaders);
         contextSetup();
     }
-    void contextSetup()
+
+    void contextSetup() override
     {
         glEnable(GL_DEPTH_TEST); // 深度缓冲
         glViewport(0, 0, width, height);
     }
 
-    void render(RenderParameters &renderParameters)
+    void resize(int _width, int _height) override
+    {
+        if (width == _width &&
+            height == _height)
+        {
+            return;
+        }
+        width = _width;
+        height = _height;
+
+        contextSetup();
+    }
+
+    void render(RenderParameters &renderParameters) override
     {
         if (render_mode == ShadowMode::point_shadow)
         {
@@ -225,16 +284,17 @@ public:
 private:
     void renderPointShadow(RenderParameters &renderParameters)
     {
-        auto &[lights, cam, scene, model, window] = renderParameters;
+        auto &[allLights, cam, scene, model, window] = renderParameters;
+        auto &[pointLights, dirLights] = allLights;
         // temporary light source variable
-        LightSource &light = lights[0]; // Assuming the first light is the one we want to use for point shadow
+        PointLight &light = pointLights[0]; // Assuming the first light is the one we want to use for point shadow
         pointShadowPass.render(light, scene, model);
 
         glEnable(GL_DEPTH_TEST); // 深度缓冲
         glViewport(0, 0, width, height);
 
         ps_shaders.use();
-        ps_shaders.setFloat("far_plane", pointShadowPass.far);
+        ps_shaders.setFloat("farPlane", pointShadowPass.far);
         ps_shaders.setTextureAuto(pointShadowPass.depthCubemap, GL_TEXTURE_CUBE_MAP, 0, "depthMap");
 
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
@@ -246,23 +306,29 @@ private:
         cam.setViewMatrix(ps_shaders);
         cam.setPerspectiveMatrix(ps_shaders, width, height);
 
-        DrawScene(scene, model, ps_shaders);
+        Renderer::DrawScene(scene, model, ps_shaders);
     }
     void renderParallelShadow(RenderParameters &renderParameters)
     {
-        auto &[lights, cam, scene, model, window] = renderParameters;
+        auto &[allLights, cam, scene, model, window] = renderParameters;
+        auto &[pointLights, dirLights] = allLights;
 
         // temporary light source variable
-        LightSource &light = lights[0]; // Assuming the first light is the one we want to use for shadow
+        PointLight &light = pointLights[0]; // Assuming the first light is the one we want to use for shadow
 
-        static float near_plane = 1.f, far_plane = 700.f;
-        glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-        glm::mat4 lightView = glm::lookAt(light.position,
+        // 怎样设置正交投影farplane,正交比例,光源位置,使得阴影覆盖最优?
+        static float ortho_scale = 10.f;
+        ImGui::Begin("ParellLightMatrix");
+        {
+            ImGui::SliderFloat("OrthoScale", &ortho_scale, 1, 500.f);
+        }
+        ImGui::End();
+        static float nearPlane = 0.1f, farPlane = 1000.f;
+        glm::mat4 lightProjection = glm::ortho(-1.0f * ortho_scale, 1.0f * ortho_scale, -1.0f * ortho_scale, 1.0f * ortho_scale, nearPlane, farPlane); //
+        glm::mat4 lightView = glm::lookAt(light.getPosition(),
                                           glm::vec3(0.0f, 0.0f, 0.0f),
                                           glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
-        ShowGLMMatrixAsTable(lightSpaceMatrix);
 
         parrllelShadowPass.render(light, scene, model, lightSpaceMatrix);
 
@@ -282,6 +348,6 @@ private:
         cam.setViewMatrix(pls_shaders);
         cam.setPerspectiveMatrix(pls_shaders, width, height);
 
-        DrawScene(scene, model, pls_shaders);
+        Renderer::DrawScene(scene, model, pls_shaders);
     }
 };

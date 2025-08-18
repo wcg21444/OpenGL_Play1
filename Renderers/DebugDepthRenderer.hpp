@@ -1,5 +1,4 @@
 #pragma once
-#include "RendererManager.hpp"
 #include "Renderer.hpp"
 class DebugDepthRenderer : public Renderer
 {
@@ -13,13 +12,14 @@ class DebugDepthRenderer : public Renderer
     unsigned int quadVBO;
 
 public:
-    void reloadCurrentShaders()
+    void reloadCurrentShaders() override
     {
         depthShader = std::move(Shader("Shaders/shadow_depth.vs", "Shaders/shadow_depth.fs"));
         quadShader = std::move(Shader("Shaders/debug_quad.vs", "Shaders/debug_quad.fs"));
         contextSetup();
     }
-    void contextSetup()
+
+    void contextSetup() override
     {
         glEnable(GL_DEPTH_TEST);
         glGenFramebuffers(1, &depthMapFBO);
@@ -77,18 +77,33 @@ public:
             glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
         }
     }
-    void render(RenderParameters &renderParameters)
+
+    void resize(int _width, int _height) override
     {
-        auto &[lights, cam, scene, model, window] = renderParameters;
+        if (SCR_WIDTH == _width &&
+            SCR_HEIGHT == _height)
+        {
+            return;
+        }
+        SCR_WIDTH = _width;
+        SCR_HEIGHT = _height;
+
+        contextSetup();
+    }
+
+    void render(RenderParameters &renderParameters) override
+    {
+        auto &[allLights, cam, scene, model, window] = renderParameters;
+        auto &[pointLights, dirLights] = allLights;
         // temporary light source variable
-        LightSource &light = lights[0]; // Assuming the first light is the one we want to use for shadow
+        PointLight &light = pointLights[0]; // Assuming the first light is the one we want to use for shadow
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // 配置光源空间的投影 视图 矩阵
-        float near_plane = 0.1f, far_plane = 70.f;
-        glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-        glm::mat4 lightView = glm::lookAt(light.position,
+        float nearPlane = 0.1f, farPlane = 700.f;
+        glm::mat4 lightProjection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, nearPlane, farPlane);
+        glm::mat4 lightView = glm::lookAt(light.getPosition(),
                                           glm::vec3(0.0f, 0.0f, 0.0f),
                                           glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
@@ -99,15 +114,15 @@ public:
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        DrawScene(scene, model, depthShader);
+        Renderer::DrawScene(scene, model, depthShader);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         quadShader.use();
-        quadShader.setFloat("near_plane", near_plane);
-        quadShader.setFloat("far_plane", far_plane);
+        quadShader.setFloat("nearPlane", nearPlane);
+        quadShader.setFloat("farPlane", farPlane);
 
         quadShader.setTextureAuto(depthMap, GL_TEXTURE_2D, 0, "depthMap");
 

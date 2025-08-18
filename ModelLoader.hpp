@@ -11,7 +11,8 @@
 #include <atomic>
 #include <vector>
 
-#include "DebugOutput.hpp"
+#include "utils/DebugOutput.hpp"
+#include "../utils/TextureLoader.hpp"
 #include "Model.hpp"
 
 class ModelLoader
