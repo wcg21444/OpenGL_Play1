@@ -14,7 +14,17 @@ set(IMGUI
 imgui
 imgui/backends
 )
+set(IMGUIZMO 
+imguizmo
+)
 set (INCLUDES includes)
+set (MODULES 
+Objects
+Renderers
+Shading
+Renderers/Passes
+LightSource
+Utils)
 
 
 file(GLOB_RECURSE IMGUI_SRC 
@@ -22,13 +32,14 @@ file(GLOB_RECURSE IMGUI_SRC
 )
 
 
+file(GLOB_RECURSE IMGUIZMO_SRC 
+    Imguizmo/*.cpp
+)
+
+
 include_directories(${IMGUI})
-include_directories("Objects")
-include_directories("Renderers")
-include_directories("Shading")
-include_directories("Renderers/Passes")
-include_directories("utils")
-include_directories("LightSource")
+include_directories(${IMGUIZMO})
+include_directories(${MODULES})
 include_directories(${INCLUDES})
 
 file(GLOB OBJECTS_SRC
@@ -39,12 +50,12 @@ file(GLOB RENDERERS_SRC
     Renderers/Passes/*.cpp
 )
 file(GLOB UTILS_SRC
-    utils/*.cpp
+    Utils/*.cpp
 )
 file(GLOB SHADING_SRC
     Shading/*.cpp
 )
-add_executable(${PROJECT_NAME} "main.cpp" "LightSource/LightSource.cpp" "InputHandler.cpp" ${IMGUI_SRC} ${RENDERERS_SRC} ${OBJECTS_SRC} ${UTILS_SRC} ${SHADING_SRC})
+add_executable(${PROJECT_NAME} "main.cpp" "LightSource/LightSource.cpp" "InputHandler.cpp" ${IMGUI_SRC} ${RENDERERS_SRC} ${OBJECTS_SRC} ${UTILS_SRC} ${SHADING_SRC} ${IMGUIZMO_SRC})
 
 find_package(glfw3 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw)

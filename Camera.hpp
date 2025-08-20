@@ -32,11 +32,16 @@ public:
     float nearPlane = 0.1f;
     float farPlane = 1000.f;
 
+    int width;
+    int height;
+
 public:
     Camera(int width,
            int height,
            float _cameraSpeed,
-           float _sensitivity) : lastX((float)width / 2),
+           float _sensitivity) : width(width),
+                                 height(height),
+                                 lastX((float)width / 2),
                                  lastY((float)height / 2),
                                  cameraSpeed(_cameraSpeed),
                                  sensitivity(_sensitivity)
@@ -118,11 +123,33 @@ public:
     }
     void setPerspectiveMatrix(Shader &shaders, int width, int height)
     {
+        this->width = width;
+        this->height = height;
         glm::mat4 projection = glm::perspective(glm::radians(fov),
-                                                (float)width / (float)height,
+                                                (float)this->width / (float)this->height,
                                                 nearPlane,
                                                 farPlane);
         shaders.setMat4("projection", projection);
+    }
+    glm::mat4 getPerspectiveMatrix()
+    {
+        this->width = width;
+        this->height = height;
+        glm::mat4 projection = glm::perspective(glm::radians(fov),
+                                                (float)this->width / (float)this->height,
+                                                nearPlane,
+                                                farPlane);
+        return projection;
+    }
+
+    glm::mat4 getViewMatrix()
+    {
+        glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+        float radius = 2.0f;
+        float camX = static_cast<float>(sin(glfwGetTime()) * radius);
+        float camZ = static_cast<float>(cos(glfwGetTime()) * radius);
+        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        return view;
     }
     glm::vec3 getPosition() const
     {
