@@ -141,6 +141,10 @@ GLint Shader::getUniformLocationSafe(const std::string &name)
     {
         throw std::runtime_error("Attempted to set uniform '" + name + "' while shader is not active (glUseProgram was not called).");
     }
+    if (uniformLocationMap.find(name) != uniformLocationMap.end()) // Location»º´æ
+    {
+        return uniformLocationMap.at(name);
+    }
     GLint location = glGetUniformLocation(progrm_ID, name.c_str());
     if (location == -1)
     {
@@ -156,6 +160,7 @@ GLint Shader::getUniformLocationSafe(const std::string &name)
             }
         }
     }
+    uniformLocationMap.insert({name, location});
     return location;
 }
 

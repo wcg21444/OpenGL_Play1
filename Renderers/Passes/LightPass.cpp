@@ -131,6 +131,7 @@ void LightPass::render(RenderParameters &renderParameters,
     /*****************************************阴影设置************************************************* */
     shaders.setFloat("blurRadius", shaderUI->blurRadius);
     shaders.setInt("n_samples", shaderUI->samplesNumber);
+    /*****************************************RayMarching设置************************************************* */
 
     Renderer::DrawQuad();
 }

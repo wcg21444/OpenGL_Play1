@@ -25,6 +25,7 @@ public:
     unsigned int progrm_ID;
     bool used = false;
     std::unordered_map<std::string, int> textureLocationMap;
+    std::unordered_map<std::string, int> uniformLocationMap;
     std::unordered_set<std::string> warningMsgSet;
     int location_ID;
 

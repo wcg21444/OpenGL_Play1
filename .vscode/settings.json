@@ -93,7 +93,8 @@
         "semaphore": "cpp",
         "text_encoding": "cpp",
         "variant": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "*.fs": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"

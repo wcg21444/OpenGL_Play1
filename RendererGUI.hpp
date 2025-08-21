@@ -27,6 +27,7 @@ public:
     bool toggleVignetting = true;
     bool toggleGammaCorrection = true;
     bool toggleBloom = true;
+    bool toggleSkybox = true;
 
     void render()
     {
@@ -39,6 +40,7 @@ public:
             ImGui::Checkbox("Vignetting", &toggleVignetting);
             ImGui::Checkbox("GammaCorrection", &toggleGammaCorrection);
             ImGui::Checkbox("Bloom", &toggleBloom);
+            ImGui::Checkbox("SkyBox", &toggleSkybox);
         }
         ImGui::End();
     }

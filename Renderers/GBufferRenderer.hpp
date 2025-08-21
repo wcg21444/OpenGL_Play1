@@ -167,8 +167,8 @@ private:
             ssaoBlurTex = ssaoBlurPass.getTextures();
         }
         /****************************光照渲染*********************************************/
+        lightPass.setToggle(rendererGUI.toggleSkybox, "Skybox");
         lightPass.setToggle(rendererGUI.togglePointShadow, "PointShadow");
-
         lightPass.setToggle(rendererGUI.toggleDirShadow, "DirShadow");
 
         lightPass.render(renderParameters,
