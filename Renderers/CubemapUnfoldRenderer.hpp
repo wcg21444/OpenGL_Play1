@@ -1,7 +1,7 @@
 #pragma once
 #include "Renderer.hpp"
 #include "ShadowRenderer.hpp"
-#include "../utils/Random.hpp"
+#include "../Utils/Random.hpp"
 #include "Passes/Pass.hpp"
 
 class CubemapUnfoldRenderer : public Renderer

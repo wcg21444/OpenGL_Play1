@@ -14,7 +14,7 @@
 #include <unordered_set>
 #include <iostream>
 
-#include "../utils/DebugOutput.hpp"
+#include "../Utils/DebugOutput.hpp"
 
 class Shader
 {

@@ -4,7 +4,7 @@
 #include "Renderer.hpp"
 #include "Passes/DirShadowPass.hpp"
 #include "Passes/PointShadowPass.hpp"
-#include "../utils/Random.hpp"
+#include "../Utils/Random.hpp"
 #include "Passes/Pass.hpp"
 #include "Passes/LightPass.hpp"
 #include "Passes/GBufferPass.hpp"
@@ -15,8 +15,8 @@
 
 #include "../../RendererGUI.hpp"
 
-#include "../utils/TextureLoader.hpp"
-#include "../utils/Utils.hpp"
+#include "../Utils/TextureLoader.hpp"
+#include "../Utils/Utils.hpp"
 
 class GBufferRenderer : public Renderer
 {
@@ -197,11 +197,11 @@ private:
         auto postProcessPassTex = postProcessPass.getTextures();
 
         /****************************Screen渲染*********************************************/
-        // screenPass.render(lightPassTex); // 渲染到底层窗口
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        // screenPass.render(postProcessPassTex); // 渲染到底层窗口
 
         auto renderWindowSize = rendererGUI.getRenderWindowSize();
-        resize(renderWindowSize.x, renderWindowSize.y);
+        resize(static_cast<int>(renderWindowSize.x), static_cast<int>(renderWindowSize.y));
         rendererGUI.renderToDockingWindow(postProcessPassTex);
     }
 };

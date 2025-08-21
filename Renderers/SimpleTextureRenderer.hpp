@@ -1,6 +1,6 @@
 #pragma once
 #include "Renderer.hpp"
-#include "../utils/TextureLoader.hpp"
+#include "../Utils/TextureLoader.hpp"
 class SimpleTextureRenderer : public Renderer
 {
     Shader shaders = Shader("Shaders/texture.vs", "Shaders/texture.fs");

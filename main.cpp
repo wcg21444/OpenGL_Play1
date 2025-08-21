@@ -13,11 +13,14 @@
 #include "Objects/Sphere.hpp"
 #include "Renderers/RendererManager.hpp"
 #include "Shader.hpp"
-#include "utils/DebugOutput.hpp"
+#include "Utils/DebugOutput.hpp"
 
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
 #include "imgui/imgui.h"
+#include "imgui/imgui_internal.h"
+
+#include "imguizmo/ImGuizmo.h"
 
 const int InitWidth = 1600;
 const int InitHeight = 900;
@@ -73,9 +76,9 @@ int main()
     (void)io;
 
     // 窗口Flags设置
-    io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
+    // io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // 关闭multi viewport imguizmo 偏移bug会消失  ,原因是rect设置没有参照scene窗口  它会导致主窗口imguizmo偏移
 
     ImGui::StyleColorsDark();
 
@@ -158,6 +161,8 @@ int main()
 
     InputHandler::BindRenderApplication(ptrRenderParameters, ptrRenderManager);
 
+    GUI::BindRenderApplication(ptrRenderParameters, ptrRenderManager);
+
     auto &renderParameters = *ptrRenderParameters;
     auto &renderManager = *ptrRenderManager;
     //  main render loop
@@ -169,11 +174,13 @@ int main()
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        ImGuizmo::BeginFrame();
+        ImGuizmo::SetOrthographic(false);
 
         static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
-        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(),
-                                     dockspace_flags);
+        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockspace_flags);
+
         {
             ImGui::BeginMainMenuBar();
             if (ImGui::BeginMenu("File"))
@@ -194,7 +201,6 @@ int main()
             GUI::ModelLoadView();
         }
         ModelLoader::run(scene);
-        // 渲染顺序
 
         renderManager.render(renderParameters);
 

@@ -3,9 +3,9 @@
 #include <tuple>
 #include <glad/glad.h>
 #include "../Shading/Shader.hpp"
-#include "../utils/Random.hpp"
+#include "../Utils/Random.hpp"
 #include "Passes/Pass.hpp"
-#include "../utils/TextureLoader.hpp"
+#include "../Utils/TextureLoader.hpp"
 
 CubemapUnfoldRenderer::CubemapUnfoldRenderer()
     : unfoldShaders("Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs"),

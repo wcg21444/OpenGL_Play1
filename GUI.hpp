@@ -11,19 +11,38 @@
 #include "Objects/Object.hpp"
 #include "LightSource/LightSource.hpp"
 #include "Renderers/RendererManager.hpp"
-#include "utils/DebugOutput.hpp"
+#include "Utils/DebugOutput.hpp"
 #include "ModelLoader.hpp"
 #include "FileBrowser.hpp"
 
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
+#include "imgui/imgui_internal.h"
+
+#include "imguizmo/ImGuizmo.h"
 
 namespace GUI
 {
+    inline static std::shared_ptr<RenderParameters> ptrRenderParameters;
+    inline static std::shared_ptr<RenderManager> ptrRenderManager;
+
+    inline static ImGuizmo::OPERATION mCurrentGizmoOperation = ImGuizmo::OPERATION(ImGuizmo::TRANSLATE);
+    inline static ImGuizmo::MODE mCurrentGizmoMode = ImGuizmo::MODE(ImGuizmo::WORLD);
+    inline static bool useSnap = false;
+    inline static float snap[3] = {1.f, 1.f, 1.f};
+
     // 状态管理变量
     inline static bool modelLoadView = false; // 控制显示状态
     int selectedIndex = -1;
+
+    void BindRenderApplication(
+        std::shared_ptr<RenderParameters> _ptrRenderParameters,
+        std::shared_ptr<RenderManager> _ptrRenderManager)
+    {
+        ptrRenderManager = _ptrRenderManager;
+        ptrRenderParameters = _ptrRenderParameters;
+    }
 
     void RendererShaderManager(RenderManager &renderManager)
     {
@@ -61,6 +80,114 @@ namespace GUI
             DebugOutput::AddLog("Execute Shaders Reload\n");
         }
     }
+
+    static void EditTransform(Camera &camera, glm::mat4 &_matrix)
+    {
+        auto view = camera.getViewMatrix();
+        auto projection = camera.getPerspectiveMatrix();
+        float *cameraView = glm::value_ptr(view);
+        float *cameraProjection = glm::value_ptr(projection);
+        float *matrix = glm::value_ptr(_matrix);
+
+        ImVec2 size;
+        ImVec2 pos;
+        ImGui::Begin("Scene", 0);
+        {
+            ImGui::BeginChild("GameRender");
+            size = ImGui::GetWindowSize();
+            pos = ImGui::GetWindowPos();
+            ImGui::EndChild();
+        }
+        ImGui::End();
+        ImGui::SetNextWindowSize(size);
+        ImGui::SetNextWindowPos(pos);
+
+        ImGuiIO &io = ImGui::GetIO();
+        ImGui::Begin("Scene", 0);
+        {
+
+            ImGui::BeginChild("GameRender");
+            ImGuizmo::SetAlternativeWindow(ImGui::GetCurrentWindow());
+
+            float windowWidth = (float)ImGui::GetWindowWidth();
+            float windowHeight = (float)ImGui::GetWindowHeight();
+            ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
+            // ImGuizmo::SetRect(ImGui::GetMainViewport()->Pos.x, ImGui::GetMainViewport()->Pos.y, io.DisplaySize.x, io.DisplaySize.y);
+            ImGuizmo::Manipulate(cameraView, cameraProjection, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL, useSnap ? &snap[0] : NULL);
+            ImGui::EndChild();
+        }
+        ImGui::End();
+
+        float matrixTranslation[3], matrixRotation[3], matrixScale[3];
+
+        ImGuizmo::DecomposeMatrixToComponents(matrix, matrixTranslation, matrixRotation, matrixScale);
+        ImGui::SetNextItemWidth(150.f);
+        ImGui::DragFloat3("Tr", matrixTranslation);
+        ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, matrix);
+    }
+
+    static void Transform(glm::mat4 &_matrix)
+    {
+
+        ImGui::Begin("Transform");
+        {
+            float *matrix = glm::value_ptr(_matrix);
+
+            static float bounds[] = {-0.5f, -0.5f, -0.5f, 0.5f, 0.5f, 0.5f};
+            static float boundsSnap[] = {0.1f, 0.1f, 0.1f};
+            static bool boundSizing = false;
+            static bool boundSizingSnap = false;
+
+            if (ImGui::IsKeyPressed(ImGuiKey_T))
+                mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+            if (ImGui::IsKeyPressed(ImGuiKey_E))
+                mCurrentGizmoOperation = ImGuizmo::ROTATE;
+            if (ImGui::IsKeyPressed(ImGuiKey_R)) // r Key
+                mCurrentGizmoOperation = ImGuizmo::SCALE;
+            if (ImGui::RadioButton("Translate", mCurrentGizmoOperation == ImGuizmo::TRANSLATE))
+                mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Rotate", mCurrentGizmoOperation == ImGuizmo::ROTATE))
+                mCurrentGizmoOperation = ImGuizmo::ROTATE;
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Scale", mCurrentGizmoOperation == ImGuizmo::SCALE))
+                mCurrentGizmoOperation = ImGuizmo::SCALE;
+            float matrixTranslation[3], matrixRotation[3], matrixScale[3];
+            ImGuizmo::DecomposeMatrixToComponents(matrix, matrixTranslation, matrixRotation, matrixScale);
+            ImGui::InputFloat3("Tr", matrixTranslation);
+            ImGui::InputFloat3("Rt", matrixRotation);
+            ImGui::InputFloat3("Sc", matrixScale);
+            ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, matrix);
+
+            if (mCurrentGizmoOperation != ImGuizmo::SCALE)
+            {
+                if (ImGui::RadioButton("Local", mCurrentGizmoMode == ImGuizmo::LOCAL))
+                    mCurrentGizmoMode = ImGuizmo::LOCAL;
+                ImGui::SameLine();
+                if (ImGui::RadioButton("World", mCurrentGizmoMode == ImGuizmo::WORLD))
+                    mCurrentGizmoMode = ImGuizmo::WORLD;
+            }
+
+            if (ImGui::IsKeyPressed(ImGuiKey_S) && ImGui::IsKeyPressed(ImGuiKey_LeftAlt))
+                useSnap = !useSnap;
+            ImGui::Checkbox(" ", &useSnap);
+            ImGui::SameLine();
+            switch (mCurrentGizmoOperation)
+            {
+            case ImGuizmo::TRANSLATE:
+                ImGui::InputFloat3("Snap", &snap[0]);
+                break;
+            case ImGuizmo::ROTATE:
+                ImGui::InputFloat("Angle Snap", &snap[0]);
+                break;
+            case ImGuizmo::SCALE:
+                ImGui::InputFloat("Scale Snap", &snap[0]);
+                break;
+            }
+            ImGui::End();
+        }
+    }
+
     void LightHandle(LightSource &light_source)
     {
         auto &[lightColor, lightIntensity] = light_source.colorIntensity;
@@ -69,10 +196,12 @@ namespace GUI
         ImGui::ColorEdit3("LightColor", glm::value_ptr(lightColor));
         ImGui::PushItemWidth(100.f);
         ImGui::DragFloat("Intensitiy", &lightIntensity, 0.1f, 0.f);
-        ImGui::DragFloat("Position.X", &lightPosition.x, 0.1f);
-        ImGui::DragFloat("Position.Y", &lightPosition.y, 0.1f);
-        ImGui::DragFloat("Position.Z", &lightPosition.z, 0.1f);
         ImGui::PopItemWidth();
+
+        glm::mat4 translate = glm::translate(glm::identity<glm::mat4>(), light_source.getPosition());
+        // Transform(translate);
+        EditTransform(ptrRenderParameters->cam, translate);
+        lightPosition = translate[3];
         light_source.setPosition(lightPosition);
     }
     void LightSourceManage(Lights &lights)

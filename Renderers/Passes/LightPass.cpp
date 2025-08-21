@@ -1,7 +1,7 @@
 #include <glad/glad.h>
 #include "../../Shading/Shader.hpp"
 #include "../../ShaderGUI.hpp"
-#include "../../utils/Random.hpp"
+#include "../../Utils/Random.hpp"
 #include "LightPass.hpp"
 
 LightPass::LightPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)

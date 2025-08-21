@@ -18,7 +18,8 @@ private:
     enum ControlMode
     {
         APP_CONTROL, // 程序控制模式
-        UI_CONTROL   // ImGui控制模式
+        UI_CONTROL,  // ImGui控制模式
+        GUIZMO_ENABLE
     };
 
     // 存储鼠标位置状态

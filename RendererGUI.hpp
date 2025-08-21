@@ -3,6 +3,7 @@
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
 #include <glm/glm.hpp>
+#include "imguizmo/ImGuizmo.h"
 /*******************************************************************************/
 // Renderer 用户 交互界面
 // 效果的开关设置交互
@@ -11,6 +12,10 @@
 // 组件注册到"RendererGUI"
 class GBufferRendererGUI
 {
+private:
+    inline static ImVec2 renderWindowPMin;
+    inline static ImVec2 renderWindowPMax;
+
 public:
     bool togglePointShadow = true;
     bool toggleDirShadow = true;
@@ -53,22 +58,25 @@ public:
     void renderToDockingWindow(GLuint postProcessPassTex)
     {
         static ImVec2 size;
-        ImGui::Begin("Scene");
+        ImGui::Begin("Scene", 0);
         {
+
             ImGui::BeginChild("GameRender");
 
             size = ImGui::GetContentRegionAvail();
 
             ImVec2 pos = ImGui::GetCursorScreenPos();
+            renderWindowPMin = ImVec2(pos.x, pos.y);
+            renderWindowPMax = ImVec2(pos.x + size.x, pos.y + size.y);
 
             ImGui::GetWindowDrawList()->AddImage(
                 (ImTextureID)(intptr_t)postProcessPassTex,
-                ImVec2(pos.x, pos.y),
-                ImVec2(pos.x + size.x, pos.y + size.y),
+                renderWindowPMin,
+                renderWindowPMax,
                 ImVec2(0, 1),
                 ImVec2(1, 0));
+            ImGui::EndChild();
         }
-        ImGui::EndChild();
         ImGui::End();
     }
 };
