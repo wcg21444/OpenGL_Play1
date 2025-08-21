@@ -198,10 +198,10 @@ private:
 
         /****************************Screen渲染*********************************************/
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        screenPass.render(postProcessPassTex); // 渲染到底层窗口
+        // screenPass.render(postProcessPassTex); // 渲染到底层窗口
 
-        // auto renderWindowSize = rendererGUI.getRenderWindowSize();
-        // resize(static_cast<int>(renderWindowSize.x), static_cast<int>(renderWindowSize.y));
-        // rendererGUI.renderToDockingWindow(postProcessPassTex);
+        auto renderWindowSize = rendererGUI.getRenderWindowSize();
+        resize(static_cast<int>(renderWindowSize.x), static_cast<int>(renderWindowSize.y));
+        rendererGUI.renderToDockingWindow(postProcessPassTex);
     }
 };

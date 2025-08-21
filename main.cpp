@@ -18,6 +18,7 @@
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
 #include "imgui/imgui.h"
+#include "imgui/imgui_internal.h"
 
 #include "imguizmo/ImGuizmo.h"
 
@@ -78,7 +79,6 @@ int main()
     // io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // 关闭multi viewport imguizmo 偏移bug会消失  ,原因是rect设置没有参照scene窗口  它会导致主窗口imguizmo偏移
-    // 解决方法        ImGuizmo::SetRect(ImGui::GetMainViewport()->Pos.x, ImGui::GetMainViewport()->Pos.y, io.DisplaySize.x, io.DisplaySize.y);
 
     ImGui::StyleColorsDark();
 
@@ -179,8 +179,8 @@ int main()
 
         static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
-        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(),
-                                     dockspace_flags);
+        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockspace_flags);
+
         {
             ImGui::BeginMainMenuBar();
             if (ImGui::BeginMenu("File"))
@@ -201,7 +201,6 @@ int main()
             GUI::ModelLoadView();
         }
         ModelLoader::run(scene);
-        // 渲染顺序
 
         renderManager.render(renderParameters);
 

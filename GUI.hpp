@@ -18,6 +18,7 @@
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
+#include "imgui/imgui_internal.h"
 
 #include "imguizmo/ImGuizmo.h"
 
@@ -88,12 +89,34 @@ namespace GUI
         float *cameraProjection = glm::value_ptr(projection);
         float *matrix = glm::value_ptr(_matrix);
 
+        ImVec2 size;
+        ImVec2 pos;
+        ImGui::Begin("Scene", 0);
+        {
+            ImGui::BeginChild("GameRender");
+            size = ImGui::GetWindowSize();
+            pos = ImGui::GetWindowPos();
+            ImGui::EndChild();
+        }
+        ImGui::End();
+        ImGui::SetNextWindowSize(size);
+        ImGui::SetNextWindowPos(pos);
+
         ImGuiIO &io = ImGui::GetIO();
-        // float windowWidth = (float)ImGui::GetWindowWidth();
-        // float windowHeight = (float)ImGui::GetWindowHeight();
-        // ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
-        ImGuizmo::SetRect(ImGui::GetMainViewport()->Pos.x, ImGui::GetMainViewport()->Pos.y, io.DisplaySize.x, io.DisplaySize.y);
-        ImGuizmo::Manipulate(cameraView, cameraProjection, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL, useSnap ? &snap[0] : NULL);
+        ImGui::Begin("Scene", 0);
+        {
+
+            ImGui::BeginChild("GameRender");
+            ImGuizmo::SetAlternativeWindow(ImGui::GetCurrentWindow());
+
+            float windowWidth = (float)ImGui::GetWindowWidth();
+            float windowHeight = (float)ImGui::GetWindowHeight();
+            ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
+            // ImGuizmo::SetRect(ImGui::GetMainViewport()->Pos.x, ImGui::GetMainViewport()->Pos.y, io.DisplaySize.x, io.DisplaySize.y);
+            ImGuizmo::Manipulate(cameraView, cameraProjection, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL, useSnap ? &snap[0] : NULL);
+            ImGui::EndChild();
+        }
+        ImGui::End();
 
         float matrixTranslation[3], matrixRotation[3], matrixScale[3];
 
