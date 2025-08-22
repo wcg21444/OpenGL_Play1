@@ -116,6 +116,12 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setFloat("pointLightFar", pointLightFar);
     shaders.setFloat("fov", cam.fov);
     cam.setViewMatrix(shaders);
+    /****************************************天空设置*****************************************************/
+    shaders.setFloat("skyHeight", shaderUI->skyHeight);
+    shaders.setFloat("earthRadius", shaderUI->earthRadius);
+    shaders.setFloat("skyIntensity", shaderUI->skyIntensity);
+    shaders.setInt("maxStep", shaderUI->maxStep);
+    shaders.setFloat("H", shaderUI->H);
 
     /****************************************采样器设置**************************************************/
     for (unsigned int i = 0; i < shadowKernel.size(); ++i)

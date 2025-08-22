@@ -489,6 +489,166 @@ vec3 pointLightSpec(vec3 fragPos, vec3 n)
 }
 
 /*****************************天空大气计算********************************************************** */
+const float PI = 3.1415926535;
+//全局变量
+vec3 camDir = vec3(0.f);
+vec3 camPos = vec3(0.f);
+vec3 sunDir = vec3(0.f);
+vec3 earthCenter;
+const vec4 betaRayleigh = vec4(5.8e-6, 1.35e-5, 3.31e-5,1.0f);
+float itvl;
+uniform int maxStep;
+uniform float skyHeight;
+uniform float earthRadius;
+uniform float skyIntensity;
+uniform float H;
+
+vec3 intersectSky(vec3 ori, vec3 dir) {
+    // 假设这些常量已经在全局或函数外定义
+    float kAtmosphereRadius = earthRadius + skyHeight;
+    float kEarthRadius = earthRadius;
+
+    vec3 relativeOrigin = ori - earthCenter;
+
+    // 计算二次方程的系数 A, B, C
+    float a = dot(dir, dir);
+    float b = 2.0f * dot(relativeOrigin, dir);
+    float cS = dot(relativeOrigin, relativeOrigin) - kAtmosphereRadius * kAtmosphereRadius;
+    float cE = dot(relativeOrigin, relativeOrigin) - kEarthRadius * kEarthRadius;
+
+    // --- 检查光线与大气层的交点 ---
+    float discrS = b * b - 4.0f * a * cS;
+    if (discrS < 0.0f) {
+        // 判别式小于0，光线没有与大气层相交
+        return vec3(0.0f);
+    }
+    
+    // 计算大气层的两个交点参数 t
+    float tS1 = (-b - sqrt(discrS)) / (2.0f * a);
+    float tS2 = (-b + sqrt(discrS)) / (2.0f * a);
+
+    // --- 确定进入大气的第一个交点 tS ---
+    float tS;
+    if (tS1 > 0.0f) {
+        tS = tS1;
+    } else if (tS2 > 0.0f) {
+        tS = tS2;
+    } else {
+        // 两个交点都在光线起点之后（tS < 0），光线朝远离大气的方向传播
+        return vec3(0.0f);
+    }
+
+    // --- 检查光线是否被地球遮挡 ---
+    float discrE = b * b - 4.0f * a * cE;
+    if (discrE >= 0.0f) {
+        // 光线与地球相交
+        float tE1 = (-b - sqrt(discrE)) / (2.0f * a);
+        float tE2 = (-b + sqrt(discrE)) / (2.0f * a);
+
+        // 检查最靠近的地球交点是否在进入大气层之前
+        // tE1 和 tE2 都是光线与地球的交点参数
+        // 如果 tE1 大于 0 且小于 tS，说明光线在进入大气之前就被地球遮挡了
+        // 这里我们只需要检查 tE1，因为它总是更靠近的交点
+        if (tE1 > 0.0f && tE1 < tS) {
+            return vec3(0.0f); // 光线被地球遮挡
+        }
+    }
+
+    // 返回进入大气层的交点坐标
+    return ori + dir * tS;
+}
+
+// 计算一个点p相对于地球表面的高度
+float heightToGround(vec3 p) {
+
+    // return (length(p-earthCenter) - earthRadius);
+    return p.y;
+}
+
+float phase(vec3 _camDir,vec3 _sunDir){
+    float cosine = dot(_camDir,_sunDir)/length(_camDir)/length(_sunDir);
+    return 3.0f/16.0f*PI*(1+cosine*cosine);
+}
+
+float rho(float h){
+    return exp(-h/H);//大气密度近似
+}
+
+vec4 transmittance(vec3 ori, vec3 end)
+{
+    // if(heightToGround(ori)<0.0f||heightToGround(end)<0.0f){
+    //     return vec4(0.0f);
+    // }
+    vec4 t; // 透射率
+
+    // int tMaxStep = 32; //透射率步进步数
+    float dist = length(end - ori);
+    float tItvl = dist / float(maxStep);
+
+    float opticalDepth = 0.f;
+    for(int i = 0; i < maxStep; ++i)
+    {
+        vec3 p =  i  * (end - ori);
+        float h = heightToGround(p);
+        opticalDepth+= tItvl*rho(h);
+    }
+    
+    t = vec4(
+    exp(-betaRayleigh.r*opticalDepth),
+    exp(-betaRayleigh.g*opticalDepth),
+    exp(-betaRayleigh.b*opticalDepth),
+    1.0f    
+    );
+    return t;
+}
+
+vec4 scatterCoefficient(vec3 p){
+    vec3 intersection = intersectSky(camPos,camDir);
+    // if(intersection==vec3(0.0f)){
+    //     return vec4(0.0f);
+    // }
+    float h =heightToGround(p);//散射点高度
+    return betaRayleigh* rho(h);
+}
+
+vec4 scatterColor(vec3 p){
+    vec3 skyInsertion = intersectSky(p,sunDir);
+    // if(skyInsertion == vec3(0.0f)){
+    //     return vec4(0.000f);//散射点阳光被地面阻挡   
+    // }
+    vec4 t1 = transmittance(camPos, p);//散射点到摄像机的透射率
+
+    vec4 t2 = transmittance(p, skyInsertion);//边界到散射点的透射率
+    if(skyInsertion == vec3(0.0f)){
+        t2 =  vec4(0.000f);//散射点阳光被地面阻挡   
+    }
+    // return dirLightIntensity[0]*decay(p,border)*scatterCoefficient(p)
+    // return vec4(dirLightIntensity[0],1.0f)*decay1*scatterCoefficient(p)*decay2;
+    // return t1;
+    return t2*t1*scatterCoefficient(p);
+    // return t2*t1;
+    // return t2;//T2决定日出日落颜色变化
+    // return normalize(vec4(border(p,-sunDir),1.0f))*1e5;
+}
+
+vec4 computeSkyColor(vec2 TexCoord)
+{
+    vec4 skyColor;
+    itvl = skyHeight / float(maxStep);
+    camDir = fragViewSpaceDir(TexCoord);
+    camPos = eyePos;
+
+    sunDir = dirLightPos[0];
+    earthCenter = vec3(0.0f,-earthRadius, 0.0f); // 地球球心，位于地面原点正下方
+    
+    for(int i = 0; i<maxStep;++i){
+
+        skyColor += scatterColor(camPos+i*itvl*camDir);
+    }
+
+    //从循环中提出常数,减少计算量
+    return vec4(dirLightIntensity[0],1.0f)*phase(camDir,sunDir)*skyColor*skyIntensity;
+}
 
 void main()
 {
@@ -508,9 +668,8 @@ void main()
         {
             LightResult = vec4(sampleSkybox(TexCoord, skybox), 1.0f); // 采样天空盒
         }
-        // 天空盒色彩混合
-        LightResult = vec4(0.4f, 0.5f, 0.7f, 1.0f);
-        // LightResult = vec4(0.3f,0.3f,0.3f,1.0f);
+        else
+{        LightResult = computeSkyColor(TexCoord);}
     }
     else
     {

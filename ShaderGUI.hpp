@@ -40,6 +40,12 @@ public:
     glm::vec3 ambientLight{0.0f, 0.0f, 0.0f};
     int samplesNumber = 32;
     float blurRadius = 0.1f;
+
+    float skyHeight = 1e5;       // 大气层高度
+    float earthRadius = 6.371e6; // 地球半径
+    float skyIntensity = 5e3;    // 天空光强度
+    float H = 8.5e3;
+    int maxStep = 64;
     void render()
     {
         ImGui::Begin("ShadersGUI");
@@ -51,6 +57,16 @@ public:
                 ImGui::PushItemWidth(100.f);
                 ImGui::SliderInt("Samples", &samplesNumber, 1, 128);
                 ImGui::DragFloat("BlurRadius", &blurRadius, 0.01f, 0.0f, 1.0f);
+                ImGui::PopItemWidth();
+            }
+            if (ImGui::CollapsingHeader("Sky", ImGuiTreeNodeFlags_None))
+            {
+                ImGui::PushItemWidth(100.f);
+                ImGui::DragFloat("skyHeight", &skyHeight, 1e3f, 1e1f, 1e7f);
+                ImGui::DragFloat("earthRadius", &earthRadius, 1e4f, 1e1f, 1e7f);
+                ImGui::DragFloat("skyIntensity", &skyIntensity, 1e2f, 0.0f, 1e7);
+                ImGui::DragInt("maxStep", &maxStep, 1, 1, 128);
+                ImGui::DragFloat("H", &H, 10.f, 0.0f, 1e5);
                 ImGui::PopItemWidth();
             }
         }
