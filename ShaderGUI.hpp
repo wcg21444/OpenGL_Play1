@@ -44,9 +44,10 @@ public:
     float skyHeight = 1e5;       // 大气层高度
     float earthRadius = 6.371e6; // 地球半径
     float skyIntensity = 5e3;    // 天空光强度
-    float H = 8.5e3;
-    float atmosphereDensity = 15.f; // 大气密度
-    int maxStep = 64;
+    float HRayleigh = 8.5e3;
+    float HMie = 1e3;
+    float atmosphereDensity = 2.f; // 大气密度
+    int maxStep = 32;
     void render()
     {
         ImGui::Begin("ShadersGUI");
@@ -67,7 +68,7 @@ public:
                 ImGui::DragFloat("earthRadius", &earthRadius, 1e4f, 1e1f, 1e7f);
                 ImGui::DragFloat("skyIntensity", &skyIntensity, 1e2f, 0.0f, 1e7);
                 ImGui::DragInt("maxStep", &maxStep, 1, 1, 128);
-                ImGui::DragFloat("H", &H, 10.f, 0.0f, 1e5);
+                ImGui::DragFloat("HRayleigh", &HRayleigh, 10.f, 0.0f, 1e5);
                 ImGui::DragFloat("AtmosphereDensity", &atmosphereDensity, 0.1f, 0.0f, 1e2);
                 ImGui::PopItemWidth();
             }

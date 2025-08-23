@@ -95,7 +95,7 @@ int main()
 
     // 场景布置
     glm::mat4 model = glm::mat4(1.0f);
-    Camera cam(InitWidth, InitHeight, 14.f, 0.05f);
+    Camera cam(InitWidth, InitHeight, 20.f, 0.05f);
 
     std::vector<std::unique_ptr<Object>> scene;
     glm::mat4 plane_model = glm::translate(model, glm::vec3(0.f, -1.f, 0.f));

@@ -121,7 +121,7 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setFloat("earthRadius", shaderUI->earthRadius);
     shaders.setFloat("skyIntensity", shaderUI->skyIntensity);
     shaders.setInt("maxStep", shaderUI->maxStep);
-    shaders.setFloat("H", shaderUI->H);
+    shaders.setFloat("HRayleigh", shaderUI->HRayleigh);
     shaders.setFloat("atmosphereDensity", shaderUI->atmosphereDensity);
 
     /****************************************采样器设置**************************************************/

@@ -31,6 +31,8 @@ uniform sampler2D dirDepthMap[MAX_DIR_LIGHTS];
 uniform vec3 dirLightPos[MAX_DIR_LIGHTS];
 uniform vec3 dirLightIntensity[MAX_DIR_LIGHTS];
 uniform mat4 dirLightSpaceMatrix[MAX_DIR_LIGHTS];
+
+vec3 sunlightDecay;
 /*****************阴影采样设置******************************************************************/
 vec2 noiseScale = vec2(width / 16.0, height / 16.0);
 uniform sampler2D shadowNoiseTex;
@@ -428,8 +430,16 @@ vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
         vec3 l = normalize(dirLightPos[i]);
         float rr = dot(l, l);
         float shadowFactor = 1 - computeDirLightShadow(fragPos, dirLightSpaceMatrix[i], dirDepthMap[i]);
-        diffuse +=
-            shadowFactor * dirLightIntensity[i] / rr * max(0.f, dot(n, l));
+
+        if (i == 0) // 太阳光处理
+        {
+            diffuse += shadowFactor * dirLightIntensity[i] / rr * max(0.f, dot(n, l)) * sunlightDecay;
+        }
+        else
+        {
+            diffuse +=
+                shadowFactor * dirLightIntensity[i] / rr * max(0.f, dot(n, l));
+        }
     }
     return diffuse;
 }
@@ -439,13 +449,23 @@ vec3 dirLightSpec(vec3 fragPos, vec3 n)
     vec3 specular = vec3(0.0f);
     for (int i = 0; i < numDirLights; ++i)
     {
+        // 太阳光处理
+
         vec3 l = normalize(dirLightPos[i]);
         float specularStrength = 0.01f;
         vec3 viewDir = normalize(eyePos - fragPos);
         vec3 reflectDir = reflect(-l, n);
         float shadowFactor = 1 - computeDirLightShadow(fragPos, dirLightSpaceMatrix[i], dirDepthMap[i]);
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), 128);
-        specular += shadowFactor * specularStrength * spec * dirLightIntensity[i] * 160;
+
+        if (i == 0) // 太阳光处理
+        {
+            specular += shadowFactor * specularStrength * spec * dirLightIntensity[i] * sunlightDecay * 160;
+        }
+        else
+        {
+            specular += shadowFactor * specularStrength * spec * dirLightIntensity[i] * 160;
+        }
     }
     return specular;
 }
@@ -495,14 +515,17 @@ vec3 camDir = vec3(0.f);
 vec3 camPos = vec3(0.f);
 vec3 sunDir = vec3(0.f);
 vec3 earthCenter;
+
 const vec4 betaRayleigh = vec4(5.8e-6, 1.35e-5, 3.31e-5, 1.0f);
+const vec4 betaMie = vec4(21e-6, 21e-6, 21e-6, 1.0f);
+const float gMie = 0.8f;
 float itvl;
-uniform float atmosphereDensity = 15.f; // 大气密度
+uniform float atmosphereDensity = 7.f; // 大气密度
 uniform int maxStep;
 uniform float skyHeight;
 uniform float earthRadius;
 uniform float skyIntensity;
-uniform float H;
+uniform float HRayleigh;
 
 vec3 intersectSky(vec3 ori, vec3 dir)
 {
@@ -604,22 +627,27 @@ float heightToGround(vec3 p)
     // return p.y;
 }
 
-float phase(vec3 _camDir, vec3 _sunDir)
+float phaseRayleigh(vec3 _camDir, vec3 _sunDir)
 {
     float cosine = dot(_camDir, _sunDir) / length(_camDir) / length(_sunDir);
     return 3.0f / 16.0f * PI * (1 + cosine * cosine);
 }
-
+float phaseMie(vec3 _camDir, vec3 _sunDir)
+{
+    float gMie2 = gMie * gMie;
+    float cosine = dot(_camDir, _sunDir) / length(_camDir) / length(_sunDir);
+    return (1.0 - gMie2) / pow(1.0 + gMie2 - 2.0 * gMie * cosine, 1.5);
+}
 float rho(float h)
 {
     if (h < 0.0f)
     {
         h = 0.0f;
     }
-    return atmosphereDensity * exp(-abs(h) / H); // 大气密度近似
+    return atmosphereDensity * exp(-abs(h) / HRayleigh); // 大气密度近似
 }
 
-vec4 transmittance(vec3 ori, vec3 end)
+vec4 transmittance(vec3 ori, vec3 end, float scale)
 {
     // if(heightToGround(ori)<0.0f||heightToGround(end)<0.0f){
     //     return vec4(0.0f);
@@ -635,7 +663,7 @@ vec4 transmittance(vec3 ori, vec3 end)
     {
         vec3 p = i * (end - ori);
         float h = heightToGround(p);
-        opticalDepth += tItvl * rho(h);
+        opticalDepth += tItvl * rho(h) * scale;
     }
 
     t = vec4(
@@ -662,9 +690,9 @@ vec4 scatterColor(vec3 p)
     {
         return vec4(0.000f); // 散射点阳光被地面阻挡
     }
-    vec4 t1 = transmittance(camPos, p); // 散射点到摄像机的透射率   决定天顶-地平线透射率差异
+    vec4 t1 = transmittance(camPos, p, 2.0f); // 散射点到摄像机的透射率   决定天顶-地平线透射率差异
 
-    vec4 t2 = transmittance(p, skyInsertion); // 边界到散射点的透射率
+    vec4 t2 = transmittance(p, skyInsertion, 1.0f); // 边界到散射点的透射率
     // return t1;
     // return scatterCoefficient(p);
     return t2 * t1 * scatterCoefficient(p);
@@ -681,18 +709,46 @@ vec3 uncharted2_tonemap(vec3 color)
     float W = 11.2; // white point
     return ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
 }
-vec4 computeSkyColor(vec2 TexCoord)
+
+vec3 computeSunlightDecay(vec3 camPos, vec3 fragDir, vec3 sunDir)
+{
+    vec3 skyInsertion = intersectSky(camPos, sunDir);
+    vec4 t1 = transmittance(camPos, skyInsertion, 1.0f); // 散射点到摄像机的透射率   决定天顶-地平线透射率差异
+
+    return t1.rgb;
+}
+
+vec3 generateSunDisk(vec3 camPos, vec3 fragDir, vec3 sunDir, vec3 sunIntensity, float sunSize)
+{
+    // 归一化输入向量以确保计算正确
+    vec3 normalizedFragDir = normalize(fragDir);
+    vec3 normalizedSunDir = normalize(sunDir);
+
+    sunSize *= 1e-4;
+    // 使用点积来测量两个向量之间的相似度。
+    // dot() 的结果范围是 [-1, 1]。当两个向量完全对齐时，结果为 1。
+    float dotProduct = dot(normalizedFragDir, normalizedSunDir);
+    // 如果点积大于 sunSize，说明方向足够接近太阳
+    if (dotProduct > sunSize)
+    {
+        float falloff = sunSize / (1.0 - dotProduct);
+
+        // 返回太阳颜色，并乘以强度和衰减因子
+        return sunIntensity * pow(falloff, 4.0f) * sunlightDecay;
+    }
+    else
+    {
+        // 如果方向不对齐，则返回黑色
+        return vec3(0.0);
+    }
+}
+
+vec4 computeSkyColor()
 {
     vec4 skyColor;
-    itvl = skyHeight / float(maxStep);
-    camDir = fragViewSpaceDir(TexCoord);
-    camPos = eyePos;
-
-    sunDir = dirLightPos[0];
-    earthCenter = vec3(0.0f, -earthRadius, 0.0f); // 地球球心，位于地面原点正下方
 
     vec3 intersection = intersectSky(camPos, camDir);
-    // itvl = length(intersection-camPos)/float(maxStep);
+    itvl = length(intersection - camPos) / float(maxStep);
     for (int i = 0; i < maxStep; ++i)
     {
 
@@ -700,22 +756,35 @@ vec4 computeSkyColor(vec2 TexCoord)
     }
 
     skyColor.rgb = uncharted2_tonemap(skyColor.rgb);
+
     // 从循环中提出常数,减少计算量
-    return vec4(dirLightIntensity[0], 1.0f) * phase(camDir, sunDir) * skyColor * skyIntensity;
+    return vec4(dirLightIntensity[0], 1.0f) * phaseRayleigh(camDir, sunDir) * skyColor * skyIntensity;
     // return vec4(dirLightIntensity[0], 1.0f) * skyColor * skyIntensity;
 }
 
+void initialize()
+{
+
+    LightResult = vec4(0.f, 0.f, 0.f, 1.f); // Initialize LightResult
+
+    camDir = fragViewSpaceDir(TexCoord);
+    camPos = eyePos;
+    earthCenter = vec3(0.0f, -earthRadius, 0.0f); // 地球球心，位于地面原点正下方
+    sunDir = dirLightPos[0];
+    sunlightDecay = computeSunlightDecay(camPos, camDir, dirLightPos[0]);
+}
 void main()
 {
     // Diffuse Caculation
-
-    LightResult = vec4(0.f, 0.f, 0.f, 1.f); // Initialize LightResult
 
     vec3 FragPos = texture(gPosition, TexCoord).rgb;
     vec3 n = normalize(texture(gNormal, TexCoord).rgb);
     vec3 diffuse;
     vec3 specular;
     vec3 ambient;
+
+    initialize();
+
     // 天空计算
     if (length(FragPos) == 0)
     {
@@ -725,7 +794,8 @@ void main()
         }
         else
         {
-            LightResult = computeSkyColor(TexCoord);
+            LightResult = computeSkyColor();
+            LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightIntensity[0], 0.5f);
         }
     }
     else
