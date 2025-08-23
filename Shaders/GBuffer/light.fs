@@ -510,22 +510,25 @@ vec3 pointLightSpec(vec3 fragPos, vec3 n)
 
 /*****************************天空大气计算********************************************************** */
 const float PI = 3.1415926535;
+const vec4 betaRayleigh = vec4(5.8e-6, 1.35e-5, 3.31e-5, 1.0f); // 散射率(波长/RGB)
+const vec4 betaMie = vec4(21e-6, 21e-6, 21e-6, 1.0f);
 // 全局变量
 vec3 camDir = vec3(0.f);
 vec3 camPos = vec3(0.f);
 vec3 sunDir = vec3(0.f);
 vec3 earthCenter;
-
-const vec4 betaRayleigh = vec4(5.8e-6, 1.35e-5, 3.31e-5, 1.0f);
-const vec4 betaMie = vec4(21e-6, 21e-6, 21e-6, 1.0f);
-const float gMie = 0.8f;
 float itvl;
-uniform float atmosphereDensity = 7.f; // 大气密度
 uniform int maxStep;
+uniform float atmosphereDensity; // 大气密度
+uniform float MieDensity;
+uniform float gMie;
+uniform float absorbMie;
+uniform float MieIntensity;
 uniform float skyHeight;
 uniform float earthRadius;
 uniform float skyIntensity;
 uniform float HRayleigh;
+uniform float HMie;
 
 vec3 intersectSky(vec3 ori, vec3 dir)
 {
@@ -637,8 +640,10 @@ float phaseMie(vec3 _camDir, vec3 _sunDir)
     float gMie2 = gMie * gMie;
     float cosine = dot(_camDir, _sunDir) / length(_camDir) / length(_sunDir);
     return (1.0 - gMie2) / pow(1.0 + gMie2 - 2.0 * gMie * cosine, 1.5);
+
+    // return 3.0f / 8.0f * PI * (1.0 - gMie2) * (1 + cosine * cosine) / (2 + gMie2) / pow((1 + gMie2 - 2.0 * gMie * cosine), 1.5f);
 }
-float rho(float h)
+float rhoRayleigh(float h)
 {
     if (h < 0.0f)
     {
@@ -646,12 +651,18 @@ float rho(float h)
     }
     return atmosphereDensity * exp(-abs(h) / HRayleigh); // 大气密度近似
 }
-
-vec4 transmittance(vec3 ori, vec3 end, float scale)
+float rhoMie(float h)
 {
-    // if(heightToGround(ori)<0.0f||heightToGround(end)<0.0f){
-    //     return vec4(0.0f);
-    // }
+    if (h < 0.0f)
+    {
+        h = 0.0f;
+    }
+    return MieDensity * exp(-abs(h) / HMie);
+}
+
+vec4 transmittanceRayleigh(vec3 ori, vec3 end, float scale)
+{
+
     vec4 t; // 透射率
 
     // int tMaxStep = 32; //透射率步进步数
@@ -663,7 +674,7 @@ vec4 transmittance(vec3 ori, vec3 end, float scale)
     {
         vec3 p = i * (end - ori);
         float h = heightToGround(p);
-        opticalDepth += tItvl * rho(h) * scale;
+        opticalDepth += tItvl * rhoRayleigh(h) * scale;
     }
 
     t = vec4(
@@ -674,28 +685,70 @@ vec4 transmittance(vec3 ori, vec3 end, float scale)
     return t;
 }
 
-vec4 scatterCoefficient(vec3 p)
+vec4 transmittanceMie(vec3 ori, vec3 end, float scale)
 {
-    vec3 intersection = intersectSky(camPos, camDir);
+    vec4 t; // 透射率
 
-    float h = (heightToGround(p)); // 散射点高度
-    return betaRayleigh * rho(h);
+    float dist = length(end - ori);
+    float tItvl = dist / float(maxStep);
+
+    // TODO 加入吸收率
+    float opticalDepth = 0.f;
+    for (int i = 0; i < maxStep; ++i)
+    {
+        vec3 p = i * (end - ori);
+        float h = heightToGround(p);
+        opticalDepth += tItvl * rhoMie(h) * scale;
+    }
+    vec4 extiction = betaMie * (1.0 + absorbMie);
+    t = vec4(exp(-extiction.r * opticalDepth),
+             exp(-extiction.g * opticalDepth),
+             exp(-extiction.b * opticalDepth),
+             1.0f);
+    return t;
 }
 
-vec4 scatterColor(vec3 p)
+vec4 transmittance(vec3 ori, vec3 end, float scale)
 {
-    vec3 skyInsertion = intersectSky(p, sunDir);
-    vec3 earthInsertion = intersectEarth(p, sunDir);
-    if (skyInsertion == vec3(0.0f))
-    {
-        return vec4(0.000f); // 散射点阳光被地面阻挡
-    }
-    vec4 t1 = transmittance(camPos, p, 2.0f); // 散射点到摄像机的透射率   决定天顶-地平线透射率差异
+    vec4 t; // 透射率
 
-    vec4 t2 = transmittance(p, skyInsertion, 1.0f); // 边界到散射点的透射率
-    // return t1;
-    // return scatterCoefficient(p);
-    return t2 * t1 * scatterCoefficient(p);
+    float dist = length(end - ori);
+    float tItvl = dist / float(maxStep);
+
+    // 光学深度积分
+    float opticalDepthMie = 0.f;
+    float opticalDepthRayleigh = 0.f;
+    for (int i = 0; i < maxStep; ++i)
+    {
+        vec3 p = i * (end - ori);
+        float h = heightToGround(p);
+        opticalDepthMie += tItvl * rhoMie(h) * scale;
+        opticalDepthRayleigh += tItvl * rhoRayleigh(h) * scale;
+    }
+
+    // 总透射率计算
+    vec4 extictionMie = betaMie * (1.0 + absorbMie) * opticalDepthMie / 5;
+    vec4 extictionRayleigh = betaRayleigh * opticalDepthRayleigh;
+    t = vec4(exp(-(extictionMie + extictionRayleigh).r),
+             exp(-(extictionMie + extictionRayleigh).g),
+             exp(-(extictionMie + extictionRayleigh).b),
+             1.0f);
+    return t;
+}
+
+vec4 scatterCoefficientRayleigh(vec3 p)
+{
+    // vec3 intersection = intersectSky(camPos, camDir);
+
+    float h = (heightToGround(p)); // 散射点高度
+    return betaRayleigh * rhoRayleigh(h);
+}
+vec4 scatterCoefficientMie(vec3 p)
+{
+    // vec3 intersection = intersectSky(camPos, camDir);
+
+    float h = (heightToGround(p)); // 散射点高度
+    return betaMie * rhoMie(h);
 }
 
 vec3 uncharted2_tonemap(vec3 color)
@@ -710,12 +763,48 @@ vec3 uncharted2_tonemap(vec3 color)
     return ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
 }
 
+vec4 computeSkyColor()
+{
+    vec4 skyColor;
+    vec4 scatterRayleigh = vec4(0.0f);
+    vec4 scatterMie = vec4(0.0f);
+
+    vec3 camSkyIntersection = intersectSky(camPos, camDir); // 摄像机视线与天空交点
+    itvl = length(camSkyIntersection - camPos) / float(maxStep);
+    for (int i = 0; i < maxStep; ++i)
+    {
+        if (camSkyIntersection == vec3(0.0f))
+        {
+            return vec4(0.000f); // 散射点阳光被地面阻挡
+        }
+        vec3 scatterPoint = camPos + i * itvl * camDir;
+        vec3 scatterSkyIntersection = intersectSky(scatterPoint, sunDir);    // 散射点与天空交点
+        vec4 t1 = transmittance(camPos, scatterPoint, 1.0f);                 // 摄像机到散射点的透射率
+        vec4 t2 = transmittance(scatterPoint, scatterSkyIntersection, 1.0f); // 散射点到天空边界的透射率
+
+        scatterRayleigh += scatterCoefficientRayleigh(scatterPoint) * t1 * t2;
+
+        scatterMie += scatterCoefficientMie(scatterPoint) * t1 * t2;
+    }
+
+    scatterRayleigh *= phaseRayleigh(camDir, sunDir);
+
+    scatterMie *= phaseMie(camDir, sunDir);
+
+    skyColor += scatterRayleigh;
+    skyColor += scatterMie * MieIntensity;
+    skyColor.rgb = uncharted2_tonemap(skyColor.rgb);
+
+    return vec4(dirLightIntensity[0], 1.0f) * skyColor * skyIntensity;
+    // return vec4(dirLightIntensity[0], 1.0f) * skyColor * skyIntensity;
+}
+
 vec3 computeSunlightDecay(vec3 camPos, vec3 fragDir, vec3 sunDir)
 {
-    vec3 skyInsertion = intersectSky(camPos, sunDir);
-    vec4 t1 = transmittance(camPos, skyInsertion, 1.0f); // 散射点到摄像机的透射率   决定天顶-地平线透射率差异
+    vec3 skyIntersection = intersectSky(camPos, sunDir);
+    vec4 tR1 = transmittance(camPos, skyIntersection, 1.0f); // 散射点到摄像机的透射率   决定天顶-地平线透射率差异
 
-    return t1.rgb;
+    return tR1.rgb;
 }
 
 vec3 generateSunDisk(vec3 camPos, vec3 fragDir, vec3 sunDir, vec3 sunIntensity, float sunSize)
@@ -741,25 +830,6 @@ vec3 generateSunDisk(vec3 camPos, vec3 fragDir, vec3 sunDir, vec3 sunIntensity, 
         // 如果方向不对齐，则返回黑色
         return vec3(0.0);
     }
-}
-
-vec4 computeSkyColor()
-{
-    vec4 skyColor;
-
-    vec3 intersection = intersectSky(camPos, camDir);
-    itvl = length(intersection - camPos) / float(maxStep);
-    for (int i = 0; i < maxStep; ++i)
-    {
-
-        skyColor += scatterColor(camPos + i * itvl * camDir);
-    }
-
-    skyColor.rgb = uncharted2_tonemap(skyColor.rgb);
-
-    // 从循环中提出常数,减少计算量
-    return vec4(dirLightIntensity[0], 1.0f) * phaseRayleigh(camDir, sunDir) * skyColor * skyIntensity;
-    // return vec4(dirLightIntensity[0], 1.0f) * skyColor * skyIntensity;
 }
 
 void initialize()
@@ -795,7 +865,7 @@ void main()
         else
         {
             LightResult = computeSkyColor();
-            LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightIntensity[0], 0.5f);
+            LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightIntensity[0], 0.8f);
         }
     }
     else

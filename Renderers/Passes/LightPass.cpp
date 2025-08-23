@@ -122,7 +122,12 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setFloat("skyIntensity", shaderUI->skyIntensity);
     shaders.setInt("maxStep", shaderUI->maxStep);
     shaders.setFloat("HRayleigh", shaderUI->HRayleigh);
+    shaders.setFloat("HMie", shaderUI->HMie);
     shaders.setFloat("atmosphereDensity", shaderUI->atmosphereDensity);
+    shaders.setFloat("MieDensity", shaderUI->MieDensity);
+    shaders.setFloat("gMie", shaderUI->gMie);
+    shaders.setFloat("absorbMie", shaderUI->absorbMie);
+    shaders.setFloat("MieIntensity", shaderUI->MieIntensity);
 
     /****************************************采样器设置**************************************************/
     for (unsigned int i = 0; i < shadowKernel.size(); ++i)

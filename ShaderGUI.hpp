@@ -43,10 +43,14 @@ public:
 
     float skyHeight = 1e5;       // 大气层高度
     float earthRadius = 6.371e6; // 地球半径
-    float skyIntensity = 5e3;    // 天空光强度
+    float skyIntensity = 2e4;    // 天空光强度
     float HRayleigh = 8.5e3;
     float HMie = 1e3;
     float atmosphereDensity = 2.f; // 大气密度
+    float MieDensity = 1.0f;
+    float gMie = 0.56f;
+    float absorbMie = 0.1f;
+    float MieIntensity = 1e-1;
     int maxStep = 32;
     void render()
     {
@@ -69,7 +73,12 @@ public:
                 ImGui::DragFloat("skyIntensity", &skyIntensity, 1e2f, 0.0f, 1e7);
                 ImGui::DragInt("maxStep", &maxStep, 1, 1, 128);
                 ImGui::DragFloat("HRayleigh", &HRayleigh, 10.f, 0.0f, 1e5);
-                ImGui::DragFloat("AtmosphereDensity", &atmosphereDensity, 0.1f, 0.0f, 1e2);
+                ImGui::DragFloat("HMie", &HMie, 2.f, 0.0f, 1e4);
+                ImGui::DragFloat("AtmosphereDensity", &atmosphereDensity, 0.05f, 0.0f, 1e2);
+                ImGui::DragFloat("MieDensity", &MieDensity, 0.05f, 0.0f, 1e2);
+                ImGui::DragFloat("gMie", &gMie, 0.01f, 0.0f, 1.f);
+                ImGui::DragFloat("absorbMie", &absorbMie, 0.01f, 1e-3, 1);
+                ImGui::DragFloat("MieIntensity", &MieIntensity, 0.01f, 1e-2, 1);
                 ImGui::PopItemWidth();
             }
         }
