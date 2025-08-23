@@ -6,11 +6,12 @@ class Camera
 public:
     enum Movement
     {
-        none = 0,         // 0b0000
-        forward = 1 << 0, // 0b0001
-        left = 1 << 1,    // 0b0010
-        right = 1 << 2,   // 0b0100
-        backward = 1 << 3 // 0b1000
+        none = 0,          // 0b0000
+        forward = 1 << 0,  // 0b0001
+        left = 1 << 1,     // 0b0010
+        right = 1 << 2,    // 0b0100
+        backward = 1 << 3, // 0b1000
+        spirit = 1 << 4    // 0b10000
     }; // 每种枚举可以任意组合,总共15种状态
 
 private:
@@ -30,7 +31,7 @@ private:
 public:
     float fov = 60.f;
     float nearPlane = 0.1f;
-    float farPlane = 1000.f;
+    float farPlane = 1e6f;
 
     int width;
     int height;
@@ -86,7 +87,8 @@ public:
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
         float reletive_speed = cameraSpeed * deltaTime;
-
+        if (movement & spirit)
+            reletive_speed *= 1e3;
         if (movement & forward)
             cameraPos += reletive_speed * cameraFront;
         if (movement & backward)

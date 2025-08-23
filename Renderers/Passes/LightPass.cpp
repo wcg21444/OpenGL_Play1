@@ -128,6 +128,7 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setFloat("gMie", shaderUI->gMie);
     shaders.setFloat("absorbMie", shaderUI->absorbMie);
     shaders.setFloat("MieIntensity", shaderUI->MieIntensity);
+    shaders.setUniform("betaMie", shaderUI->betaMie);
 
     /****************************************采样器设置**************************************************/
     for (unsigned int i = 0; i < shadowKernel.size(); ++i)

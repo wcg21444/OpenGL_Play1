@@ -66,7 +66,7 @@ glm::vec3 PointLight::getPosition() const
 }
 /********************************DirectionLight******************************************************************** */
 DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution)
-    : LightSource(_intensity, _position), ortho_scale(50.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
+    : LightSource(_intensity, _position), ortho_scale(100.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
 {
     lightProjection = glm::ortho(-1.0f * ortho_scale,
                                  1.0f * ortho_scale,

@@ -95,7 +95,7 @@ int main()
 
     // 场景布置
     glm::mat4 model = glm::mat4(1.0f);
-    Camera cam(InitWidth, InitHeight, 20.f, 0.05f);
+    Camera cam(InitWidth, InitHeight, 14.f, 0.05f);
 
     std::vector<std::unique_ptr<Object>> scene;
     glm::mat4 plane_model = glm::translate(model, glm::vec3(0.f, -1.f, 0.f));
@@ -148,7 +148,7 @@ int main()
                              glm::vec3(16.f, 4.f, 8.f));
 
     dirLights.emplace_back(
-        DirectionLight(glm::vec3(0.4f), glm::vec3(50.f, 20.f, 10.f), 4096));
+        DirectionLight(glm::vec3(1.0f), glm::vec3(50.f, 20.f, 10.f), 4096));
 
     // temporary light source variable
     PointLight &light = pointLights[0]; // Assuming the first light is the one we
