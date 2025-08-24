@@ -81,4 +81,29 @@ public:
         }
         ImGui::End();
     }
+    void renderPassInspector(GLuint passTex)
+    {
+        static ImVec2 size;
+
+        ImGui::Begin("PassInspector", 0);
+        {
+
+            ImGui::BeginChild("PassRender");
+
+            size = ImGui::GetContentRegionAvail();
+
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+            renderWindowPMin = ImVec2(pos.x, pos.y);
+            renderWindowPMax = ImVec2(pos.x + size.x, pos.y + size.y);
+
+            ImGui::GetWindowDrawList()->AddImage(
+                (ImTextureID)(intptr_t)passTex,
+                renderWindowPMin,
+                renderWindowPMax,
+                ImVec2(0, 1),
+                ImVec2(1, 0));
+            ImGui::EndChild();
+        }
+        ImGui::End();
+    }
 };

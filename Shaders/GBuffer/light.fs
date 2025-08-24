@@ -864,7 +864,7 @@ vec3 generateSunDisk(vec3 camPos, vec3 fragDir, vec3 sunDir, vec3 sunIntensity, 
         float falloff = sunSize / (1.0 - dotProduct);
 
         // 返回太阳颜色，并乘以强度和衰减因子
-        return sunIntensity * pow(falloff, 4.0f) * sunlightDecay;
+        return sunIntensity * pow(falloff, 2.0f) * sunlightDecay;
     }
     else
     {
@@ -919,7 +919,7 @@ void main()
                 // 渲染地面
                 vec3 normal = normalize(camEarthIntersection - earthCenter);
                 vec3 lighting = dirLightDiffuse(camEarthIntersection, normal);
-                vec3 earthBaseColor = vec3(0.15, 0.3f, 0.7f); // 地面颜色
+                vec3 earthBaseColor = vec3(0.1, 0.3f, 0.2f); // 地面颜色
                 LightResult.rgb += lighting * earthBaseColor * t1.rgb;
             }
             else
@@ -933,7 +933,7 @@ void main()
                     LightResult += computeSkyColor();
                 }
             }
-            LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightIntensity[0], 0.8f);
+            LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightIntensity[0], 2.0f);
         }
     }
     else

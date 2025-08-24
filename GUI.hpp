@@ -413,6 +413,7 @@ namespace GUI
         }
 
         ImGui::Text("FPS: %.2f", ImGui::GetIO().Framerate);
+        ImGui::Text("DeltaTime: %.3f ms", ImGui::GetIO().DeltaTime * 1e3);
         ImGui::End();
     }
 }

@@ -36,6 +36,8 @@ void Texture::Generate(unsigned int width, unsigned int height, GLenum internalF
     glBindTexture(Target, 0);
 }
 
+/// @brief 设置纹理数据 在Generate()之后调用 通常是逐帧调用
+/// @param data 纹理数据指针 注意与纹理格式对齐
 void Texture::SetData(void *data)
 {
     glBindTexture(Target, ID);

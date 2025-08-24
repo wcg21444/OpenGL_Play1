@@ -12,7 +12,7 @@
 #include "Passes/PostProcessPass.hpp"
 #include "Passes/GaussianBlurPass.hpp"
 #include "Passes/BloomPass.hpp"
-
+#include "Passes/CubemapUnfoldPass.hpp"
 #include "../../RendererGUI.hpp"
 
 #include "../Utils/TextureLoader.hpp"
@@ -31,7 +31,6 @@ private:
     int width = 1600;
     int height = 900;
 
-    unsigned int FBO;
     unsigned int skyboxCube;
 
     const int MAX_LIGHTS = 10;
@@ -45,6 +44,7 @@ private:
     SSAOBlurPass ssaoBlurPass;
     PostProcessPass postProcessPass;
     BloomPass bloomPass;
+    CubemapUnfoldPass unfoldPass;
 
     GBufferRendererGUI rendererGUI;
 
@@ -58,7 +58,8 @@ public:
           dirShadowPass(DirShadowPass("Shaders/DirShadow/dirShadow.vs", "Shaders/DirShadow/dirShadow.fs")),
           pointShadowPass(PointShadowPass("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs")),
           postProcessPass(PostProcessPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/postProcess.fs")),
-          bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs"))
+          bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs")),
+          unfoldPass(CubemapUnfoldPass(width, height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 128))
     {
     }
     void reloadCurrentShaders() override
@@ -72,6 +73,7 @@ public:
         ssaoBlurPass.reloadCurrentShaders();
         postProcessPass.reloadCurrentShaders();
         bloomPass.reloadCurrentShaders();
+        unfoldPass.reloadCurrentShaders();
         contextSetup();
     }
 
@@ -84,7 +86,6 @@ public:
         {
             initialized = true;
             glViewport(0, 0, width, height);
-            glGenFramebuffers(1, &FBO);
             skyboxCube = LoadCubemap(faces);
         }
     }
@@ -157,13 +158,13 @@ private:
         auto [gPosition, gNormal, gAlbedoSpec, gViewPosition] = gBufferPass.getTextures();
 
         /****************************SSAO渲染*********************************************/
-        unsigned int ssaoPassTexture = 0;
+        unsigned int ssaoPassTex = 0;
         unsigned int ssaoBlurTex = 0;
         if (rendererGUI.toggleSSAO)
         {
             ssaoPass.render(renderParameters, gPosition, gNormal, gAlbedoSpec, gViewPosition);
-            ssaoPassTexture = ssaoPass.getTextures();
-            ssaoBlurPass.render(ssaoPassTexture);
+            ssaoPassTex = ssaoPass.getTextures();
+            ssaoBlurPass.render(ssaoPassTex);
             ssaoBlurTex = ssaoBlurPass.getTextures();
         }
         /****************************光照渲染*********************************************/
@@ -203,5 +204,9 @@ private:
         auto renderWindowSize = rendererGUI.getRenderWindowSize();
         resize(static_cast<int>(renderWindowSize.x), static_cast<int>(renderWindowSize.y));
         rendererGUI.renderToDockingWindow(postProcessPassTex);
+
+        unfoldPass.render(skyboxCube);
+        auto unfoldedTex = unfoldPass.getUnfoldedCubemap();
+        rendererGUI.renderPassInspector(unfoldedTex);
     }
 };

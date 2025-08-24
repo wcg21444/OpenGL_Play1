@@ -1,7 +1,7 @@
 #pragma once
 #include "../../Shading/Shader.hpp"
 #include "../../Shading/Texture.hpp"
-
+#include "../../Utils/Utils.hpp"
 #include "../Renderer.hpp"
 /* 1个Pass对应一个FBO , 一个Shader
 [in] Textures , Uniform Varibles , Extra Resources
@@ -34,11 +34,6 @@ public:
         shaders = Shader(vs_path.c_str(), fs_path.c_str(), gs_path.c_str());
         contextSetup();
     }
-    void setToggle(bool status, std::string toggle)
-    {
-        shaders.use();
-        shaders.setInt(toggle, status ? 1 : 0);
-    }
 
     // 上下文设置
     virtual void contextSetup() = 0;
@@ -47,6 +42,11 @@ public:
     virtual ~Pass()
     {
         glDeleteFramebuffers(1, &FBO);
+    }
+    void setToggle(bool status, std::string toggle)
+    {
+        shaders.use();
+        shaders.setInt(toggle, status ? 1 : 0);
     }
 };
 
@@ -83,7 +83,9 @@ public:
 
     void render(unsigned int finalTextureID)
     {
+
         glViewport(0, 0, vp_width, vp_height);
+
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         // 设置着色器参数
         shaders.use();
