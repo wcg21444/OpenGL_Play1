@@ -117,18 +117,19 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setFloat("fov", cam.fov);
     cam.setViewMatrix(shaders);
     /****************************************天空设置*****************************************************/
-    shaders.setFloat("skyHeight", shaderUI->skyHeight);
-    shaders.setFloat("earthRadius", shaderUI->earthRadius);
-    shaders.setFloat("skyIntensity", shaderUI->skyIntensity);
-    shaders.setInt("maxStep", shaderUI->maxStep);
-    shaders.setFloat("HRayleigh", shaderUI->HRayleigh);
-    shaders.setFloat("HMie", shaderUI->HMie);
-    shaders.setFloat("atmosphereDensity", shaderUI->atmosphereDensity);
-    shaders.setFloat("MieDensity", shaderUI->MieDensity);
-    shaders.setFloat("gMie", shaderUI->gMie);
-    shaders.setFloat("absorbMie", shaderUI->absorbMie);
-    shaders.setFloat("MieIntensity", shaderUI->MieIntensity);
-    shaders.setUniform("betaMie", shaderUI->betaMie);
+    shaders.setFloat("skyHeight", SkyGUI::skyHeight);
+    shaders.setFloat("earthRadius", SkyGUI::earthRadius);
+    shaders.setFloat("skyIntensity", SkyGUI::skyIntensity);
+    shaders.setInt("maxStep", SkyGUI::maxStep);
+    shaders.setFloat("HRayleigh", SkyGUI::HRayleigh);
+    shaders.setFloat("HMie", SkyGUI::HMie);
+    shaders.setFloat("atmosphereDensity", SkyGUI::atmosphereDensity);
+    shaders.setFloat("MieDensity", SkyGUI::MieDensity);
+    shaders.setFloat("gMie", SkyGUI::gMie);
+    shaders.setFloat("absorbMie", SkyGUI::absorbMie);
+    shaders.setFloat("MieIntensity", SkyGUI::MieIntensity);
+    shaders.setUniform("betaMie", SkyGUI::betaMie);
+    SkyGUI::render();
 
     /****************************************采样器设置**************************************************/
     for (unsigned int i = 0; i < shadowKernel.size(); ++i)

@@ -35,6 +35,9 @@ public:
     // 绘制公共Quad .单一职责:不负责视口管理.
     static void DrawQuad();
 
+    // 绘制立方体贴图的球体
+    static void DrawSphere();
+
 public:
     // 在切换渲染器时执行
     virtual void contextSetup() = 0;

@@ -919,7 +919,7 @@ void main()
                 // 渲染地面
                 vec3 normal = normalize(camEarthIntersection - earthCenter);
                 vec3 lighting = dirLightDiffuse(camEarthIntersection, normal);
-                vec3 earthBaseColor = vec3(0.1, 0.3f, 0.2f); // 地面颜色
+                vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
                 LightResult.rgb += lighting * earthBaseColor * t1.rgb;
             }
             else
@@ -933,8 +933,8 @@ void main()
                     LightResult += computeSkyColor();
                 }
             }
-            LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightIntensity[0], 2.0f);
         }
+        LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightIntensity[0], 2.0f);
     }
     else
     {

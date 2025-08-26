@@ -27,8 +27,6 @@ public:
 
     void contextSetup() override;
 
-    void render(PointLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix);
-
     void resize(int _width, int _height) override;
 
     void renderToTexture(

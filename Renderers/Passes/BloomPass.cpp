@@ -14,8 +14,6 @@ BloomPass::BloomPass(int _vp_width, int _vp_height, std::string _vs_path,
 
 BloomPass::~BloomPass()
 {
-    // 通常在此处释放资源，例如 glDeleteFramebuffers 等
-    // 但在这个简单的类中，父类和成员的析构函数会处理大部分工作
 }
 
 void BloomPass::initializeGLResources()
@@ -76,6 +74,7 @@ unsigned int BloomPass::getTextures()
 
 void BloomPass::render(unsigned int screenTex)
 {
+
     shaderUI->render();
     // 设置视口
     glViewport(0, 0, vp_width, vp_height);

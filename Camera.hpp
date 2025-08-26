@@ -123,6 +123,46 @@ public:
         shaders.setMat4("view", view);
         shaders.setUniform3fv("eyePos", cameraPos);
     }
+    /**
+     * @brief 根据索引设置Cubemap的视图矩阵
+     * @param shaders 着色器对象
+     * @param cameraPos 摄像机或反射源的位置
+     * @param i 当前Cubemap渲染面的索引 (0-5)
+     */
+    void setCubemapViewMatrix(Shader &shaders, unsigned int i)
+    {
+        // Cubemap 面的朝向和上向量
+        // 顺序对应：+X, -X, +Y, -Y, +Z, -Z
+        static const glm::vec3 cubemapTargets[6] = {
+            glm::vec3(1.0f, 0.0f, 0.0f),  // +X
+            glm::vec3(-1.0f, 0.0f, 0.0f), // -X
+            glm::vec3(0.0f, 1.0f, 0.0f),  // +Y
+            glm::vec3(0.0f, -1.0f, 0.0f), // -Y
+            glm::vec3(0.0f, 0.0f, 1.0f),  // +Z
+            glm::vec3(0.0f, 0.0f, -1.0f)  // -Z
+        };
+
+        static const glm::vec3 cubemapUps[6] = {
+            glm::vec3(0.0f, -1.0f, 0.0f), // 对于 +X, 上向量通常是 -Y
+            glm::vec3(0.0f, -1.0f, 0.0f), // 对于 -X, 上向量通常是 -Y
+            glm::vec3(0.0f, 0.0f, 1.0f),  // 对于 +Y, 上向量通常是 +Z
+            glm::vec3(0.0f, 0.0f, -1.0f), // 对于 -Y, 上向量通常是 -Z
+            glm::vec3(0.0f, -1.0f, 0.0f), // 对于 +Z, 上向量通常是 -Y
+            glm::vec3(0.0f, -1.0f, 0.0f)  // 对于 -Z, 上向量通常是 -Y
+        };
+        if (i >= 6)
+        {
+            // 索引超出范围，可能需要抛出异常或处理
+            return;
+        }
+
+        // 创建视图矩阵，从 cameraPos 观察到 cubemapTargets[i]
+        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cubemapTargets[i], cubemapUps[i]);
+
+        // 将视图矩阵作为 uniform 传递到着色器
+        shaders.setMat4("view", view);
+        shaders.setUniform3fv("eyePos", cameraPos);
+    }
     void setPerspectiveMatrix(Shader &shaders, int width, int height)
     {
         this->width = width;
@@ -133,6 +173,7 @@ public:
                                                 farPlane);
         shaders.setMat4("projection", projection);
     }
+
     glm::mat4 getPerspectiveMatrix()
     {
         this->width = width;

@@ -66,7 +66,7 @@ public:
     void render(unsigned int originTex, int amount, float radius)
     {
         glViewport(0, 0, vp_width, vp_height);
-
+        CheckGLErrors();
         bool horizontal = true, first_iteration = true;
         shaders.use();
 
@@ -78,7 +78,7 @@ public:
         for (unsigned int i = 0; i < amount; i++)
         {
             glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
-
+            CheckGLErrors();
             shaders.setInt("horizontal", horizontal);
             glBindTexture(
                 GL_TEXTURE_2D, first_iteration ? originTex : pingpongTex[!horizontal].ID); // 初次迭代使用输入BrightTex; 后续迭代使用模糊Tex
@@ -88,6 +88,7 @@ public:
 
             Renderer::DrawQuad();
         }
+        CheckGLErrors();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 };

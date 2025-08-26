@@ -40,19 +40,6 @@ public:
     glm::vec3 ambientLight{0.0f, 0.0f, 0.0f};
     int samplesNumber = 32;
     float blurRadius = 0.1f;
-
-    float skyHeight = 1e5;       // 大气层高度
-    float earthRadius = 6.371e6; // 地球半径
-    float skyIntensity = 1.f;    // 天空光强度
-    float HRayleigh = 8.5e3;
-    float HMie = 1e3;
-    float atmosphereDensity = 1.f; // 大气密度
-    float MieDensity = 1.0f;
-    float gMie = 0.56f;
-    float absorbMie = 0.1f;
-    float MieIntensity = 1e-1;
-    glm::vec4 betaMie = glm::vec4(21e-6, 21e-6, 21e-6, 1.0f);
-    int maxStep = 32;
     void render()
     {
         ImGui::Begin("ShadersGUI");
@@ -64,29 +51,6 @@ public:
                 ImGui::PushItemWidth(100.f);
                 ImGui::SliderInt("Samples", &samplesNumber, 1, 128);
                 ImGui::DragFloat("BlurRadius", &blurRadius, 0.01f, 0.0f, 1.0f);
-                ImGui::PopItemWidth();
-            }
-            if (ImGui::CollapsingHeader("Sky", ImGuiTreeNodeFlags_None))
-            {
-
-                ImGui::PushItemWidth(100.f);
-                ImGui::Text("BetaMie");
-                ImGui::PushID("BetaMie");
-                ImGui::DragFloat("R", &betaMie.r, 1.0e-7f, 1e-7f, 1e-4f, "%.5e");
-                ImGui::DragFloat("G", &betaMie.g, 1.0e-7f, 1e-7f, 1e-4f, "%.5e");
-                ImGui::DragFloat("B", &betaMie.b, 1.0e-7f, 1e-7f, 1e-4f, "%.5e");
-                ImGui::PopID();
-                ImGui::DragFloat("skyHeight", &skyHeight, 1e3f, 1e1f, 1e7f);
-                ImGui::DragFloat("earthRadius", &earthRadius, 1e4f, 1e1f, 1e7f);
-                ImGui::DragFloat("skyIntensity", &skyIntensity, 1e-1f, 0.0f, 1e3);
-                ImGui::DragInt("maxStep", &maxStep, 1, 1, 128);
-                ImGui::DragFloat("HRayleigh", &HRayleigh, 10.f, 0.0f, 1e5);
-                ImGui::DragFloat("HMie", &HMie, 2.f, 0.0f, 1e4);
-                ImGui::DragFloat("AtmosphereDensity", &atmosphereDensity, 0.05f, 0.0f, 1e2);
-                ImGui::DragFloat("MieDensity", &MieDensity, 0.05f, 0.0f, 1e2);
-                ImGui::DragFloat("gMie", &gMie, 0.01f, 0.0f, 1.f);
-                ImGui::DragFloat("absorbMie", &absorbMie, 0.01f, 1e-3, 1e1);
-                ImGui::DragFloat("MieIntensity", &MieIntensity, 0.01f, 1e-2, 1e2);
                 ImGui::PopItemWidth();
             }
         }
@@ -137,6 +101,53 @@ public:
                 ImGui::SliderFloat("Radius", &radius, 0.01f, 5.f);
                 ImGui::SliderFloat("Threshold", &threshold, 0.01f, 1.f);
                 ImGui::SliderInt("BlurAmount", &blurAmount, 1, 30);
+                ImGui::PopItemWidth();
+            }
+        }
+        ImGui::End();
+    }
+};
+
+class SkyGUI
+{
+public:
+    inline static float skyHeight = 1e5;       // 大气层高度
+    inline static float earthRadius = 6.371e6; // 地球半径
+    inline static float skyIntensity = 1.f;    // 天空光强度
+    inline static float HRayleigh = 8.5e3;
+    inline static float HMie = 1e3;
+    inline static float atmosphereDensity = 1.f; // 大气密度
+    inline static float MieDensity = 1.0f;
+    inline static float gMie = 0.56f;
+    inline static float absorbMie = 0.1f;
+    inline static float MieIntensity = 1e-1;
+    inline static glm::vec4 betaMie = glm::vec4(21e-6, 21e-6, 21e-6, 1.0f);
+    inline static int maxStep = 32;
+    inline static void render()
+    {
+        ImGui::Begin("ShadersGUI");
+        {
+            if (ImGui::CollapsingHeader("Sky", ImGuiTreeNodeFlags_None))
+            {
+
+                ImGui::PushItemWidth(100.f);
+                ImGui::Text("BetaMie");
+                ImGui::PushID("BetaMie");
+                ImGui::DragFloat("R", &betaMie.r, 1.0e-7f, 1e-7f, 1e-4f, "%.5e");
+                ImGui::DragFloat("G", &betaMie.g, 1.0e-7f, 1e-7f, 1e-4f, "%.5e");
+                ImGui::DragFloat("B", &betaMie.b, 1.0e-7f, 1e-7f, 1e-4f, "%.5e");
+                ImGui::PopID();
+                ImGui::DragFloat("skyHeight", &skyHeight, 1e3f, 1e1f, 1e7f);
+                ImGui::DragFloat("earthRadius", &earthRadius, 1e4f, 1e1f, 1e7f);
+                ImGui::DragFloat("skyIntensity", &skyIntensity, 1e-1f, 0.0f, 1e3);
+                ImGui::DragInt("maxStep", &maxStep, 1, 1, 128);
+                ImGui::DragFloat("HRayleigh", &HRayleigh, 10.f, 0.0f, 1e5);
+                ImGui::DragFloat("HMie", &HMie, 2.f, 0.0f, 1e4);
+                ImGui::DragFloat("AtmosphereDensity", &atmosphereDensity, 0.05f, 0.0f, 1e2);
+                ImGui::DragFloat("MieDensity", &MieDensity, 0.05f, 0.0f, 1e2);
+                ImGui::DragFloat("gMie", &gMie, 0.01f, 0.0f, 1.f);
+                ImGui::DragFloat("absorbMie", &absorbMie, 0.01f, 1e-3, 1e1);
+                ImGui::DragFloat("MieIntensity", &MieIntensity, 0.01f, 1e-2, 1e2);
                 ImGui::PopItemWidth();
             }
         }

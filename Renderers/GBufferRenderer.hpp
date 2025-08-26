@@ -13,6 +13,7 @@
 #include "Passes/GaussianBlurPass.hpp"
 #include "Passes/BloomPass.hpp"
 #include "Passes/CubemapUnfoldPass.hpp"
+#include "Passes/SkyTexPass.hpp"
 #include "../../RendererGUI.hpp"
 
 #include "../Utils/TextureLoader.hpp"
@@ -45,6 +46,7 @@ private:
     PostProcessPass postProcessPass;
     BloomPass bloomPass;
     CubemapUnfoldPass unfoldPass;
+    SkyTexPass skyTexPass;
 
     GBufferRendererGUI rendererGUI;
 
@@ -59,7 +61,9 @@ public:
           pointShadowPass(PointShadowPass("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs")),
           postProcessPass(PostProcessPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/postProcess.fs")),
           bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs")),
-          unfoldPass(CubemapUnfoldPass(width, height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 128))
+          unfoldPass(CubemapUnfoldPass(width, height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 256)),
+          skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 128))
+
     {
     }
     void reloadCurrentShaders() override
@@ -74,6 +78,7 @@ public:
         postProcessPass.reloadCurrentShaders();
         bloomPass.reloadCurrentShaders();
         unfoldPass.reloadCurrentShaders();
+        skyTexPass.reloadCurrentShaders();
         contextSetup();
     }
 
@@ -167,25 +172,38 @@ private:
             ssaoBlurPass.render(ssaoPassTex);
             ssaoBlurTex = ssaoBlurPass.getTextures();
         }
+        /****************************天空渲染*********************************************/
+        skyTexPass.render(renderParameters);
+        auto skyPassCubemap = skyTexPass.getCubemap();
+
         /****************************光照渲染*********************************************/
         lightPass.setToggle(rendererGUI.toggleSkybox, "Skybox");
         lightPass.setToggle(rendererGUI.togglePointShadow, "PointShadow");
         lightPass.setToggle(rendererGUI.toggleDirShadow, "DirShadow");
 
+        // lightPass.render(renderParameters,
+        //                  gPosition,
+        //                  gNormal,
+        //                  gAlbedoSpec,
+        //                  skyboxCube,
+        //                  pointShadowPass.farPlane);
         lightPass.render(renderParameters,
                          gPosition,
                          gNormal,
                          gAlbedoSpec,
-                         skyboxCube,
+                         skyPassCubemap,
                          pointShadowPass.farPlane);
         auto lightPassTex = lightPass.getTextures();
+
         /************************************Bloom*******************************************/
         unsigned int bloomPassTex = 0;
+
         if (rendererGUI.toggleBloom)
         {
             bloomPass.render(lightPassTex);
             bloomPassTex = bloomPass.getTextures();
         }
+
         /****************************PostProcess*********************************************/
 
         postProcessPass.setToggle(rendererGUI.toggleSSAO, "SSAO");
@@ -205,7 +223,7 @@ private:
         resize(static_cast<int>(renderWindowSize.x), static_cast<int>(renderWindowSize.y));
         rendererGUI.renderToDockingWindow(postProcessPassTex);
 
-        unfoldPass.render(skyboxCube);
+        unfoldPass.render(skyPassCubemap);
         auto unfoldedTex = unfoldPass.getUnfoldedCubemap();
         rendererGUI.renderPassInspector(unfoldedTex);
     }
