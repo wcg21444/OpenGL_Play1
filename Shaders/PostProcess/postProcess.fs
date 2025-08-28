@@ -2,7 +2,7 @@
 #version 330 core
 out vec4 FragColor;
 in vec2 TexCoord;
-
+#define TONEMAP_CURVE 5.0
 /*****************Screen输入*****************************************************************/
 uniform sampler2D screenTex;
 
@@ -32,10 +32,11 @@ uniform float vignettingStrength;
 uniform float vignettingPower;
 
 /****************屏幕圆设置*******************************************************************/
-//绘制正圆
-vec4 drawCircle(vec2 u_center,float u_radius,float u_thickness,vec4 u_color) {
+// 绘制正圆
+vec4 drawCircle(vec2 u_center, float u_radius, float u_thickness, vec4 u_color)
+{
     vec4 color = vec4(0.f);
-    vec2 u_resolution = vec2(width,height);
+    vec2 u_resolution = vec2(width, height);
     vec2 current_pos = gl_FragCoord.xy - u_resolution.xy / 2.0;
 
     // 2. 将坐标系除以屏幕的短边，使其成为一个正方形坐标系
@@ -50,43 +51,101 @@ vec4 drawCircle(vec2 u_center,float u_radius,float u_thickness,vec4 u_color) {
     float inner_radius = u_radius - u_thickness;
 
     // 5. 使用条件判断来绘制
-    if (dist_to_center >= inner_radius && dist_to_center <= u_radius) {
+    if (dist_to_center >= inner_radius && dist_to_center <= u_radius)
+    {
         color += u_color;
-    } else {
+    }
+    else
+    {
         color += vec4(0.0);
     }
     return color;
 }
 
-void main() {
-    FragColor = texture(screenTex,TexCoord);
+const float overlap = 0.2;
 
-    if(SSAO == 1) {
-        vec3 AO = texture(ssaoTex,TexCoord).rgb;
-        FragColor *= vec4(AO,1.0f);
+const float rgOverlap = 0.1 * overlap;
+const float rbOverlap = 0.01 * overlap;
+const float gbOverlap = 0.04 * overlap;
+const mat3 coneOverlap = mat3(1.0, rgOverlap, rbOverlap,
+                              rgOverlap, 1.0, gbOverlap,
+                              rbOverlap, rgOverlap, 1.0);
+
+const mat3 coneOverlapInverse = mat3(1.0 + (rgOverlap + rbOverlap), -rgOverlap, -rbOverlap,
+                                     -rgOverlap, 1.0 + (rgOverlap + gbOverlap), -gbOverlap,
+                                     -rbOverlap, -rgOverlap, 1.0 + (rbOverlap + rgOverlap));
+
+vec3 saturate(const vec3 v)
+{
+    return clamp(v, 0.0f, 1.0f);
+}
+
+vec3 SEUSTonemap(vec3 color)
+{
+    color = color * coneOverlap;
+
+    const float p = TONEMAP_CURVE;
+    color = pow(color, vec3(p));
+    color = color / (1.0 + color);
+    color = pow(color, vec3(1.0 / p));
+
+    // color = mix(color, color * color * (3.0 - 2.0 * color), vec3(0.0));
+
+    // color = pow(color, vec3(1.0 / 2.0));
+    // color = mix(color, color * color * (3.0 - 2.0 * color), vec3(0.1));
+    // color = pow(color, vec3(2.0));
+
+    // color = color * 0.5 + 0.5;
+    // color = mix(color, color * color * (3.0 - 2.0 * color), vec3(0.8));
+    // color = saturate(color * 2.0 - 1.0);
+
+    color = color * coneOverlapInverse;
+    color = saturate(color);
+
+    // color.r = almostIdentity(color.r, 0.05, 0.0);
+    // color.g = almostIdentity(color.g, 0.05, 0.0);
+    // color.b = almostIdentity(color.b, 0.05, 0.0);
+
+    return color;
+}
+
+void main()
+{
+    FragColor = texture(screenTex, TexCoord);
+
+    if (SSAO == 1)
+    {
+        vec3 AO = texture(ssaoTex, TexCoord).rgb;
+        FragColor *= vec4(AO, 1.0f);
     }
-    //HDR
-    if(HDR==1) {
+    // HDR
+    if (HDR == 1)
+    {
         FragColor *= HDRExposure;
     }
-    if(Bloom==1) {
-        vec4 BloomColor = texture(bloomTex,TexCoord);
-        FragColor+=BloomColor;
+    if (Bloom == 1)
+    {
+        vec4 BloomColor = texture(bloomTex, TexCoord);
+        FragColor += BloomColor;
     }
 
-    //Gamma 矫正
-    if(GammaCorrection==1) {
-        FragColor.rgb = pow(FragColor.rgb, vec3(1.0/gamma));
+    // Gamma 矫正
+    if (GammaCorrection == 1)
+    {
+        FragColor.rgb = pow(FragColor.rgb, vec3(1.0 / gamma));
     }
 
     // FragColor = vec4(1.f);
     // 暗角
-    if(Vignetting==1) {
+    if (Vignetting == 1)
+    {
         vec2 tuv = TexCoord * (vec2(1.0) - TexCoord.yx);
-        float vign = tuv.x*tuv.y * vignettingStrength;
+        float vign = tuv.x * tuv.y * vignettingStrength;
         vign = pow(vign, vignettingPower);
         FragColor *= vign;
     }
+
+    FragColor.rgb = SEUSTonemap(FragColor.rgb);
 
     /***均匀采样核*****************************************/
     // vec4 result = vec4(0.0f);

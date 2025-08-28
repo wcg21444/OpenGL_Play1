@@ -98,10 +98,10 @@ int main()
     Camera cam(InitWidth, InitHeight, 14.f, 0.05f);
 
     std::vector<std::unique_ptr<Object>> scene;
-    glm::mat4 plane_model = glm::translate(model, glm::vec3(0.f, -1.f, 0.f));
-    glm::mat4 box_model = glm::translate(model, glm::vec3(3.f, 0.f, -4.f));
-    glm::mat4 sphere_model = glm::translate(model, glm::vec3(6.f, 0.f, 2.f));
-    glm::mat4 backPack_model = glm::translate(model, glm::vec3(0.f, 2.f, 4.f));
+    glm::mat4 plane_model = glm::translate(model, glm::vec3(0.f, 1.f, 0.f));
+    glm::mat4 box_model = glm::translate(model, glm::vec3(3.f, 2.f, -4.f));
+    glm::mat4 sphere_model = glm::translate(model, glm::vec3(6.f, 2.f, 2.f));
+    glm::mat4 backPack_model = glm::translate(model, glm::vec3(0.f, 3.f, 4.f));
     glm::mat4 bass_model = glm::translate(model, glm::vec3(0.f, 4.f, 4.f));
 
     // scene.push_back(std::make_unique<Grid>());

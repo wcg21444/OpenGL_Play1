@@ -320,7 +320,14 @@ vec3 computeSkyboxAmbient(samplerCube _skybox)
     return ambient / samplesN;
 }
 
-float computeDirLightShadow(vec3 fragPos, mat4 _dirLightSpaceMatrix, sampler2D _dirDepthMap)
+vec3 computeSkyboxAmbientMipMap(samplerCube _skybox, vec3 dir)
+{
+    vec3 ambient = textureLod(_skybox, dir, 6).rgb;
+
+    return ambient;
+}
+
+float computeDirLightShadow(vec3 fragPos, vec3 fragNormal, mat4 _dirLightSpaceMatrix, sampler2D _dirDepthMap)
 {
     // perform perspective divide
     if (DirShadow == 0)
@@ -329,35 +336,43 @@ float computeDirLightShadow(vec3 fragPos, mat4 _dirLightSpaceMatrix, sampler2D _
     }
     vec4 lightSpaceFragPos = _dirLightSpaceMatrix * vec4(fragPos, 1.0f);
 
-    // 计算遮挡物与接受物的平均距离
-    float d = 0.f;
-    int occlusion_times = 0;
-    for (int k = 0; k < n_samples; ++k)
-    {
-        vec4 sampleOffset = _dirLightSpaceMatrix * vec4(TBN * shadowSamples[k] * blurRadius * 60, 0.0f);
-        vec4 fragPosLightSpace = lightSpaceFragPos + sampleOffset; // Dir Light View Space
-        vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
-        // transform to [0,1] range
-        projCoords = projCoords * 0.5 + 0.5;
-        // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-        float closestDepth = texture(_dirDepthMap, projCoords.xy).r;
-        // get depth of current fragment from light's perspective
-        float currentDepth = projCoords.z;
-        float bias = 0.000005f;
-        if (currentDepth - closestDepth - bias > 0)
-        {
-            occlusion_times++;
-            d += (currentDepth - closestDepth) * 2000; // 深度值换算与光源farplane数值有关
-        }
-    }
-    d = d / occlusion_times;
+    // // 计算遮挡物与接受物的平均距离
+    // float d = 0.f;
+    // int occlusion_times = 0;
+    // for (int k = 0; k < n_samples; ++k)
+    // {
+    //     vec4 sampleOffset = _dirLightSpaceMatrix * vec4(TBN * shadowSamples[k] * blurRadius, 0.0f);
+    //     vec4 fragPosLightSpace = lightSpaceFragPos + sampleOffset; // Dir Light View Space
+    //     vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
+    //     // transform to [0,1] range
+    //     projCoords = projCoords * 0.5 + 0.5;
+    //     // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+    //     float closestDepth = texture(_dirDepthMap, projCoords.xy).r;
+    //     // get depth of current fragment from light's perspective
+    //     float currentDepth = projCoords.z;
+
+    //     float bias = 0.00003f;
+
+    //     if (currentDepth - closestDepth - bias > 0)
+    //     {
+    //         occlusion_times++;
+    //         d += (currentDepth - closestDepth) * 2000; // 深度值换算与光源farplane数值有关
+    //     }
+    // }
+    // d = d / occlusion_times;
+    // PCF Only
     float factor = 0.f;
     for (int j = 0; j < n_samples; ++j)
     {
+        // vec4 sampleOffset = _dirLightSpaceMatrix * vec4(
+        //                                                TBN *
+        //                                                    shadowSamples[j] *
+        //                                                    blurRadius * 20 * pow(d, 2),
+        //                                                0.0f);
         vec4 sampleOffset = _dirLightSpaceMatrix * vec4(
                                                        TBN *
                                                            shadowSamples[j] *
-                                                           blurRadius * 20 * pow(d, 2),
+                                                           blurRadius * 5.f,
                                                        0.0f);
         vec4 fragPosLightSpace = lightSpaceFragPos + sampleOffset; // Dir Light View Space
         vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
@@ -367,7 +382,9 @@ float computeDirLightShadow(vec3 fragPos, mat4 _dirLightSpaceMatrix, sampler2D _
         float closestDepth = texture(_dirDepthMap, projCoords.xy).r;
         // get depth of current fragment from light's perspective
         float currentDepth = projCoords.z;
-        float bias = 0.000005f;
+        float cosine = dot(fragNormal, dirLightPos[0]) / length(fragNormal) / length(dirLightPos[0]); // 只考虑阳光
+        float texel = 5e-6;
+        float bias = sqrt(1 - cosine * cosine) / cosine * texel;
         // check whether current frag pos is in shadow
         factor += currentDepth - closestDepth - bias > 0 ? 1.0f : 0.0f;
     }
@@ -429,7 +446,7 @@ vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
 
         vec3 l = normalize(dirLightPos[i]);
         float rr = dot(l, l);
-        float shadowFactor = 1 - computeDirLightShadow(fragPos, dirLightSpaceMatrix[i], dirDepthMap[i]);
+        float shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightSpaceMatrix[i], dirDepthMap[i]);
 
         if (i == 0) // 太阳光处理
         {
@@ -455,7 +472,7 @@ vec3 dirLightSpec(vec3 fragPos, vec3 n)
         float specularStrength = 0.01f;
         vec3 viewDir = normalize(eyePos - fragPos);
         vec3 reflectDir = reflect(-l, n);
-        float shadowFactor = 1 - computeDirLightShadow(fragPos, dirLightSpaceMatrix[i], dirDepthMap[i]);
+        float shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightSpaceMatrix[i], dirDepthMap[i]);
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), 128);
 
         if (i == 0) // 太阳光处理
@@ -949,7 +966,8 @@ void main()
         vec3 ambient = ambientLight;
         if (Skybox == 1)
         {
-            ambient += computeSkyboxAmbient(skybox);
+            ambient += computeSkyboxAmbientMipMap(skybox, n);
+            // ambient = vec3(0.f);
         }
         // ambient = (ambientLight +
         //            computeSkyboxAmbient(skybox));
@@ -958,9 +976,12 @@ void main()
         LightResult += vec4(specular * texture(gAlbedoSpec, TexCoord).a, 1.f);
         LightResult += vec4(ambient * texture(gAlbedoSpec, TexCoord).rgb, 1.f);
 
-        vec4 t1 = transmittance(camPos, FragPos, 1.0f);
-        LightResult *= t1;
-        LightResult += computeAerialPerspective(FragPos);
+        if (Skybox == 0) // 关闭天空盒
+        {
+            vec4 t1 = transmittance(camPos, FragPos, 1.0f);
+            LightResult *= t1;
+            LightResult += computeAerialPerspective(FragPos);
+        }
     }
 
     const vec3 BoxMin = vec3(2.0f, -2.0f, -2.0f);
@@ -980,6 +1001,6 @@ void main()
             FragPos,
             LightVolueBoxMin + pointLightPos[i],
             LightVolueBoxMax + pointLightPos[i],
-            vec4(pointLightIntensity[i], 1.0f) / length(pointLightIntensity[i]));
+            vec4(pointLightIntensity[i] * 2.f, 1.0f) / length(pointLightIntensity[i]));
     }
 }

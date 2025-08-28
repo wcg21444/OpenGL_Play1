@@ -62,7 +62,7 @@ public:
           postProcessPass(PostProcessPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/postProcess.fs")),
           bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs")),
           unfoldPass(CubemapUnfoldPass(width, height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 256)),
-          skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 128))
+          skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 64))
 
     {
     }
@@ -85,7 +85,8 @@ public:
     void contextSetup() override
     {
         static bool initialized = false;
-        glEnable(GL_DEPTH_TEST); // 深度缓冲
+        glEnable(GL_DEPTH_TEST);                // 深度缓冲
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS); // 无缝Cubemap
 
         if (!initialized)
         {

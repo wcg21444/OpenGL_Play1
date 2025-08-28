@@ -35,7 +35,7 @@ inline void SkyTexPass::initializeGLResources()
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+    // glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 }
 
 inline void SkyTexPass::contextSetup()
@@ -73,6 +73,7 @@ void SkyTexPass::render(
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, skyCubemapTex, 0);
         Renderer::DrawSphere();
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
     }
     /****************************************方向光源输入**************************************************/
     allLights.dirLights[0].setToShader(shaders);
