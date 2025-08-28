@@ -224,8 +224,9 @@ vec4 transmittanceMie(vec3 ori, vec3 end, float scale)
 // 透射率步数大幅会影响散射效果,为什么? 因为公式有误,p步进幅度忘记/tMaxStep了
 vec4 transmittance(vec3 ori, vec3 end, float scale)
 {
-    vec4 t; // 透射率
-    const float tMaxStep = 24;
+    vec4 t;                                              // 透射率
+    vec4 betaMieAbsorb = vec4(2.5e-5, 4e-5, 1e-5, 1.0f); // Hacking 让地平线呈现微妙紫色
+    const float tMaxStep = 64;
 
     float dist = length(end - ori);
     float tItvl = dist / float(tMaxStep);
@@ -242,7 +243,7 @@ vec4 transmittance(vec3 ori, vec3 end, float scale)
     }
 
     // 总透射率计算
-    vec4 extictionMie = betaMie * (1.0 + absorbMie) * opticalDepthMie / 5;
+    vec4 extictionMie = (betaMie + betaMieAbsorb * absorbMie) * opticalDepthMie;
     vec4 extictionRayleigh = betaRayleigh * opticalDepthRayleigh;
     t = vec4(exp(-(extictionMie + extictionRayleigh).r),
              exp(-(extictionMie + extictionRayleigh).g),
@@ -275,7 +276,10 @@ vec3 skyTonemap(vec3 color)
     float E = 0.02;
     float F = 0.30;
     float W = 11.2; // white point
+    // color = pow(color, vec3(0.95f, 0.96f, 0.94f));
+
     return ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
+    return color;
 }
 
 vec4 computeSkyColor()
@@ -391,6 +395,14 @@ vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
 
     return diffuse;
 }
+
+vec3 saturate_color(vec3 color, float amount)
+{
+
+    float luma = dot(color, vec3(0.299, 0.587, 0.114));
+
+    return luma + (color - luma) * amount;
+}
 void main()
 {
     initialize();
@@ -406,13 +418,13 @@ void main()
         // 击中地球,渲染大气透视
         SkyResult = computeAerialPerspective(camEarthIntersection);
 
-        // vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
+        vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
 
-        // // 渲染地面
-        // vec3 normal = normalize(camEarthIntersection - earthCenter);
-        // vec3 lighting = dirLightDiffuse(camEarthIntersection, normal);
-        // vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
-        // SkyResult.rgb += lighting * earthBaseColor * t1.rgb;
+        // 渲染地面
+        vec3 normal = normalize(camEarthIntersection - earthCenter);
+        vec3 lighting = dirLightDiffuse(camEarthIntersection, normal);
+        vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
+        SkyResult.rgb += lighting * earthBaseColor * t1.rgb;
     }
     else
     {
@@ -425,5 +437,7 @@ void main()
             SkyResult += computeSkyColor();
         }
     }
+    SkyResult.rgb = clamp(SkyResult.rgb, vec3(0.0f), vec3(1.0f));
+
     // SkyResult = vec4(1.0f);
 }
