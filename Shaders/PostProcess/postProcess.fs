@@ -82,7 +82,7 @@ vec3 saturate(const vec3 v)
 
 vec3 SEUSTonemap(vec3 color)
 {
-    color = color * coneOverlap;
+    color = color * coneOverlap / 1.1f;
 
     const float p = TONEMAP_CURVE;
     color = pow(color, vec3(p));

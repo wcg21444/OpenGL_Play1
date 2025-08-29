@@ -45,6 +45,9 @@ vec3 sunDir = vec3(0.f);
 vec3 earthCenter;
 float itvl;
 
+#include "geometry.glsl"
+#include "scatter.glsl"
+/*
 vec3 intersectSky(vec3 ori, vec3 dir)
 {
     // 假设这些常量已经在全局或函数外定义
@@ -142,38 +145,8 @@ float heightToGround(vec3 p)
 {
     return (length(p - earthCenter) - earthRadius);
     // return p.y;
-}
-
-float phaseRayleigh(vec3 _camRayDir, vec3 _sunDir)
-{
-    float cosine = dot(_camRayDir, _sunDir) / length(_camRayDir) / length(_sunDir);
-    return 3.0f / 16.0f * PI * (1 + cosine * cosine);
-}
-float phaseMie(vec3 _camRayDir, vec3 _sunDir)
-{
-    float gMie2 = gMie * gMie;
-    float cosine = dot(_camRayDir, _sunDir) / length(_camRayDir) / length(_sunDir);
-    return (1.0 - gMie2) / pow(1.0 + gMie2 - 2.0 * gMie * cosine, 1.5);
-
-    // return 3.0f / 8.0f * PI * (1.0 - gMie2) * (1 + cosine * cosine) / (2 + gMie2) / pow((1 + gMie2 - 2.0 * gMie * cosine), 1.5f);
-}
-float rhoRayleigh(float h)
-{
-    if (h < 0.0f)
-    {
-        h = 0.0f;
-    }
-    return atmosphereDensity * exp(-abs(h) / HRayleigh); // 大气密度近似
-}
-float rhoMie(float h)
-{
-    if (h < 0.0f)
-    {
-        h = 0.0f;
-    }
-    return MieDensity * exp(-abs(h) / HMie);
-}
-
+}*/
+/*
 vec4 transmittanceRayleigh(vec3 ori, vec3 end, float scale)
 {
 
@@ -221,65 +194,20 @@ vec4 transmittanceMie(vec3 ori, vec3 end, float scale)
     return t;
 }
 
-// 透射率步数大幅会影响散射效果,为什么? 因为公式有误,p步进幅度忘记/tMaxStep了
-vec4 transmittance(vec3 ori, vec3 end, float scale)
-{
-    vec4 t;                                              // 透射率
-    vec4 betaMieAbsorb = vec4(2.5e-5, 4e-5, 1e-5, 1.0f); // Hacking 让地平线呈现微妙紫色
-    const float tMaxStep = 64;
-
-    float dist = length(end - ori);
-    float tItvl = dist / float(tMaxStep);
-
-    // 光学深度积分
-    float opticalDepthMie = 0.f;
-    float opticalDepthRayleigh = 0.f;
-    for (int i = 0; i < tMaxStep; ++i)
-    {
-        vec3 p = ori + i * (end - ori) / tMaxStep;
-        float h = heightToGround(p);
-        opticalDepthMie += tItvl * rhoMie(h) * scale;
-        opticalDepthRayleigh += tItvl * rhoRayleigh(h) * scale;
-    }
-
-    // 总透射率计算
-    vec4 extictionMie = (betaMie + betaMieAbsorb * absorbMie) * opticalDepthMie;
-    vec4 extictionRayleigh = betaRayleigh * opticalDepthRayleigh;
-    t = vec4(exp(-(extictionMie + extictionRayleigh).r),
-             exp(-(extictionMie + extictionRayleigh).g),
-             exp(-(extictionMie + extictionRayleigh).b),
-             1.0f);
-    return t;
-}
-
-vec4 scatterCoefficientRayleigh(vec3 p)
-{
-    // vec3 intersection = intersectSky(camPos, camRayDir);
-
-    float h = (heightToGround(p)); // 散射点高度
-    return betaRayleigh * rhoRayleigh(h);
-}
-vec4 scatterCoefficientMie(vec3 p)
-{
-    // vec3 intersection = intersectSky(camPos, camRayDir);
-
-    float h = (heightToGround(p)); // 散射点高度
-    return betaMie * rhoMie(h);
-}
+ */
 
 vec3 skyTonemap(vec3 color)
 {
     float A = 0.15;
-    float B = 0.50;
+    float B = 0.70;
     float C = 0.20;
     float D = 0.20;
     float E = 0.02;
-    float F = 0.30;
-    float W = 11.2; // white point
+    float F = 0.40;
+    float W = 10.2; // white point
     // color = pow(color, vec3(0.95f, 0.96f, 0.94f));
 
     return ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
-    return color;
 }
 
 vec4 computeSkyColor()
@@ -365,15 +293,6 @@ vec3 computeSunlightDecay(vec3 camPos, vec3 fragDir, vec3 sunDir)
     return t1.rgb;
 }
 
-vec3 fragViewSpaceDir(vec2 uv)
-{
-    vec3 dir = vec3(uv - vec2(0.5f, 0.5f), 0.f);
-    dir.y = dir.y * tan(radians(fov / 2)) * 2;
-    dir.x = dir.x * tan(radians(fov / 2)) * (float(width) / float(height)) * 2;
-    dir.z = -1.0f;
-    dir = normalize(inverse(mat3(view)) * dir);
-    return dir;
-}
 void initialize()
 {
     SkyResult = vec4(0.f, 0.f, 0.f, 1.f); // Initialize Sky

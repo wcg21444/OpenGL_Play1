@@ -72,6 +72,17 @@ uniform int Skybox;
 /*******************************RayMarching输入**************************************************/
 
 /*******************************RayMarching******************************************************/
+
+vec3 fragViewSpaceDir(vec2 uv)
+{
+    vec3 dir = vec3(uv - vec2(0.5f, 0.5f), 0.f);
+    dir.y = dir.y * tan(radians(fov / 2)) * 2;
+    dir.x = dir.x * tan(radians(fov / 2)) * (float(width) / float(height)) * 2;
+    dir.z = -1.0f;
+    dir = normalize(inverse(mat3(view)) * dir);
+    return dir;
+}
+
 bool isPointInBox(vec3 testPoint, vec3 boxMin, vec3 boxMax)
 {
     return testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
@@ -288,16 +299,6 @@ vec4 lightVolume(
     return lightVolumeRayMarching(startPoint, direction, fragPos, boxMin, boxMax, color);
 }
 /*******************************Lighting******************************************************/
-
-vec3 fragViewSpaceDir(vec2 uv)
-{
-    vec3 dir = vec3(uv - vec2(0.5f, 0.5f), 0.f);
-    dir.y = dir.y * tan(radians(fov / 2)) * 2;
-    dir.x = dir.x * tan(radians(fov / 2)) * (float(width) / float(height)) * 2;
-    dir.z = -1.0f;
-    dir = normalize(inverse(mat3(view)) * dir);
-    return dir;
-}
 
 vec3 sampleSkybox(vec2 uv, samplerCube _skybox)
 {
@@ -546,228 +547,8 @@ uniform float skyIntensity;
 uniform float HRayleigh;
 uniform float HMie;
 
-vec3 intersectSky(vec3 ori, vec3 dir)
-{
-    // 假设这些常量已经在全局或函数外定义
-    float kAtmosphereRadius = earthRadius + skyHeight;
-    float kEarthRadius = earthRadius;
-
-    vec3 relativeOrigin = ori - earthCenter;
-
-    // 计算二次方程的系数 A, B, C
-    float a = dot(dir, dir);
-    float b = 2.0f * dot(relativeOrigin, dir);
-    float cS = dot(relativeOrigin, relativeOrigin) - kAtmosphereRadius * kAtmosphereRadius;
-    float cE = dot(relativeOrigin, relativeOrigin) - kEarthRadius * kEarthRadius;
-
-    // --- 检查光线与大气层的交点 ---
-    float discrS = b * b - 4.0f * a * cS;
-    if (discrS < 0.0f)
-    {
-        // 判别式小于0，光线没有与大气层相交
-        return vec3(0.0f);
-    }
-
-    // 计算大气层的两个交点参数 t
-    float tS1 = (-b - sqrt(discrS)) / (2.0f * a);
-    float tS2 = (-b + sqrt(discrS)) / (2.0f * a);
-
-    // --- 确定进入大气的第一个交点 tS ---
-    float tS;
-    if (tS1 > 0.0f)
-    {
-        tS = tS1;
-    }
-    else if (tS2 > 0.0f)
-    {
-        tS = tS2;
-    }
-    else
-    {
-        // 两个交点都在光线起点之后（tS < 0），光线朝远离大气的方向传播
-        // return vec3(0.0f);
-    }
-
-    // 返回进入大气层的交点坐标
-    return ori + dir * tS;
-}
-vec3 intersectEarth(vec3 ori, vec3 dir)
-{
-    float kEarthRadius = earthRadius;
-
-    vec3 relativeOrigin = ori - earthCenter;
-
-    // 计算二次方程的系数 A, B, C
-    float a = dot(dir, dir);
-    float b = 2.0f * dot(relativeOrigin, dir);
-    float c = dot(relativeOrigin, relativeOrigin) - kEarthRadius * kEarthRadius;
-
-    float discr = b * b - 4.0f * a * c;
-
-    // 如果判别式小于0，说明没有交点
-    if (discr < 0.0f)
-    {
-        // 返回一个特殊值来表示没有交点，例如一个“无效”向量
-        return vec3(0.0f);
-    }
-
-    // 计算两个交点参数t
-    float t1 = (-b - sqrt(discr)) / (2.0f * a);
-    float t2 = (-b + sqrt(discr)) / (2.0f * a);
-
-    // 通常我们只关心“最近”的那个交点（t值最小且大于0）
-    float t_intersect;
-
-    if (t1 > 0.0f)
-    {
-        t_intersect = t1;
-    }
-    else if (t2 > 0.0f)
-    {
-        t_intersect = t2;
-    }
-    else
-    {
-        // 两个t值都小于等于0，表示光线从球体内部射出，或球体在光线背后
-        // 此时可以认为没有有效交点
-        return vec3(0.0f); // 同样，返回一个特殊值
-    }
-
-    // 根据找到的有效t值计算交点坐标
-    vec3 intersectionPoint = ori + t_intersect * dir;
-    return intersectionPoint;
-}
-
-// 计算一个点p相对于地球表面的高度
-float heightToGround(vec3 p)
-{
-    return (length(p - earthCenter) - earthRadius);
-    // return p.y;
-}
-
-float phaseRayleigh(vec3 _camDir, vec3 _sunDir)
-{
-    float cosine = dot(_camDir, _sunDir) / length(_camDir) / length(_sunDir);
-    return 3.0f / 16.0f * PI * (1 + cosine * cosine);
-}
-float phaseMie(vec3 _camDir, vec3 _sunDir)
-{
-    float gMie2 = gMie * gMie;
-    float cosine = dot(_camDir, _sunDir) / length(_camDir) / length(_sunDir);
-    return (1.0 - gMie2) / pow(1.0 + gMie2 - 2.0 * gMie * cosine, 1.5);
-
-    // return 3.0f / 8.0f * PI * (1.0 - gMie2) * (1 + cosine * cosine) / (2 + gMie2) / pow((1 + gMie2 - 2.0 * gMie * cosine), 1.5f);
-}
-float rhoRayleigh(float h)
-{
-    if (h < 0.0f)
-    {
-        h = 0.0f;
-    }
-    return atmosphereDensity * exp(-abs(h) / HRayleigh); // 大气密度近似
-}
-float rhoMie(float h)
-{
-    if (h < 0.0f)
-    {
-        h = 0.0f;
-    }
-    return MieDensity * exp(-abs(h) / HMie);
-}
-
-vec4 transmittanceRayleigh(vec3 ori, vec3 end, float scale)
-{
-
-    vec4 t; // 透射率
-
-    // int tMaxStep = 32; //透射率步进步数
-    float dist = length(end - ori);
-    float tItvl = dist / float(maxStep);
-
-    float opticalDepth = 0.f;
-    for (int i = 0; i < maxStep; ++i)
-    {
-        vec3 p = i * (end - ori);
-        float h = heightToGround(p);
-        opticalDepth += tItvl * rhoRayleigh(h) * scale;
-    }
-
-    t = vec4(
-        exp(-betaRayleigh.r * opticalDepth),
-        exp(-betaRayleigh.g * opticalDepth),
-        exp(-betaRayleigh.b * opticalDepth),
-        1.0f);
-    return t;
-}
-
-vec4 transmittanceMie(vec3 ori, vec3 end, float scale)
-{
-    vec4 t; // 透射率
-
-    float dist = length(end - ori);
-    float tItvl = dist / float(maxStep);
-
-    // TODO 加入吸收率
-    float opticalDepth = 0.f;
-    for (int i = 0; i < maxStep; ++i)
-    {
-        vec3 p = i * (end - ori);
-        float h = heightToGround(p);
-        opticalDepth += tItvl * rhoMie(h) * scale;
-    }
-    vec4 extiction = betaMie * (1.0 + absorbMie);
-    t = vec4(exp(-extiction.r * opticalDepth),
-             exp(-extiction.g * opticalDepth),
-             exp(-extiction.b * opticalDepth),
-             1.0f);
-    return t;
-}
-
-// 透射率步数大幅会影响散射效果,为什么? 因为公式有误,p步进幅度忘记/tMaxStep了
-vec4 transmittance(vec3 ori, vec3 end, float scale)
-{
-    vec4 t; // 透射率
-    vec4 betaMieAbsorb = vec4(2.1e-5, 4e-5, 2e-5, 1.0f);
-    const float tMaxStep = 64;
-
-    float dist = length(end - ori);
-    float tItvl = dist / float(tMaxStep);
-
-    // 光学深度积分
-    float opticalDepthMie = 0.f;
-    float opticalDepthRayleigh = 0.f;
-    for (int i = 0; i < tMaxStep; ++i)
-    {
-        vec3 p = ori + i * (end - ori) / tMaxStep;
-        float h = heightToGround(p);
-        opticalDepthMie += tItvl * rhoMie(h) * scale;
-        opticalDepthRayleigh += tItvl * rhoRayleigh(h) * scale;
-    }
-
-    // 总透射率计算
-    vec4 extictionMie = (betaMie + betaMieAbsorb * absorbMie) * opticalDepthMie;
-    vec4 extictionRayleigh = betaRayleigh * opticalDepthRayleigh;
-    t = vec4(exp(-(extictionMie + extictionRayleigh).r),
-             exp(-(extictionMie + extictionRayleigh).g),
-             exp(-(extictionMie + extictionRayleigh).b),
-             1.0f);
-    return t;
-}
-
-vec4 scatterCoefficientRayleigh(vec3 p)
-{
-    // vec3 intersection = intersectSky(camPos, camDir);
-
-    float h = (heightToGround(p)); // 散射点高度
-    return betaRayleigh * rhoRayleigh(h);
-}
-vec4 scatterCoefficientMie(vec3 p)
-{
-    // vec3 intersection = intersectSky(camPos, camDir);
-
-    float h = (heightToGround(p)); // 散射点高度
-    return betaMie * rhoMie(h);
-}
+#include "SkyTexPass/geometry.glsl"
+#include "SkyTexPass/scatter.glsl"
 
 vec3 uncharted2_tonemap(vec3 color)
 {
@@ -1021,6 +802,6 @@ void main()
             FragPos,
             LightVolueBoxMin + pointLightPos[i],
             LightVolueBoxMax + pointLightPos[i],
-            vec4(pointLightIntensity[i] * 2.f, 1.0f) / length(pointLightIntensity[i]));
+            vec4(pow(pointLightIntensity[i] / 8.f, vec3(1.2f)), 1.0f));
     }
 }

@@ -26,18 +26,17 @@ void BloomPass::initializeGLResources()
 
 void BloomPass::contextSetup()
 {
-    // 将 BloomPass 的 FBO 绑定为渲染目标
+
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-    // 将生成的浮点纹理附加到 FBO 的颜色附件0上
+
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bloomPassTex.ID, 0);
-    // 检查 FBO 完整性并解绑
+
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
         std::cerr << "ERROR::BLOOM_PASS::Framebuffer is not complete!" << std::endl;
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // 递归调用，设置高斯模糊通道的上下文
     blurPass.contextSetup();
 }
 
@@ -76,10 +75,9 @@ void BloomPass::render(unsigned int screenTex)
 {
 
     shaderUI->render();
-    // 设置视口
-    glViewport(0, 0, vp_width, vp_height);
-    // 绑定 BloomPass 的 FBO，准备进行预处理渲染
+
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glViewport(0, 0, vp_width, vp_height);
 
     shaders.use();
 

@@ -1,4 +1,5 @@
 #include "Shader.hpp"
+#include "ShaderIncludes.hpp"
 
 // 构造函数
 Shader::Shader() : location_ID(0), progrm_ID(0) {}
@@ -68,8 +69,10 @@ Shader::Shader(const char *vs_path, const char *fs_path, const char *gs_path) : 
     if (!success)
     {
         glGetProgramInfoLog(progrm_ID, 512, NULL, infoLog);
-        std::cerr << "ERROR::SHADER::PROGRAM::LINK_FAILED\n"
+        std::cerr << "VS : " << std::string(vs_path) << "FS : " << std::string(fs_path) << std::endl
+                  << "ERROR::SHADER::PROGRAM::LINK_FAILED\n"
                   << infoLog << std::endl;
+
         throw std::runtime_error("Shader program link failed.");
     }
 
@@ -116,23 +119,24 @@ Shader &Shader::operator=(Shader &&other) noexcept
     return *this;
 }
 
-// 私有方法实现
 std::string Shader::loadShaderFile(const char *shader_path)
 {
-    std::fstream shader_file(shader_path, std::ios::in);
-    if (!shader_file.is_open())
-    {
-        std::cerr << "(errno " << errno << "): " << strerror(errno) << std::endl;
-        throw std::runtime_error("Failed to open shader file: " + std::string(shader_path));
-    }
-    std::stringstream shader_buffer;
-    shader_buffer << shader_file.rdbuf();
-    if (shader_file.fail() && !shader_file.eof())
-    {
-        std::cerr << "(errno " << errno << "): " << strerror(errno) << std::endl;
-        throw std::runtime_error("Failed to read shader file: " + std::string(shader_path));
-    }
-    return shader_buffer.str();
+    /*改用ShaderIncludes加载着色器 */
+    // std::fstream shader_file(shader_path, std::ios::in);
+    // if (!shader_file.is_open())
+    // {
+    //     std::cerr << "(errno " << errno << "): " << strerror(errno) << std::endl;
+    //     throw std::runtime_error("Failed to open shader file: " + std::string(shader_path));
+    // }
+    // std::stringstream shader_buffer;
+    // shader_buffer << shader_file.rdbuf();
+    // if (shader_file.fail() && !shader_file.eof())
+    // {
+    //     std::cerr << "(errno " << errno << "): " << strerror(errno) << std::endl;
+    //     throw std::runtime_error("Failed to read shader file: " + std::string(shader_path));
+    // }
+    // return shader_buffer.str();
+    return GLSLPT::ShaderInclude::load(shader_path).src;
 }
 
 GLint Shader::getUniformLocationSafe(const std::string &name)

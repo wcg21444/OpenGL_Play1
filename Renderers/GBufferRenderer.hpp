@@ -53,7 +53,7 @@ private:
 public:
     GBufferRenderer()
         : gBufferPass(GBufferPass(width, height, "Shaders/GBuffer/gbuffer.vs", "Shaders/GBuffer/gbuffer.fs")),
-          lightPass(LightPass(width, height, "Shaders/screenQuad.vs", "Shaders/GBuffer/light.fs")),
+          lightPass(LightPass(width, height, "Shaders/screenQuad.vs", "Shaders/light.fs")),
           screenPass(ScreenPass(width, height, "Shaders/screenQuad.vs", "Shaders/GBuffer/texture.fs")),
           ssaoPass(SSAOPass(width, height, "Shaders/screenQuad.vs", "Shaders/SSAOPass/ssao.fs")),
           ssaoBlurPass(SSAOBlurPass(width, height, "Shaders/screenQuad.vs", "Shaders/SSAOPass/blur.fs")),
@@ -220,12 +220,12 @@ private:
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         // screenPass.render(postProcessPassTex); // 渲染到底层窗口
 
+        unfoldPass.render(skyPassCubemap); // 删掉这一行天空盒无法渲染 为什么?
+        // auto unfoldedTex = unfoldPass.getUnfoldedCubemap();
+        rendererGUI.renderPassInspector(bloomPassTex);
+
         auto renderWindowSize = rendererGUI.getRenderWindowSize();
         resize(static_cast<int>(renderWindowSize.x), static_cast<int>(renderWindowSize.y));
         rendererGUI.renderToDockingWindow(postProcessPassTex);
-
-        unfoldPass.render(skyPassCubemap);
-        auto unfoldedTex = unfoldPass.getUnfoldedCubemap();
-        rendererGUI.renderPassInspector(unfoldedTex);
     }
 };

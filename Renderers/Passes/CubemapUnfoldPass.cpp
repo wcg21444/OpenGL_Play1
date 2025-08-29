@@ -38,6 +38,7 @@ void CubemapUnfoldPass::contextSetup()
 }
 void CubemapUnfoldPass::unfoldCubemap(unsigned int cubemap)
 {
+    // 将此函数置为空函数, 天空盒正常渲染
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
