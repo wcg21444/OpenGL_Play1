@@ -403,6 +403,14 @@ vec3 saturate_color(vec3 color, float amount)
 
     return luma + (color - luma) * amount;
 }
+
+vec3 saturate_color(vec3 color, float amount)
+{
+
+    float luma = dot(color, vec3(0.299, 0.587, 0.114));
+
+    return luma + (color - luma) * amount;
+}
 void main()
 {
     initialize();
@@ -419,7 +427,13 @@ void main()
         SkyResult = computeAerialPerspective(camEarthIntersection);
 
         vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
+        vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
 
+        // 渲染地面
+        vec3 normal = normalize(camEarthIntersection - earthCenter);
+        vec3 lighting = dirLightDiffuse(camEarthIntersection, normal);
+        vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
+        SkyResult.rgb += lighting * earthBaseColor * t1.rgb;
         // 渲染地面
         vec3 normal = normalize(camEarthIntersection - earthCenter);
         vec3 lighting = dirLightDiffuse(camEarthIntersection, normal);
@@ -437,6 +451,8 @@ void main()
             SkyResult += computeSkyColor();
         }
     }
+    SkyResult.rgb = clamp(SkyResult.rgb, vec3(0.0f), vec3(1.0f));
+
     SkyResult.rgb = clamp(SkyResult.rgb, vec3(0.0f), vec3(1.0f));
 
     // SkyResult = vec4(1.0f);
