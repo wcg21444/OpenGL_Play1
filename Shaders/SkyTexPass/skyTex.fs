@@ -245,7 +245,7 @@ vec4 computeSkyColor()
 
     skyColor += scatterRayleigh;
     skyColor += scatterMie * MieIntensity;
-    skyColor.rgb = skyTonemap(skyColor.rgb);
+    // skyColor.rgb = skyTonemap(skyColor.rgb);
 
     return vec4(dirLightIntensity, 1.0f) * skyColor * skyIntensity * itvl;
 }
@@ -280,7 +280,7 @@ vec4 computeAerialPerspective(vec3 camEarthIntersection)
 
     aerialColor += scatterRayleigh;
     aerialColor += scatterMie * MieIntensity;
-    aerialColor.rgb = skyTonemap(aerialColor.rgb);
+    // aerialColor.rgb = skyTonemap(aerialColor.rgb);
 
     return vec4(dirLightIntensity, 1.0f) * aerialColor * itvl;
 }
@@ -370,7 +370,7 @@ void main()
             SkyResult += computeSkyColor();
         }
     }
-    SkyResult.rgb = clamp(SkyResult.rgb, vec3(0.0f), vec3(1.0f));
+    // SkyResult.rgb = clamp(SkyResult.rgb, vec3(0.0f), vec3(1.0f));
 
     SkyResult.rgb = clamp(SkyResult.rgb, vec3(0.0f), vec3(1.0f));
 

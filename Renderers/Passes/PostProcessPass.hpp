@@ -19,5 +19,5 @@ public:
     void contextSetup() override;
     void resize(int _width, int _height) override;
     unsigned int getTextures();
-    void render(unsigned int screenTex, unsigned int ssaoTex, unsigned int bloomTex);
+    void render(unsigned int screenTex, unsigned int ssaoTex, const std::vector<unsigned int> &bloomTexArray);
 };

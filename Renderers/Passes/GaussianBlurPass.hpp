@@ -31,6 +31,7 @@ public:
     {
         for (unsigned int i = 0; i < 2; i++)
         {
+
             glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
 
             glFramebufferTexture2D(
@@ -51,7 +52,6 @@ public:
         }
         vp_width = _width;
         vp_height = _height;
-
         pingpongTex[0].Resize(vp_width, vp_height);
         pingpongTex[1].Resize(vp_width, vp_height);
 
@@ -60,25 +60,27 @@ public:
 
     unsigned int getTextures() { return pingpongTex[1].ID; }
 
+    unsigned int getOutputFBO() { return pingpongFBO[1]; }
+
     //[in] originTex 原始Texture
     //      amount  模糊迭代次数
     //      radius  模糊半径
     void render(unsigned int originTex, int amount, float radius)
     {
         glViewport(0, 0, vp_width, vp_height);
-        // CheckGLErrors();
+
         bool horizontal = true, first_iteration = true;
         shaders.use();
 
         shaders.setUniform("radius", radius);
         shaders.setInt("width", vp_width);
         shaders.setInt("height", vp_height);
-        shaders.setTextureAuto(originTex, GL_TEXTURE_2D, 0, "image");
+        shaders.setTextureAuto(originTex, GL_TEXTURE_2D, 0, "srcTex");
 
-        for (unsigned int i = 0; i < amount; i++)
+        for (int i = 0; i < amount; i++)
         {
             glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
-            // CheckGLErrors();
+
             shaders.setInt("horizontal", horizontal);
             glBindTexture(
                 GL_TEXTURE_2D, first_iteration ? originTex : pingpongTex[!horizontal].ID); // 初次迭代使用输入BrightTex; 后续迭代使用模糊Tex
@@ -88,7 +90,7 @@ public:
 
             Renderer::DrawQuad();
         }
-        // CheckGLErrors();
+        //
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 };

@@ -14,6 +14,8 @@
 #include "Passes/BloomPass.hpp"
 #include "Passes/CubemapUnfoldPass.hpp"
 #include "Passes/SkyTexPass.hpp"
+#include "Passes/DownSamplePass.hpp"
+
 #include "../../RendererGUI.hpp"
 
 #include "../Utils/TextureLoader.hpp"
@@ -47,6 +49,7 @@ private:
     BloomPass bloomPass;
     CubemapUnfoldPass unfoldPass;
     SkyTexPass skyTexPass;
+    DownSamplePass downSamplePass;
 
     GBufferRendererGUI rendererGUI;
 
@@ -62,8 +65,8 @@ public:
           postProcessPass(PostProcessPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/postProcess.fs")),
           bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs")),
           unfoldPass(CubemapUnfoldPass(width, height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 256)),
-          skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 64))
-
+          skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 64)),
+          downSamplePass(DownSamplePass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/downSample.fs"))
     {
     }
     void reloadCurrentShaders() override
@@ -79,6 +82,7 @@ public:
         bloomPass.reloadCurrentShaders();
         unfoldPass.reloadCurrentShaders();
         skyTexPass.reloadCurrentShaders();
+        downSamplePass.reloadCurrentShaders();
         contextSetup();
     }
 
@@ -115,6 +119,7 @@ public:
         ssaoBlurPass.resize(_width, _height);
         postProcessPass.resize(_width, _height);
         bloomPass.resize(_width, _height);
+        downSamplePass.resize(_width, _height);
     }
 
     void render(RenderParameters &renderParameters) override
@@ -174,6 +179,7 @@ private:
             ssaoBlurTex = ssaoBlurPass.getTextures();
         }
         /****************************天空渲染*********************************************/
+
         skyTexPass.render(renderParameters);
         auto skyPassCubemap = skyTexPass.getCubemap();
 
@@ -198,11 +204,14 @@ private:
 
         /************************************Bloom*******************************************/
         unsigned int bloomPassTex = 0;
-
+        auto [bloomPassTex0,
+              bloomPassTex1,
+              bloomPassTex2,
+              bloomPassTex3,
+              bloomPassTex4] = bloomPass.getTextures();
         if (rendererGUI.toggleBloom)
         {
             bloomPass.render(lightPassTex);
-            bloomPassTex = bloomPass.getTextures();
         }
 
         /****************************PostProcess*********************************************/
@@ -213,7 +222,14 @@ private:
         postProcessPass.setToggle(rendererGUI.toggleVignetting, "Vignetting");
         postProcessPass.setToggle(rendererGUI.toggleBloom, "Bloom");
 
-        postProcessPass.render(lightPassTex, ssaoBlurTex, bloomPassTex);
+        postProcessPass.render(
+            lightPassTex,
+            ssaoBlurTex,
+            {bloomPassTex0,
+             bloomPassTex1,
+             bloomPassTex2,
+             bloomPassTex3,
+             bloomPassTex4});
         auto postProcessPassTex = postProcessPass.getTextures();
 
         /****************************Screen渲染*********************************************/
@@ -222,7 +238,9 @@ private:
 
         unfoldPass.render(skyPassCubemap); // 删掉这一行天空盒无法渲染 为什么?
         // auto unfoldedTex = unfoldPass.getUnfoldedCubemap();
-        rendererGUI.renderPassInspector(bloomPassTex);
+
+        // rendererGUI.renderPassInspector(bloomPassTex4);
+        rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
 
         auto renderWindowSize = rendererGUI.getRenderWindowSize();
         resize(static_cast<int>(renderWindowSize.x), static_cast<int>(renderWindowSize.y));

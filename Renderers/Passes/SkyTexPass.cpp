@@ -55,13 +55,8 @@ void SkyTexPass::render(
     auto &[allLights, cam, scene, model, window] = renderParameters;
 
     static std::vector<glm::mat4> camTransforms;
-
     glViewport(0, 0, cubemapSize, cubemapSize);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-
-    glClearColor(1.f, 0.f, 0.f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     shaders.use();
     if (!shaders.used)
         throw(std::exception("Shader failed to setup."));

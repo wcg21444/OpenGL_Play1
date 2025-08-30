@@ -597,7 +597,7 @@ vec4 computeSkyColor()
 
     skyColor += scatterRayleigh;
     skyColor += scatterMie * MieIntensity;
-    skyColor.rgb = uncharted2_tonemap(skyColor.rgb);
+    // skyColor.rgb = uncharted2_tonemap(skyColor.rgb);
 
     return vec4(dirLightIntensity[0], 1.0f) * skyColor * skyIntensity * itvl;
     // return vec4(dirLightIntensity[0], 1.0f) * skyColor * skyIntensity;
@@ -633,7 +633,7 @@ vec4 computeAerialPerspective(vec3 camEarthIntersection)
 
     aerialColor += scatterRayleigh;
     aerialColor += scatterMie * MieIntensity;
-    aerialColor.rgb = uncharted2_tonemap(aerialColor.rgb);
+    // aerialColor.rgb = uncharted2_tonemap(aerialColor.rgb);
 
     // return vec4(dirLightIntensity[0], 1.0f) * aerialColor * 2e3;
     return vec4(dirLightIntensity[0], 1.0f) * aerialColor * itvl;
@@ -649,27 +649,17 @@ vec3 computeSunlightDecay(vec3 camPos, vec3 fragDir, vec3 sunDir)
 
 vec3 generateSunDisk(vec3 camPos, vec3 fragDir, vec3 sunDir, vec3 sunIntensity, float sunSize)
 {
-    // 归一化输入向量以确保计算正确
-    vec3 normalizedFragDir = normalize(fragDir);
-    vec3 normalizedSunDir = normalize(sunDir);
 
-    sunSize *= 1e-4;
-    // 使用点积来测量两个向量之间的相似度。
-    // dot() 的结果范围是 [-1, 1]。当两个向量完全对齐时，结果为 1。
-    float dotProduct = dot(normalizedFragDir, normalizedSunDir);
-    // 如果点积大于 sunSize，说明方向足够接近太阳
-    if (dotProduct > sunSize)
-    {
-        float falloff = sunSize / (1.0 - dotProduct);
+    // 计算太阳方向和片段方向之间的余弦值
+    float exponent = 1e3; // 锐利程度
+    float sunSizeInner = 1.f - 1e-4;
+    float sunSizeOuter = 1.f - 1e-3;
 
-        // 返回太阳颜色，并乘以强度和衰减因子
-        return sunIntensity * pow(falloff, 2.0f) * sunlightDecay;
-    }
-    else
-    {
-        // 如果方向不对齐，则返回黑色
-        return vec3(0.0);
-    }
+    float sunDot = dot(normalize(fragDir), normalize(sunDir));
+    float sunSmoothstep = smoothstep(sunSizeOuter, sunSizeInner, sunDot);
+
+    // 返回太阳亮度，与透射率相乘
+    return sunIntensity * 1e2 * pow(sunSmoothstep, exponent) * sunlightDecay;
 }
 
 void initialize()

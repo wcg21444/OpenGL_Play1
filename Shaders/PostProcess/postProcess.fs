@@ -9,7 +9,11 @@ uniform sampler2D screenTex;
 /*****************SSAO输入******************************************************************/
 uniform sampler2D ssaoTex;
 /*****************Bloom输入******************************************************************/
-uniform sampler2D bloomTex;
+uniform sampler2D bloomTex0;
+uniform sampler2D bloomTex1;
+uniform sampler2D bloomTex2;
+uniform sampler2D bloomTex3;
+uniform sampler2D bloomTex4;
 
 /*****************视口大小******************************************************************/
 uniform int width = 1600;
@@ -109,6 +113,16 @@ vec3 SEUSTonemap(vec3 color)
     return color;
 }
 
+vec3 aces(vec3 col)
+{
+    float a = 2.51f;
+    float b = 0.03f;
+    float c = 2.43f;
+    float d = 0.59f;
+    float e = 0.14f;
+    return clamp((col * (a * col + b)) / (col * (c * col + d) + e), 0.0, 1.0);
+}
+
 void main()
 {
     FragColor = texture(screenTex, TexCoord);
@@ -122,11 +136,16 @@ void main()
     if (HDR == 1)
     {
         FragColor *= HDRExposure;
+        FragColor.rgb = aces(FragColor.rgb);
     }
     if (Bloom == 1)
     {
-        vec4 BloomColor = texture(bloomTex, TexCoord);
-        FragColor += BloomColor;
+        vec4 BloomColor0 = texture(bloomTex0, TexCoord);
+        vec4 BloomColor1 = texture(bloomTex1, TexCoord);
+        vec4 BloomColor2 = texture(bloomTex2, TexCoord);
+        vec4 BloomColor3 = texture(bloomTex3, TexCoord);
+        vec4 BloomColor4 = texture(bloomTex4, TexCoord);
+        FragColor += BloomColor0 + BloomColor1 + BloomColor2 + BloomColor3 + BloomColor4;
     }
 
     // Gamma 矫正
@@ -144,8 +163,6 @@ void main()
         vign = pow(vign, vignettingPower);
         FragColor *= vign;
     }
-
-    FragColor.rgb = SEUSTonemap(FragColor.rgb);
 
     /***均匀采样核*****************************************/
     // vec4 result = vec4(0.0f);
