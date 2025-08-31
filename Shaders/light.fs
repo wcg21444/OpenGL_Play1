@@ -69,6 +69,7 @@ uniform int DirShadow;
 uniform int PointShadow;
 uniform int Skybox;
 
+uniform sampler2D transmittanceLUT;
 /*******************************RayMarching输入**************************************************/
 
 /*******************************RayMarching******************************************************/
@@ -583,9 +584,9 @@ vec4 computeSkyColor()
         {
             continue; // 散射点阳光被地面阻挡
         }
-        vec4 t1 = transmittance(camPos, scatterPoint, 1.0f);                 // 摄像机到散射点的透射率
-        vec4 t2 = transmittance(scatterPoint, scatterSkyIntersection, 1.0f); // 散射点到天空边界的透射率
 
+        vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, scatterPoint);                    // 摄像机到散射点的透射率
+        vec4 t2 = getTransmittanceFromLUTSky(transmittanceLUT, earthRadius, earthRadius + skyHeight, scatterPoint, scatterSkyIntersection); // 散射点到天空边界的透射率
         scatterRayleigh += scatterCoefficientRayleigh(scatterPoint) * t1 * t2;
 
         scatterMie += scatterCoefficientMie(scatterPoint) * t1 * t2;
@@ -619,8 +620,8 @@ vec4 computeAerialPerspective(vec3 camEarthIntersection)
         {
             continue; // 散射点阳光被地面阻挡
         }
-        vec4 t1 = transmittance(camPos, scatterPoint, 1.0f);                 // 摄像机到散射点的透射率
-        vec4 t2 = transmittance(scatterPoint, scatterSkyIntersection, 1.0f); // 散射点到天空边界的透射率
+        vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, scatterPoint);                    // 摄像机到散射点的透射率
+        vec4 t2 = getTransmittanceFromLUTSky(transmittanceLUT, earthRadius, earthRadius + skyHeight, scatterPoint, scatterSkyIntersection); // 散射点到天空边界的透射率
 
         scatterRayleigh += scatterCoefficientRayleigh(scatterPoint) * t1 * t2;
 
@@ -642,7 +643,8 @@ vec4 computeAerialPerspective(vec3 camEarthIntersection)
 vec3 computeSunlightDecay(vec3 camPos, vec3 fragDir, vec3 sunDir)
 {
     vec3 skyIntersection = intersectSky(camPos, sunDir);
-    vec4 t1 = transmittance(camPos, skyIntersection, 1.0f); // 散射点到摄像机的透射率   决定天顶-地平线透射率差异
+    // vec4 t1 = transmittance(camPos, skyIntersection, 1.0f); // 散射点到摄像机的透射率   决定天顶-地平线透射率差异
+    vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, skyIntersection);
 
     return t1.rgb;
 }
@@ -701,6 +703,7 @@ void main()
                 LightResult = computeAerialPerspective(camEarthIntersection);
 
                 vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
+                // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);// TODO: 修复近地面错误
 
                 // 渲染地面
                 vec3 normal = normalize(camEarthIntersection - earthCenter);
@@ -720,6 +723,7 @@ void main()
                 LightResult = computeAerialPerspective(camEarthIntersection);
 
                 vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
+                // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);
 
                 // 渲染地面
                 vec3 normal = normalize(camEarthIntersection - earthCenter);

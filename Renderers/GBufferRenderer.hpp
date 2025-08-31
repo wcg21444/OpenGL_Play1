@@ -49,7 +49,7 @@ private:
     BloomPass bloomPass;
     CubemapUnfoldPass unfoldPass;
     SkyTexPass skyTexPass;
-    DownSamplePass downSamplePass;
+    TransmittanceLUTPass transmittanceLUTPass;
 
     GBufferRendererGUI rendererGUI;
 
@@ -66,7 +66,7 @@ public:
           bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs")),
           unfoldPass(CubemapUnfoldPass(width, height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 256)),
           skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 64)),
-          downSamplePass(DownSamplePass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/downSample.fs"))
+          transmittanceLUTPass(TransmittanceLUTPass(128, 32, "Shaders/screenQuad.vs", "Shaders/SkyTexPass/transmittanceLUT.fs"))
     {
     }
     void reloadCurrentShaders() override
@@ -82,7 +82,7 @@ public:
         bloomPass.reloadCurrentShaders();
         unfoldPass.reloadCurrentShaders();
         skyTexPass.reloadCurrentShaders();
-        downSamplePass.reloadCurrentShaders();
+        transmittanceLUTPass.reloadCurrentShaders();
         contextSetup();
     }
 
@@ -119,7 +119,6 @@ public:
         ssaoBlurPass.resize(_width, _height);
         postProcessPass.resize(_width, _height);
         bloomPass.resize(_width, _height);
-        downSamplePass.resize(_width, _height);
     }
 
     void render(RenderParameters &renderParameters) override
@@ -179,8 +178,9 @@ private:
             ssaoBlurTex = ssaoBlurPass.getTextures();
         }
         /****************************天空渲染*********************************************/
-
-        skyTexPass.render(renderParameters);
+        transmittanceLUTPass.render();
+        auto transmittanceLUTTex = transmittanceLUTPass.getTextures();
+        skyTexPass.render(renderParameters, transmittanceLUTTex);
         auto skyPassCubemap = skyTexPass.getCubemap();
 
         /****************************光照渲染*********************************************/
@@ -199,6 +199,7 @@ private:
                          gNormal,
                          gAlbedoSpec,
                          skyPassCubemap,
+                         transmittanceLUTTex,
                          pointShadowPass.farPlane);
         auto lightPassTex = lightPass.getTextures();
 
@@ -240,7 +241,8 @@ private:
         // auto unfoldedTex = unfoldPass.getUnfoldedCubemap();
 
         // rendererGUI.renderPassInspector(bloomPassTex4);
-        rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
+        // rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
+        rendererGUI.renderPassInspector(transmittanceLUTTex);
 
         auto renderWindowSize = rendererGUI.getRenderWindowSize();
         resize(static_cast<int>(renderWindowSize.x), static_cast<int>(renderWindowSize.y));

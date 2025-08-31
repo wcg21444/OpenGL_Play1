@@ -61,9 +61,9 @@ public:
 class PostProcessShaderUI
 {
 public:
-    float gamma = 1.8f;
-    float HDRExposure = 1.7f;
-    float vignettingStrength = 1.3f;
+    float gamma = 2.2f;
+    float HDRExposure = 1.1f;
+    float vignettingStrength = 2.7f;
     float vignettingPower = 0.1f;
     void render()
     {

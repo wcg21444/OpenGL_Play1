@@ -49,7 +49,8 @@ inline void SkyTexPass::resize(int _width, int _height)
 
 // 输入光源的Tex对象,绑定Tex对象到FBO,结果输出到Tex.
 void SkyTexPass::render(
-    RenderParameters &renderParameters)
+    RenderParameters &renderParameters,
+    unsigned int transmittanceLUT)
 {
 
     auto &[allLights, cam, scene, model, window] = renderParameters;
@@ -65,6 +66,7 @@ void SkyTexPass::render(
         cam.setCubemapViewMatrix(shaders, i);
         auto cubemapProjection = glm::perspective(glm::radians(90.0f), 1.0f, nearPlane, farPlane);
         shaders.setMat4("projection", cubemapProjection);
+        shaders.setTextureAuto(transmittanceLUT, GL_TEXTURE_2D, 0, "transmittanceLUT");
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, skyCubemapTex, 0);
         Renderer::DrawSphere();
@@ -104,4 +106,31 @@ void SkyTexPass::render(
 unsigned int SkyTexPass::getCubemap()
 {
     return skyCubemapTex;
+}
+
+void TransmittanceLUTPass::render()
+{
+    glViewport(0, 0, vp_width, vp_height);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+    shaders.use();
+
+    shaders.setInt("width", vp_width);
+    shaders.setInt("height", vp_height);
+
+    shaders.setFloat("skyHeight", SkyGUI::skyHeight);
+    shaders.setFloat("earthRadius", SkyGUI::earthRadius);
+    shaders.setFloat("skyIntensity", SkyGUI::skyIntensity);
+    shaders.setInt("maxStep", SkyGUI::maxStep);
+    shaders.setFloat("HRayleigh", SkyGUI::HRayleigh);
+    shaders.setFloat("HMie", SkyGUI::HMie);
+    shaders.setFloat("atmosphereDensity", SkyGUI::atmosphereDensity);
+    shaders.setFloat("MieDensity", SkyGUI::MieDensity);
+    shaders.setFloat("gMie", SkyGUI::gMie);
+    shaders.setFloat("absorbMie", SkyGUI::absorbMie);
+    shaders.setFloat("MieIntensity", SkyGUI::MieIntensity);
+    shaders.setUniform("betaMie", SkyGUI::betaMie);
+
+    Renderer::DrawQuad();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

@@ -30,5 +30,6 @@ public:
                 unsigned int gNormal,
                 unsigned int gAlbedoSpec,
                 unsigned int skybox,
+                unsigned int transmittanceLUT,
                 float pointLightFar);
 };

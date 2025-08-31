@@ -44,6 +44,7 @@ void LightPass::render(RenderParameters &renderParameters,
                        unsigned int gNormal,
                        unsigned int gAlbedoSpec,
                        unsigned int skybox,
+                       unsigned int transmittanceLUT,
                        float pointLightFar)
 {
 
@@ -129,6 +130,8 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setFloat("absorbMie", SkyGUI::absorbMie);
     shaders.setFloat("MieIntensity", SkyGUI::MieIntensity);
     shaders.setUniform("betaMie", SkyGUI::betaMie);
+    shaders.setTextureAuto(transmittanceLUT, GL_TEXTURE_2D, 0, "transmittanceLUT");
+
     SkyGUI::render();
 
     /****************************************采样器设置**************************************************/
