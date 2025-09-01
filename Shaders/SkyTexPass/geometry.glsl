@@ -1,4 +1,6 @@
 #define NO_INTERSECTION vec3(1.0f / 0.0f)
+const float PI = 3.1415926535;
+vec3 earthCenter;
 
 vec3 intersectSky(vec3 ori, vec3 dir) {
     float kAtmosphereRadius = earthRadius + skyHeight;
@@ -158,7 +160,7 @@ void MuRToRay(vec2 MuR, float earthRadius, out vec3 ori, out vec3 dir) {
 vec4 getTransmittanceFromLUT(sampler2D LUT, float earthRadius, float skyRadius, vec3 ori, vec3 end) {
     vec3 dir = normalize(ori - end);
     vec3 n = normalize(ori - vec3(0.0f, -earthRadius, 0.0f));
-    vec3 earthIntersection = intersectEarth(ori, -dir) ;
+    vec3 earthIntersection = intersectEarth(ori, -dir);
     int hitEarth = 0;
 
     if (earthIntersection != NO_INTERSECTION) {
@@ -169,11 +171,11 @@ vec4 getTransmittanceFromLUT(sampler2D LUT, float earthRadius, float skyRadius, 
     if (hitEarth == 1) {
         MuR_ori = rayToMuR(earthRadius, skyRadius, ori, 2 * ori - end);
         MuR_end = rayToMuR(earthRadius, skyRadius, end, ori);
-        float bias = 0.3f;//加上这个magic bias 近地面透射率的artifcat减少了
-        MuR_end.y+=bias;
+        float bias = 0.3f; // 加上这个magic bias 近地面透射率的artifcat减少了
+        MuR_end.y += bias;
     }
     else {
-        MuR_ori = rayToMuR(earthRadius, skyRadius, ori, end);//高空地平线走样严重
+        MuR_ori = rayToMuR(earthRadius, skyRadius, ori, end); // 高空地平线走样严重
         MuR_end = rayToMuR(earthRadius, skyRadius, end, 2 * end - ori);
     }
     vec4 tori = texture(LUT, transmittanceUVMapping(earthRadius, skyRadius, MuR_ori.x, MuR_ori.y));

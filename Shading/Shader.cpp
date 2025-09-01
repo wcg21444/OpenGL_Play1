@@ -1,5 +1,6 @@
 #include "Shader.hpp"
 #include "ShaderIncludes.hpp"
+#include "../utils/Utils.hpp"
 
 // 构造函数
 Shader::Shader() : location_ID(0), progrm_ID(0) {}
@@ -12,14 +13,16 @@ Shader::Shader(const char *vs_path, const char *fs_path, const char *gs_path) : 
     bool hasGS = gs_path && gs_path[0] != '\0';
 
     std::string shader_buf;
-    unsigned int vertexShader, fragmentShader, geometryShader;
+    unsigned int vertexShader = 0;
+    unsigned int fragmentShader = 0;
+    unsigned int geometryShader = 0;
 
     // Config Vertex Shader
     try
     {
         shader_buf = loadShaderFile(vs_path);
         const char *vertexShaderSource = shader_buf.c_str();
-        compileShader(vertexShaderSource, GL_VERTEX_SHADER, vertexShader);
+        compileShader(vertexShaderSource, GL_VERTEX_SHADER, vertexShader, vs_path);
     }
     catch (const std::exception &e)
     {
@@ -31,7 +34,7 @@ Shader::Shader(const char *vs_path, const char *fs_path, const char *gs_path) : 
     {
         shader_buf = loadShaderFile(fs_path);
         const char *fragmentShaderSource = shader_buf.c_str();
-        compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER, fragmentShader);
+        compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER, fragmentShader, fs_path);
     }
     catch (const std::exception &e)
     {
@@ -45,7 +48,7 @@ Shader::Shader(const char *vs_path, const char *fs_path, const char *gs_path) : 
         {
             shader_buf = loadShaderFile(gs_path);
             const char *geometryShadersource = shader_buf.c_str();
-            compileShader(geometryShadersource, GL_GEOMETRY_SHADER, geometryShader);
+            compileShader(geometryShadersource, GL_GEOMETRY_SHADER, geometryShader, gs_path);
         }
         catch (const std::exception &e)
         {
@@ -53,36 +56,7 @@ Shader::Shader(const char *vs_path, const char *fs_path, const char *gs_path) : 
         }
     }
 
-    // Cofig Shader Program
-    progrm_ID = glCreateProgram();
-    glAttachShader(progrm_ID, vertexShader);
-    glAttachShader(progrm_ID, fragmentShader);
-    if (hasGS)
-    {
-        glAttachShader(progrm_ID, geometryShader);
-    }
-    glLinkProgram(progrm_ID);
-
-    int success;
-    char infoLog[512];
-    glGetProgramiv(progrm_ID, GL_LINK_STATUS, &success);
-    if (!success)
-    {
-        glGetProgramInfoLog(progrm_ID, 512, NULL, infoLog);
-        std::cerr << "VS : " << std::string(vs_path) << "FS : " << std::string(fs_path) << std::endl
-                  << "ERROR::SHADER::PROGRAM::LINK_FAILED\n"
-                  << infoLog << std::endl;
-
-        throw std::runtime_error("Shader program link failed.");
-    }
-
-    // Delete our used Shaders
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    if (hasGS)
-    {
-        glDeleteShader(geometryShader);
-    }
+    progrm_ID = linkShader(vertexShader, fragmentShader, geometryShader, hasGS);
 }
 
 // 析构函数
@@ -170,7 +144,7 @@ GLint Shader::getUniformLocationSafe(const std::string &name)
     return location;
 }
 
-void Shader::compileShader(const char *shader_source, GLenum shader_type, unsigned int &shader_id)
+void Shader::compileShader(const char *shader_source, GLenum shader_type, unsigned int &shader_id, const char *path)
 {
     shader_id = glCreateShader(shader_type);
     glShaderSource(shader_id, 1, &shader_source, NULL);
@@ -181,13 +155,50 @@ void Shader::compileShader(const char *shader_source, GLenum shader_type, unsign
     glGetShaderiv(shader_id, GL_COMPILE_STATUS, &success);
     if (!success)
     {
+        DebugOutput::ExportShaderSource("shaderLogs/" + Utils::GetFilenameNoExtension(path) + "_shaderDump.glsl", shader_source); // Dump 编译失败的着色器文件
         glGetShaderInfoLog(shader_id, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::COMPILATION_FAILED (" << shader_type << ")\n"
                   << infoLog << std::endl;
+        glDeleteShader(shader_id); // 释放GL资源
         throw std::runtime_error("Failed to compile shader.");
     }
 }
 
+unsigned int Shader::linkShader(unsigned int vertexShader, unsigned int fragmentShader, unsigned int geometryShader, bool hasGS)
+{
+    // Cofig Shader Program
+    unsigned int progrm_ID = glCreateProgram();
+    glAttachShader(progrm_ID, vertexShader);
+    glAttachShader(progrm_ID, fragmentShader);
+    if (hasGS)
+    {
+        glAttachShader(progrm_ID, geometryShader);
+    }
+    glLinkProgram(progrm_ID);
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    if (hasGS)
+    {
+        glDeleteShader(geometryShader);
+    }
+
+    int success;
+    char infoLog[512];
+    glGetProgramiv(progrm_ID, GL_LINK_STATUS, &success);
+    if (!success)
+    {
+        glGetProgramInfoLog(progrm_ID, 512, NULL, infoLog);
+        glDeleteProgram(progrm_ID);
+
+        std::cerr << "VS : " << std::string(vs_path) << "FS : " << std::string(fs_path) << std::endl
+                  << "ERROR::SHADER::PROGRAM::LINK_FAILED\n"
+                  << infoLog << std::endl;
+
+        throw std::runtime_error("Shader program link failed.");
+    }
+    return progrm_ID;
+}
 // Uniform 设置方法实现
 void Shader::setUniform4fv(const std::string &name, GLsizei count, const float *value)
 {

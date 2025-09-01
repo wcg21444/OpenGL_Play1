@@ -73,7 +73,7 @@ uniform sampler2D transmittanceLUT;
 /*******************************RayMarching输入**************************************************/
 
 /*******************************RayMarching******************************************************/
-
+#include "Raymarching/raymarching.glsl"
 vec3 fragViewSpaceDir(vec2 uv)
 {
     vec3 dir = vec3(uv - vec2(0.5f, 0.5f), 0.f);
@@ -84,221 +84,6 @@ vec3 fragViewSpaceDir(vec2 uv)
     return dir;
 }
 
-bool isPointInBox(vec3 testPoint, vec3 boxMin, vec3 boxMax)
-{
-    return testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
-           testPoint.z < boxMax.z && testPoint.z > boxMin.z &&
-           testPoint.y < boxMax.y && testPoint.y > boxMin.y;
-}
-vec2 rayBoxDst(vec3 boundsMin, vec3 boundsMax, vec3 rayOrigin, vec3 invRaydir)
-{
-    vec3 t0 = (boundsMin - rayOrigin) * invRaydir;
-    vec3 t1 = (boundsMax - rayOrigin) * invRaydir;
-    vec3 tmin = min(t0, t1);
-    vec3 tmax = max(t0, t1);
-
-    float dstA = max(max(tmin.x, tmin.y), tmin.z); // 进入点
-    float dstB = min(tmax.x, min(tmax.y, tmax.z)); // 出去点
-
-    float dstToBox = max(0, dstA);
-    float dstInsideBox = max(0, dstB - dstToBox);
-    return vec2(dstToBox, dstInsideBox);
-}
-
-vec4 lightMarching(
-    vec3 startPoint,
-    vec3 direction,
-    float depthLimit,
-    vec3 boxMin,
-    vec3 boxMax)
-{
-    vec3 testPoint = startPoint;
-
-    float interval = 0.1; // 每次步进间隔
-    float intensity = 0.01 * interval;
-
-    int hit = 0;
-    float sum = 0.0;
-    for (int i = 0; i < 8; ++i)
-    {
-        // 步进总长度
-        if (i * interval > depthLimit)
-        {
-            break;
-        }
-        testPoint += direction * interval;
-
-        // 光线在体积内行进
-        if (isPointInBox(testPoint, boxMin, boxMax))
-        {
-            hit = 1;
-
-            sum += intensity / depthLimit;
-        }
-    }
-    return -sum * vec4(dirLightIntensity[0] / length(dirLightIntensity[0]), 1.0f) / 1;
-}
-
-vec4 computeCloudRayMarching(
-    vec3 startPoint,
-    vec3 direction,
-    float depthLimit,
-    vec3 boxMin,
-    vec3 boxMax,
-    vec4 color)
-{
-    vec3 testPoint = startPoint;
-
-    float interval = 0.01; // 每次步进间隔
-    float intensity = 0.1 * interval;
-
-    float density = 0.2;
-
-    int hit = 0;
-    float sum = 0.0;
-    for (int i = 0; i < 256; ++i)
-    {
-        // 步进总长度
-        if (i * interval > depthLimit)
-        {
-            break;
-        }
-        testPoint += direction * interval;
-
-        // 光线在体积内行进
-        if (isPointInBox(testPoint, boxMin, boxMax))
-        {
-            hit = 1;
-            sum += intensity;
-            sum *= exp(density * interval);
-
-            // vec3 lightDir = pointLightPos[0]-testPoint;
-            vec3 lightDir = normalize(dirLightPos[0]);
-            float limit = rayBoxDst(boxMin, boxMax, testPoint, 1 / lightDir).y;
-
-            color += lightMarching(testPoint, lightDir, limit, boxMin, boxMax);
-        }
-    }
-    if (hit == 0)
-    {
-        return vec4(0.0f);
-    }
-
-    return sum * color;
-}
-vec4 cloudRayMarching(
-    vec3 startPoint,
-    vec3 direction,
-    vec3 fragPos,
-    vec3 boxMin,
-    vec3 boxMax,
-    vec4 color)
-{
-    vec2 rst = rayBoxDst(boxMin, boxMax, startPoint, 1.0 / direction);
-    float boxDepth = rst.x;
-    float boxInsideDepth = rst.y;
-
-    float fragDepth = length(fragPos - startPoint);
-    // skybox
-    if (length(fragPos) == 0)
-    {
-        fragDepth = 10000000.f;
-    }
-
-    if (fragDepth < boxDepth)
-    {
-        // 物体阻挡Box
-        return vec4(0.f);
-    }
-    float depthLimit;
-    if ((fragDepth - boxDepth) < boxInsideDepth)
-    {
-        // 物体嵌入box,步进深度限制减小
-        depthLimit = fragDepth - boxDepth;
-    }
-    else
-    {
-        depthLimit = boxInsideDepth;
-    }
-    return computeCloudRayMarching(startPoint + direction * rst.x, direction, depthLimit, boxMin, boxMax, color);
-}
-/*********************************LightVolume******************************************************/
-vec4 computeLightVolumeRayMarching(
-    vec3 startPoint,
-    vec3 direction,
-    float depthLimit,
-    vec3 boxMin,
-    vec3 boxMax,
-    vec4 color)
-{
-    vec3 testPoint = startPoint;
-    float sum = 0.0;
-    float interval = 0.01; // 每次步进间隔
-    float intensity = 1.5 * interval;
-    float density = 0.1f;
-    for (int i = 0; i < 1024; ++i)
-    {
-        // 步进总长度
-        if (i * interval > depthLimit)
-        {
-            break;
-        }
-        testPoint += direction * interval;
-        if (testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
-            testPoint.z < boxMax.z && testPoint.z > boxMin.z &&
-            testPoint.y < boxMax.y && testPoint.y > boxMin.y)
-            sum += intensity;
-        sum *= exp(-density * interval);
-    }
-    return sum * color;
-}
-vec4 lightVolumeRayMarching(
-    vec3 startPoint,
-    vec3 direction,
-    vec3 fragPos,
-    vec3 boxMin,
-    vec3 boxMax,
-    vec4 color)
-{
-    vec2 rst = rayBoxDst(boxMin, boxMax, startPoint, 1.0 / direction);
-    float boxDepth = rst.x;
-    float boxInsideDepth = rst.y;
-
-    float fragDepth = length(fragPos - startPoint);
-    // skybox
-    if (length(fragPos) == 0)
-    {
-        fragDepth = 10000000.f;
-    }
-
-    if (fragDepth < boxDepth)
-    {
-        // 物体阻挡Box
-        return vec4(0.f);
-    }
-    float depthLimit;
-    if ((fragDepth - boxDepth) < boxInsideDepth)
-    {
-        // 物体嵌入box,步进深度限制减小
-        depthLimit = fragDepth - boxDepth;
-    }
-    else
-    {
-        depthLimit = boxInsideDepth;
-    }
-    return computeLightVolumeRayMarching(startPoint + direction * rst.x, direction, depthLimit, boxMin, boxMax, color);
-}
-
-vec4 lightVolume(
-    vec3 startPoint,
-    vec3 direction,
-    vec3 fragPos,
-    vec3 boxMin,
-    vec3 boxMax,
-    vec4 color)
-{
-    return lightVolumeRayMarching(startPoint, direction, fragPos, boxMin, boxMax, color);
-}
 /*******************************Lighting******************************************************/
 
 vec3 sampleSkybox(vec2 uv, samplerCube _skybox)
@@ -528,14 +313,8 @@ vec3 pointLightSpec(vec3 fragPos, vec3 n)
 }
 
 /*****************************天空大气计算********************************************************** */
-const float PI = 3.1415926535;
-const vec4 betaRayleigh = vec4(5.8e-6, 1.35e-5, 3.31e-5, 1.0f); // 散射率(波长/RGB)
+
 uniform vec4 betaMie = vec4(21e-6, 21e-6, 21e-6, 1.0f);
-vec3 camDir = vec3(0.f);
-vec3 camPos = vec3(0.f);
-vec3 sunDir = vec3(0.f);
-vec3 earthCenter;
-float itvl;
 uniform int maxStep;
 uniform float atmosphereDensity; // 大气密度
 uniform float MieDensity;
@@ -550,124 +329,7 @@ uniform float HMie;
 
 #include "SkyTexPass/geometry.glsl"
 #include "SkyTexPass/scatter.glsl"
-
-vec3 uncharted2_tonemap(vec3 color)
-{
-    float A = 0.15;
-    float B = 0.50;
-    float C = 0.20;
-    float D = 0.20;
-    float E = 0.02;
-    float F = 0.30;
-    float W = 11.2; // white point
-    return ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
-}
-
-vec4 computeSkyColor()
-{
-    vec4 skyColor;
-    vec4 scatterRayleigh = vec4(0.0f);
-    vec4 scatterMie = vec4(0.0f);
-
-    vec3 camSkyIntersection = intersectSky(camPos, camDir); // 摄像机视线与天空交点
-    itvl = length(camSkyIntersection - camPos) / float(maxStep);
-    for (int i = 0; i < maxStep; ++i)
-    {
-        if (camSkyIntersection == NO_INTERSECTION)
-        {
-            return vec4(0.000f); // 散射点阳光被地面阻挡
-        }
-        vec3 scatterPoint = camPos + i * itvl * camDir;
-        vec3 scatterSkyIntersection = intersectSky(scatterPoint, sunDir);     // 散射点与天空交点
-        vec3 scatterEarthIntersection = intersectEarth(scatterPoint, sunDir); // 散射点与地面交点
-        if (scatterEarthIntersection != NO_INTERSECTION && length(scatterEarthIntersection - scatterPoint) < length(scatterSkyIntersection - scatterPoint))
-        {
-            continue; // 散射点阳光被地面阻挡
-        }
-        // vec4 t1 = transmittance(camPos, scatterPoint, 1.0f);                 // 摄像机到散射点的透射率
-        // vec4 t2 = transmittance(scatterPoint, scatterSkyIntersection, 1.0f); // 散射点到天空边界的透射率
-
-        vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, scatterPoint);                    // 摄像机到散射点的透射率
-        vec4 t2 = getTransmittanceFromLUTSky(transmittanceLUT, earthRadius, earthRadius + skyHeight, scatterPoint, scatterSkyIntersection); // 散射点到天空边界的透射率
-        scatterRayleigh += scatterCoefficientRayleigh(scatterPoint) * t1 * t2;
-
-        scatterMie += scatterCoefficientMie(scatterPoint) * t1 * t2;
-    }
-
-    scatterRayleigh *= phaseRayleigh(camDir, sunDir);
-
-    scatterMie *= phaseMie(camDir, sunDir);
-
-    skyColor += scatterRayleigh;
-    skyColor += scatterMie * MieIntensity;
-    // skyColor.rgb = uncharted2_tonemap(skyColor.rgb);
-
-    return vec4(dirLightIntensity[0], 1.0f) * skyColor * skyIntensity * itvl;
-    // return vec4(dirLightIntensity[0], 1.0f) * skyColor * skyIntensity;
-}
-
-vec4 computeAerialPerspective(vec3 camEarthIntersection)
-{
-    vec4 aerialColor;
-    vec4 scatterRayleigh = vec4(0.0f);
-    vec4 scatterMie = vec4(0.0f);
-    vec4 t1 = vec4(1.0f);
-    itvl = length(camEarthIntersection - camPos) / float(maxStep);
-    for (int i = 0; i < maxStep; ++i)
-    {
-        vec3 scatterPoint = camPos + i * itvl * camDir;
-        vec3 scatterSkyIntersection = intersectSky(scatterPoint, sunDir);     // 散射点与天空交点
-        vec3 scatterEarthIntersection = intersectEarth(scatterPoint, sunDir); // 散射点与地面交点
-        if (scatterEarthIntersection != NO_INTERSECTION && length(scatterEarthIntersection - scatterPoint) < length(scatterSkyIntersection - scatterPoint))
-        {
-            continue; // 散射点阳光被地面阻挡
-        }
-        vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, scatterPoint);                    // 摄像机到散射点的透射率
-        vec4 t2 = getTransmittanceFromLUTSky(transmittanceLUT, earthRadius, earthRadius + skyHeight, scatterPoint, scatterSkyIntersection); // 散射点到天空边界的透射率
-
-        // vec4 t1 = transmittance(camPos, scatterPoint, 1.0f);                 // 摄像机到散射点的透射率
-        // vec4 t2 = transmittance(scatterPoint, scatterSkyIntersection, 1.0f); // 散射点到天空边界的透射率
-
-        scatterRayleigh += scatterCoefficientRayleigh(scatterPoint) * t1 * t2;
-
-        scatterMie += scatterCoefficientMie(scatterPoint) * t1 * t2;
-    }
-
-    scatterRayleigh *= phaseRayleigh(camDir, sunDir);
-
-    scatterMie *= phaseMie(camDir, sunDir);
-
-    aerialColor += scatterRayleigh;
-    aerialColor += scatterMie * MieIntensity;
-    // aerialColor.rgb = uncharted2_tonemap(aerialColor.rgb);
-
-    // return vec4(dirLightIntensity[0], 1.0f) * aerialColor * 2e3;
-    return vec4(dirLightIntensity[0], 1.0f) * aerialColor * itvl;
-}
-
-vec3 computeSunlightDecay(vec3 camPos, vec3 fragDir, vec3 sunDir)
-{
-    vec3 skyIntersection = intersectSky(camPos, sunDir);
-    // vec4 t1 = transmittance(camPos, skyIntersection, 1.0f); // 散射点到摄像机的透射率   决定天顶-地平线透射率差异
-    vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, skyIntersection);
-
-    return t1.rgb;
-}
-
-vec3 generateSunDisk(vec3 camPos, vec3 fragDir, vec3 sunDir, vec3 sunIntensity, float sunSize)
-{
-
-    // 计算太阳方向和片段方向之间的余弦值
-    float exponent = 1e3; // 锐利程度
-    float sunSizeInner = 1.f - 1e-4;
-    float sunSizeOuter = 1.f - 1e-3;
-
-    float sunDot = dot(normalize(fragDir), normalize(sunDir));
-    float sunSmoothstep = smoothstep(sunSizeOuter, sunSizeInner, sunDot);
-
-    // 返回太阳亮度，与透射率相乘
-    return sunIntensity * 1e2 * pow(sunSmoothstep, exponent) * sunlightDecay;
-}
+#include "SkyTexPass/skyAtmosphere.glsl"
 
 void initialize()
 {
@@ -705,7 +367,7 @@ void main()
             else
             {
                 // 击中地球,渲染大气透视
-                LightResult = computeAerialPerspective(camEarthIntersection);
+                LightResult = computeAerialPerspective(camEarthIntersection, dirLightIntensity[0]);
 
                 vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f); // 走样
                                                                              // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection); // TODO: 修复近地面错误
@@ -729,7 +391,7 @@ void main()
             {
 
                 // 击中地球,渲染大气透视
-                LightResult = computeAerialPerspective(camEarthIntersection);
+                LightResult = computeAerialPerspective(camEarthIntersection, dirLightIntensity[0]);
 
                 vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f); // 走样
                 // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);
@@ -748,7 +410,7 @@ void main()
                 }
                 else
                 {
-                    LightResult += computeSkyColor();
+                    LightResult += computeSkyColor(dirLightIntensity[0]);
                 }
             }
         }
@@ -786,7 +448,7 @@ void main()
         }
         vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, FragPos);
         LightResult *= t1;
-        LightResult += computeAerialPerspective(FragPos);
+        LightResult += computeAerialPerspective(FragPos, dirLightIntensity[0]);
     }
 
     const vec3 BoxMin = vec3(2.0f, -2.0f, -2.0f);

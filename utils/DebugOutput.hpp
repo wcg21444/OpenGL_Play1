@@ -7,6 +7,8 @@
 #include <format>  // C++20
 #include <chrono>
 
+#include "Utils.hpp"
+
 /**
  * @brief 获取当前时间的格式化字符串
  * @return 格式化后的时间字符串
@@ -52,8 +54,28 @@ public:
      */
     static void Draw(const char *title = "Debug Output", bool *p_open = nullptr);
 
+    static void ExportShaderSource(const std::string &filename, const std::string &source)
+    {
+        // 尝试创建父目录。如果失败，立即返回。
+        if (!Utils::CreateParentDirectories(filename))
+        {
+            std::cerr << "Cannot export shader source due to directory creation failure." << std::endl;
+            return;
+        }
+        std::ofstream file(filename);
+        if (file.is_open())
+        {
+            file << source;
+            file.close();
+            std::cerr << "Shader source exported to " << filename << std::endl;
+        }
+        else
+        {
+            std::cerr << "Failed to export shader source to " << filename << std::endl;
+        }
+    }
+
 private:
-    // C++17 或更高版本中，使用 inline 关键字允许在头文件中定义静态成员变量。
     inline static std::vector<std::string> s_logs;
     inline static bool s_autoScroll = true;
 };

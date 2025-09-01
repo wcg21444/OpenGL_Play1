@@ -33,7 +33,8 @@ public:
 private:
     std::string loadShaderFile(const char *shader_path);
     GLint getUniformLocationSafe(const std::string &name);
-    void compileShader(const char *shader_source, GLenum shader_type, unsigned int &shader_id);
+    void compileShader(const char *shader_source, GLenum shader_type, unsigned int &shader_id, const char *path);
+    unsigned int linkShader(unsigned int vertexShader, unsigned int fragmentShader, unsigned int geometryShader, bool hasGS);
 
 public:
     // 构造函数

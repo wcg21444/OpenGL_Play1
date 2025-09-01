@@ -1,4 +1,4 @@
-
+const vec4 betaRayleigh = vec4(5.8e-6, 1.35e-5, 3.31e-5, 1.0f); // 散射率(波长/RGB)
 float phaseRayleigh(vec3 _camRayDir, vec3 _sunDir) {
     float cosine = dot(_camRayDir, _sunDir) / length(_camRayDir) / length(_sunDir);
     return 3.0f / 16.0f * PI * (1 + cosine * cosine);
