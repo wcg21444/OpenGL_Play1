@@ -100,7 +100,7 @@ public:
 
     float nearPlane;
     float farPlane;
-    float ortho_scale;
+    float orthoScale;
 
     glm::mat4 lightSpaceMatrix;
 

@@ -135,10 +135,9 @@ vec2 transmittanceUVInverseMapping(float earthRadius, float skyRadius, vec2 uv) 
     return vec2(mu, r);
 }
 vec2 rayToMuR(float earthRadius, float skyRadius, vec3 ori, vec3 end) {
-    vec3 center = vec3(0.0, -earthRadius, 0.0);
-    float R = length(ori - center);
+    float R = length(ori - earthCenter);
 
-    vec3 n = normalize(ori - center);
+    vec3 n = normalize(ori - earthCenter);
 
     vec3 dir = normalize(end - ori);
 
@@ -159,7 +158,7 @@ void MuRToRay(vec2 MuR, float earthRadius, out vec3 ori, out vec3 dir) {
 // 从LUT获取两点透射率
 vec4 getTransmittanceFromLUT(sampler2D LUT, float earthRadius, float skyRadius, vec3 ori, vec3 end) {
     vec3 dir = normalize(ori - end);
-    vec3 n = normalize(ori - vec3(0.0f, -earthRadius, 0.0f));
+    vec3 n = normalize(ori - earthCenter);
     vec3 earthIntersection = intersectEarth(ori, -dir);
     int hitEarth = 0;
 
@@ -189,7 +188,7 @@ vec4 getTransmittanceFromLUT(sampler2D LUT, float earthRadius, float skyRadius, 
 // 从LUT获取起点到天空透射率
 vec4 getTransmittanceFromLUTSky(sampler2D LUT, float earthRadius, float skyRadius, vec3 ori, vec3 skyIntersection) {
     vec3 dir = normalize(ori - skyIntersection);
-    vec3 n = normalize(ori - vec3(0.0f, -earthRadius, 0.0f));
+    vec3 n = normalize(ori - earthCenter);
 
     vec2 MuR_ori = rayToMuR(earthRadius, skyRadius, ori, skyIntersection);
     vec4 tori = texture(LUT, transmittanceUVMapping(earthRadius, skyRadius, MuR_ori.x, MuR_ori.y));

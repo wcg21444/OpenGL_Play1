@@ -3,6 +3,16 @@
 out vec4 LightResult;
 in vec2 TexCoord;
 
+struct DirLight
+{
+    vec3 pos;
+    vec3 intensity;
+    mat4 spaceMatrix;
+    sampler2D depthMap;
+    float farPlane;
+    float orthoScale;
+};
+
 /*****************视口大小******************************************************************/
 uniform int width = 1600;
 uniform int height = 900;
@@ -27,10 +37,8 @@ uniform float pointLightFar;
 /*****************定向光源设置******************************************************************/
 const int MAX_DIR_LIGHTS = 5; // Maximum number of lights supported
 uniform int numDirLights;     // actual number of lights used
-uniform sampler2D dirDepthMap[MAX_DIR_LIGHTS];
-uniform vec3 dirLightPos[MAX_DIR_LIGHTS];
-uniform vec3 dirLightIntensity[MAX_DIR_LIGHTS];
-uniform mat4 dirLightSpaceMatrix[MAX_DIR_LIGHTS];
+
+uniform DirLight dirLightArray[MAX_DIR_LIGHTS];
 
 vec3 sunlightDecay;
 /*****************阴影采样设置******************************************************************/
@@ -69,438 +77,6 @@ uniform int DirShadow;
 uniform int PointShadow;
 uniform int Skybox;
 
-// uniform sampler2D transmittanceLUT;
-/*******************************RayMarching输入**************************************************/
-
-/*******************************RayMarching******************************************************/
-bool isPointInBox(vec3 testPoint, vec3 boxMin, vec3 boxMax) {
-    return testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
-    testPoint.z < boxMax.z && testPoint.z > boxMin.z &&
-    testPoint.y < boxMax.y && testPoint.y > boxMin.y;
-}
-vec2 rayBoxDst(vec3 boundsMin, vec3 boundsMax, vec3 rayOrigin, vec3 invRaydir) {
-    vec3 t0 = (boundsMin - rayOrigin) * invRaydir;
-    vec3 t1 = (boundsMax - rayOrigin) * invRaydir;
-    vec3 tmin = min(t0, t1);
-    vec3 tmax = max(t0, t1);
-
-    float dstA = max(max(tmin.x, tmin.y), tmin.z); // 进入点
-    float dstB = min(tmax.x, min(tmax.y, tmax.z)); // 出去点
-
-    float dstToBox = max(0, dstA);
-    float dstInsideBox = max(0, dstB - dstToBox);
-    return vec2(dstToBox, dstInsideBox);
-}
-
-vec4 lightMarching(
-    vec3 startPoint,
-    vec3 direction,
-    float depthLimit,
-    vec3 boxMin,
-    vec3 boxMax) {
-    vec3 testPoint = startPoint;
-
-    float interval = 0.1; // 每次步进间隔
-    float intensity = 0.01 * interval;
-
-    int hit = 0;
-    float sum = 0.0;
-    for (int i = 0; i < 8; ++i) {
-        // 步进总长度
-        if (i * interval > depthLimit) {
-            break;
-        }
-        testPoint += direction * interval;
-
-        // 光线在体积内行进
-        if (isPointInBox(testPoint, boxMin, boxMax)) {
-            hit = 1;
-
-            sum += intensity / depthLimit;
-        }
-    }
-    return -sum * vec4(dirLightIntensity[0] / length(dirLightIntensity[0]), 1.0f) / 1;
-}
-
-vec4 computeCloudRayMarching(
-    vec3 startPoint,
-    vec3 direction,
-    float depthLimit,
-    vec3 boxMin,
-    vec3 boxMax,
-    vec4 color) {
-    vec3 testPoint = startPoint;
-
-    float interval = 0.01; // 每次步进间隔
-    float intensity = 0.1 * interval;
-
-    float density = 0.2;
-
-    int hit = 0;
-    float sum = 0.0;
-    for (int i = 0; i < 256; ++i) {
-        // 步进总长度
-        if (i * interval > depthLimit) {
-            break;
-        }
-        testPoint += direction * interval;
-
-        // 光线在体积内行进
-        if (isPointInBox(testPoint, boxMin, boxMax)) {
-            hit = 1;
-            sum += intensity;
-            sum *= exp(density * interval);
-
-            // vec3 lightDir = pointLightPos[0]-testPoint;
-            vec3 lightDir = normalize(dirLightPos[0]);
-            float limit = rayBoxDst(boxMin, boxMax, testPoint, 1 / lightDir).y;
-
-            color += lightMarching(testPoint, lightDir, limit, boxMin, boxMax);
-        }
-    }
-    if (hit == 0) {
-        return vec4(0.0f);
-    }
-
-    return sum * color;
-}
-vec4 cloudRayMarching(
-    vec3 startPoint,
-    vec3 direction,
-    vec3 fragPos,
-    vec3 boxMin,
-    vec3 boxMax,
-    vec4 color) {
-    vec2 rst = rayBoxDst(boxMin, boxMax, startPoint, 1.0 / direction);
-    float boxDepth = rst.x;
-    float boxInsideDepth = rst.y;
-
-    float fragDepth = length(fragPos - startPoint);
-    // skybox
-    if (length(fragPos) == 0) {
-        fragDepth = 10000000.f;
-    }
-
-    if (fragDepth < boxDepth) {
-        // 物体阻挡Box
-        return vec4(0.f);
-    }
-    float depthLimit;
-    if ((fragDepth - boxDepth) < boxInsideDepth) {
-        // 物体嵌入box,步进深度限制减小
-        depthLimit = fragDepth - boxDepth;
-    }
-    else {
-        depthLimit = boxInsideDepth;
-    }
-    return computeCloudRayMarching(startPoint + direction * rst.x, direction, depthLimit, boxMin, boxMax, color);
-}
-/*********************************LightVolume******************************************************/
-vec4 computeLightVolumeRayMarching(
-    vec3 startPoint,
-    vec3 direction,
-    float depthLimit,
-    vec3 boxMin,
-    vec3 boxMax,
-    vec4 color) {
-    vec3 testPoint = startPoint;
-    float sum = 0.0;
-    float interval = 0.01; // 每次步进间隔
-    float intensity = 1.5 * interval;
-    float density = 0.1f;
-    for (int i = 0; i < 1024; ++i) {
-        // 步进总长度
-        if (i * interval > depthLimit) {
-            break;
-        }
-        testPoint += direction * interval;
-        if (testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
-            testPoint.z < boxMax.z && testPoint.z > boxMin.z &&
-            testPoint.y < boxMax.y && testPoint.y > boxMin.y)
-        sum += intensity;
-        sum *= exp(-density * interval);
-    }
-    return sum * color;
-}
-vec4 lightVolumeRayMarching(
-    vec3 startPoint,
-    vec3 direction,
-    vec3 fragPos,
-    vec3 boxMin,
-    vec3 boxMax,
-    vec4 color) {
-    vec2 rst = rayBoxDst(boxMin, boxMax, startPoint, 1.0 / direction);
-    float boxDepth = rst.x;
-    float boxInsideDepth = rst.y;
-
-    float fragDepth = length(fragPos - startPoint);
-    // skybox
-    if (length(fragPos) == 0) {
-        fragDepth = 10000000.f;
-    }
-
-    if (fragDepth < boxDepth) {
-        // 物体阻挡Box
-        return vec4(0.f);
-    }
-    float depthLimit;
-    if ((fragDepth - boxDepth) < boxInsideDepth) {
-        // 物体嵌入box,步进深度限制减小
-        depthLimit = fragDepth - boxDepth;
-    }
-    else {
-        depthLimit = boxInsideDepth;
-    }
-    return computeLightVolumeRayMarching(startPoint + direction * rst.x, direction, depthLimit, boxMin, boxMax, color);
-}
-
-vec4 lightVolume(
-    vec3 startPoint,
-    vec3 direction,
-    vec3 fragPos,
-    vec3 boxMin,
-    vec3 boxMax,
-    vec4 color) {
-    return lightVolumeRayMarching(startPoint, direction, fragPos, boxMin, boxMax, color);
-}
-vec3 fragViewSpaceDir(vec2 uv)
-{
-    vec3 dir = vec3(uv - vec2(0.5f, 0.5f), 0.f);
-    dir.y = dir.y * tan(radians(fov / 2)) * 2;
-    dir.x = dir.x * tan(radians(fov / 2)) * (float(width) / float(height)) * 2;
-    dir.z = -1.0f;
-    dir = normalize(inverse(mat3(view)) * dir);
-    return dir;
-}
-
-/*******************************Lighting******************************************************/
-
-vec3 sampleSkybox(vec2 uv, samplerCube _skybox)
-{
-    // vec3 uv_centered = vec3(uv-vec2(0.5f,0.5f),0.f);
-    vec3 dir = fragViewSpaceDir(uv);
-    // vec3 dir = normalize(eyeFront+nearPlane*uv_centered*2*tan(radians(fov)/2));
-    return vec3(texture(_skybox, dir));
-    // return dir;
-}
-
-vec3 computeSkyboxAmbient(samplerCube _skybox)
-{
-    vec3 ambient = vec3(0.f);
-    int samplesN = 32;
-    for (int i = 0; i < samplesN; ++i)
-    {
-        vec3 sample_dir = TBN * (skyboxSamples[i] + vec3(0.0, 0.0, 1.f));
-        ambient += texture(_skybox, normalize(sample_dir)).rgb;
-    }
-    return ambient / samplesN;
-}
-
-vec3 computeSkyboxAmbientMipMap(samplerCube _skybox, vec3 dir)
-{
-    vec3 ambient = textureLod(_skybox, dir, 6).rgb;
-
-    return ambient;
-}
-
-float computeDirLightShadow(vec3 fragPos, vec3 fragNormal, mat4 _dirLightSpaceMatrix, sampler2D _dirDepthMap)
-{
-    // perform perspective divide
-    if (DirShadow == 0)
-    {
-        return 0.f;
-    }
-    vec4 lightSpaceFragPos = _dirLightSpaceMatrix * vec4(fragPos, 1.0f);
-
-    // // 计算遮挡物与接受物的平均距离
-    // float d = 0.f;
-    // int occlusion_times = 0;
-    // for (int k = 0; k < n_samples; ++k)
-    // {
-    //     vec4 sampleOffset = _dirLightSpaceMatrix * vec4(TBN * shadowSamples[k] * blurRadius, 0.0f);
-    //     vec4 fragPosLightSpace = lightSpaceFragPos + sampleOffset; // Dir Light View Space
-    //     vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
-    //     // transform to [0,1] range
-    //     projCoords = projCoords * 0.5 + 0.5;
-    //     // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    //     float closestDepth = texture(_dirDepthMap, projCoords.xy).r;
-    //     // get depth of current fragment from light's perspective
-    //     float currentDepth = projCoords.z;
-
-    //     float bias = 0.00003f;
-
-    //     if (currentDepth - closestDepth - bias > 0)
-    //     {
-    //         occlusion_times++;
-    //         d += (currentDepth - closestDepth) * 2000; // 深度值换算与光源farplane数值有关
-    //     }
-    // }
-    // d = d / occlusion_times;
-    // PCF Only
-    float factor = 0.f;
-    for (int j = 0; j < n_samples; ++j)
-    {
-        // vec4 sampleOffset = _dirLightSpaceMatrix * vec4(
-        //                                                TBN *
-        //                                                    shadowSamples[j] *
-        //                                                    blurRadius * 20 * pow(d, 2),
-        //                                                0.0f);
-        vec4 sampleOffset = _dirLightSpaceMatrix * vec4(
-                                                       TBN *
-                                                           shadowSamples[j] *
-                                                           blurRadius * 5.f,
-                                                       0.0f);
-        vec4 fragPosLightSpace = lightSpaceFragPos + sampleOffset; // Dir Light View Space
-        vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
-        // transform to [0,1] range
-        projCoords = projCoords * 0.5 + 0.5;
-        // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-        float closestDepth = texture(_dirDepthMap, projCoords.xy).r;
-        // get depth of current fragment from light's perspective
-        float currentDepth = projCoords.z;
-        float cosine = dot(fragNormal, dirLightPos[0]) / length(fragNormal) / length(dirLightPos[0]); // 只考虑阳光
-        float texel = 4e-5;                                                                           // texel = (ortho_scale,farPlane)
-        float bias = sqrt(1 - cosine * cosine) / cosine * texel;
-        // check whether current frag pos is in shadow
-        factor += currentDepth - closestDepth - bias > 0 ? 1.0f : 0.0f;
-    }
-
-    return factor / n_samples;
-}
-
-float computePointLightShadow(vec3 fragPos, vec3 fragNorm, vec3 pointLightPos, samplerCube _depthMap)
-{
-    if (PointShadow == 0)
-    {
-        return 0.f;
-    }
-    vec3 dir = fragPos - pointLightPos;
-
-    float curr_depth = length(dir);
-    float omega = -dot(fragNorm, dir) / curr_depth;
-    float bias = 0.05f / tan(omega); // idea: bias increase based on center distance
-    // shadow test
-
-    // 计算遮挡物与接受物的平均距离
-    float d = 0.f;
-    int occlusion_times = 0;
-    for (int k = 0; k < n_samples; ++k)
-    {
-        vec3 sampleOffset = TBN * shadowSamples[k] * 4.f;
-        vec3 dir_sample = sampleOffset + fragPos - pointLightPos;
-        float curr_depth_sample = length(dir_sample);
-        float cloest_depth_sample = texture(_depthMap, dir_sample).r;
-
-        cloest_depth_sample *= pointLightFar;
-        if (curr_depth_sample - cloest_depth_sample - bias > 0.01f)
-        {
-            occlusion_times++;
-            d += curr_depth_sample - cloest_depth_sample;
-        }
-    }
-    d = d / occlusion_times;
-    float factor = 0.f;
-    for (int j = 0; j < n_samples; ++j)
-    {
-        vec3 sampleOffset = TBN * shadowSamples[j] * blurRadius * pow(curr_depth / 12, 2) * d / n_samples * 64;
-        vec3 dir_sample = sampleOffset + fragPos - pointLightPos;
-        float curr_depth_sample = length(dir_sample);
-        float cloest_depth_sample = texture(_depthMap, dir_sample).r;
-        cloest_depth_sample *= pointLightFar;
-        factor += (curr_depth_sample - cloest_depth_sample - bias > 0.f ? 1.0 : 0.0);
-        // factor = curr_depth_sample;
-    }
-    return (factor) / n_samples; // return shadow
-}
-
-vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
-{
-
-    vec3 diffuse = vec3(0.0f);
-    for (int i = 0; i < numDirLights; ++i)
-    {
-
-        vec3 l = normalize(dirLightPos[i]);
-        float rr = dot(l, l);
-        float shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightSpaceMatrix[i], dirDepthMap[i]);
-
-        if (i == 0) // 太阳光处理
-        {
-            diffuse += shadowFactor * dirLightIntensity[i] / rr * max(0.f, dot(n, l)) * sunlightDecay;
-        }
-        else
-        {
-            diffuse +=
-                shadowFactor * dirLightIntensity[i] / rr * max(0.f, dot(n, l));
-        }
-    }
-    return diffuse;
-}
-
-vec3 dirLightSpec(vec3 fragPos, vec3 n)
-{
-    vec3 specular = vec3(0.0f);
-    for (int i = 0; i < numDirLights; ++i)
-    {
-        // 太阳光处理
-
-        vec3 l = normalize(dirLightPos[i]);
-        float specularStrength = 0.01f;
-        vec3 viewDir = normalize(eyePos - fragPos);
-        vec3 reflectDir = reflect(-l, n);
-        float shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightSpaceMatrix[i], dirDepthMap[i]);
-        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 128);
-
-        if (i == 0) // 太阳光处理
-        {
-            specular += shadowFactor * specularStrength * spec * dirLightIntensity[i] * sunlightDecay * 160;
-        }
-        else
-        {
-            specular += shadowFactor * specularStrength * spec * dirLightIntensity[i] * 160;
-        }
-    }
-    return specular;
-}
-
-vec3 pointLightDiffuse(vec3 fragPos, vec3 n)
-{
-    vec3 diffuse = vec3(0.f, 0.f, 0.f);
-
-    for (int i = 0; i < numPointLights; ++i)
-    {
-        vec3 l = pointLightPos[i] - fragPos;
-        float rr = pow(dot(l, l), 0.6) * 10;
-        l = normalize(l);
-
-        float shadow_factor = 1 - computePointLightShadow(fragPos, n, pointLightPos[i], shadowCubeMaps[i]);
-        diffuse += pointLightIntensity[i] / rr * max(0.f, dot(n, l)) * shadow_factor;
-    }
-    return diffuse;
-}
-
-vec3 pointLightSpec(vec3 fragPos, vec3 n)
-{
-    vec3 specular = vec3(0.f, 0.f, 0.f);
-
-    for (int i = 0; i < numPointLights; ++i)
-    {
-        vec3 l = pointLightPos[i] - fragPos;
-        float rr = pow(dot(l, l), 0.6) * 10;
-        l = normalize(l);
-        float spec = 0.f;
-        float specularStrength = 0.005f;
-
-        float shadow_factor = 1 - computePointLightShadow(fragPos, n, pointLightPos[i], shadowCubeMaps[i]);
-
-        vec3 viewDir = normalize(eyePos - fragPos);
-        vec3 reflectDir = reflect(-l, n);
-        spec = pow(max(dot(viewDir, reflectDir), 0.0), 64);
-        specular += specularStrength * spec * pointLightIntensity[i] * shadow_factor;
-    }
-    return specular;
-}
-
 /*****************************天空大气计算********************************************************** */
 
 uniform vec4 betaMie = vec4(21e-6, 21e-6, 21e-6, 1.0f);
@@ -515,6 +91,7 @@ uniform float earthRadius;
 uniform float skyIntensity;
 uniform float HRayleigh;
 uniform float HMie;
+uniform sampler2D transmittanceLUT;
 
 #define NO_INTERSECTION vec3(1.0f / 0.0f)
 const float PI = 3.1415926535;
@@ -653,10 +230,9 @@ vec2 transmittanceUVInverseMapping(float earthRadius, float skyRadius, vec2 uv) 
     return vec2(mu, r);
 }
 vec2 rayToMuR(float earthRadius, float skyRadius, vec3 ori, vec3 end) {
-    vec3 center = vec3(0.0, -earthRadius, 0.0);
-    float R = length(ori - center);
+    float R = length(ori - earthCenter);
 
-    vec3 n = normalize(ori - center);
+    vec3 n = normalize(ori - earthCenter);
 
     vec3 dir = normalize(end - ori);
 
@@ -677,7 +253,7 @@ void MuRToRay(vec2 MuR, float earthRadius, out vec3 ori, out vec3 dir) {
 // 从LUT获取两点透射率
 vec4 getTransmittanceFromLUT(sampler2D LUT, float earthRadius, float skyRadius, vec3 ori, vec3 end) {
     vec3 dir = normalize(ori - end);
-    vec3 n = normalize(ori - vec3(0.0f, -earthRadius, 0.0f));
+    vec3 n = normalize(ori - earthCenter);
     vec3 earthIntersection = intersectEarth(ori, -dir);
     int hitEarth = 0;
 
@@ -707,7 +283,7 @@ vec4 getTransmittanceFromLUT(sampler2D LUT, float earthRadius, float skyRadius, 
 // 从LUT获取起点到天空透射率
 vec4 getTransmittanceFromLUTSky(sampler2D LUT, float earthRadius, float skyRadius, vec3 ori, vec3 skyIntersection) {
     vec3 dir = normalize(ori - skyIntersection);
-    vec3 n = normalize(ori - vec3(0.0f, -earthRadius, 0.0f));
+    vec3 n = normalize(ori - earthCenter);
 
     vec2 MuR_ori = rayToMuR(earthRadius, skyRadius, ori, skyIntersection);
     vec4 tori = texture(LUT, transmittanceUVMapping(earthRadius, skyRadius, MuR_ori.x, MuR_ori.y));
@@ -891,16 +467,512 @@ vec3 generateSunDisk(vec3 camPos, vec3 fragDir, vec3 sunDir, vec3 sunIntensity, 
     return sunIntensity * 1e2 * pow(sunSmoothstep, exponent) * sunlightDecay;
 }
 
-void initialize()
+bool isPointInBox(vec3 testPoint, vec3 boxMin, vec3 boxMax) {
+    return testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
+    testPoint.z < boxMax.z && testPoint.z > boxMin.z &&
+    testPoint.y < boxMax.y && testPoint.y > boxMin.y;
+}
+vec2 rayBoxDst(vec3 boundsMin, vec3 boundsMax, vec3 rayOrigin, vec3 invRaydir) {
+    vec3 t0 = (boundsMin - rayOrigin) * invRaydir;
+    vec3 t1 = (boundsMax - rayOrigin) * invRaydir;
+    vec3 tmin = min(t0, t1);
+    vec3 tmax = max(t0, t1);
+
+    float dstA = max(max(tmin.x, tmin.y), tmin.z); // 进入点
+    float dstB = min(tmax.x, min(tmax.y, tmax.z)); // 出去点
+
+    float dstToBox = max(0, dstA);
+    float dstInsideBox = max(0, dstB - dstToBox);
+    return vec2(dstToBox, dstInsideBox);
+}
+
+// vec4 lightMarching(
+//     vec3 startPoint,
+//     vec3 direction,
+//     float depthLimit,
+//     vec3 boxMin,
+//     vec3 boxMax) {
+//     vec3 testPoint = startPoint;
+
+//     float interval = 0.1; // 每次步进间隔
+//     float intensity = 0.01 * interval;
+
+//     int hit = 0;
+//     float sum = 0.0;
+//     for (int i = 0; i < 8; ++i) {
+//         // 步进总长度
+//         if (i * interval > depthLimit) {
+//             break;
+//         }
+//         testPoint += direction * interval;
+
+//         // 光线在体积内行进
+//         if (isPointInBox(testPoint, boxMin, boxMax)) {
+//             hit = 1;
+
+//             sum += intensity / depthLimit;
+//         }
+//     }
+//     return -sum * vec4(dirLightIntensity[0] / length(dirLightIntensity[0]), 1.0f) / 1;
+// }
+
+// vec4 computeCloudRayMarching(
+//     vec3 startPoint,
+//     vec3 direction,
+//     float depthLimit,
+//     vec3 boxMin,
+//     vec3 boxMax,
+//     vec4 color) {
+//     vec3 testPoint = startPoint;
+
+//     float interval = 0.01; // 每次步进间隔
+//     float intensity = 0.1 * interval;
+
+//     float density = 0.2;
+
+//     int hit = 0;
+//     float sum = 0.0;
+//     for (int i = 0; i < 256; ++i) {
+//         // 步进总长度
+//         if (i * interval > depthLimit) {
+//             break;
+//         }
+//         testPoint += direction * interval;
+
+//         // 光线在体积内行进
+//         if (isPointInBox(testPoint, boxMin, boxMax)) {
+//             hit = 1;
+//             sum += intensity;
+//             sum *= exp(density * interval);
+
+//             // vec3 lightDir = pointLightPos[0]-testPoint;
+//             vec3 lightDir = normalize(dirLightPos[0]);
+//             float limit = rayBoxDst(boxMin, boxMax, testPoint, 1 / lightDir).y;
+
+//             color += lightMarching(testPoint, lightDir, limit, boxMin, boxMax);
+//         }
+//     }
+//     if (hit == 0) {
+//         return vec4(0.0f);
+//     }
+
+//     return sum * color;
+// }
+// vec4 cloudRayMarching(
+//     vec3 startPoint,
+//     vec3 direction,
+//     vec3 fragPos,
+//     vec3 boxMin,
+//     vec3 boxMax,
+//     vec4 color) {
+//     vec2 rst = rayBoxDst(boxMin, boxMax, startPoint, 1.0 / direction);
+//     float boxDepth = rst.x;
+//     float boxInsideDepth = rst.y;
+
+//     float fragDepth = length(fragPos - startPoint);
+//     // skybox
+//     if (length(fragPos) == 0) {
+//         fragDepth = 10000000.f;
+//     }
+
+//     if (fragDepth < boxDepth) {
+//         // 物体阻挡Box
+//         return vec4(0.f);
+//     }
+//     float depthLimit;
+//     if ((fragDepth - boxDepth) < boxInsideDepth) {
+//         // 物体嵌入box,步进深度限制减小
+//         depthLimit = fragDepth - boxDepth;
+//     }
+//     else {
+//         depthLimit = boxInsideDepth;
+//     }
+//     return computeCloudRayMarching(startPoint + direction * rst.x, direction, depthLimit, boxMin, boxMax, color);
+// }
+/*********************************LightVolume******************************************************/
+vec4 computeLightVolumeRayMarching(
+    vec3 startPoint,
+    vec3 direction,
+    float depthLimit,
+    vec3 boxMin,
+    vec3 boxMax,
+    vec4 color) {
+    vec3 testPoint = startPoint;
+    float sum = 0.0;
+    float interval = 0.01; // 每次步进间隔
+    float intensity = 1.5 * interval;
+    float density = 0.1f;
+    for (int i = 0; i < 1024; ++i) {
+        // 步进总长度
+        if (i * interval > depthLimit) {
+            break;
+        }
+        testPoint += direction * interval;
+        if (testPoint.x < boxMax.x && testPoint.x > boxMin.x &&
+            testPoint.z < boxMax.z && testPoint.z > boxMin.z &&
+            testPoint.y < boxMax.y && testPoint.y > boxMin.y)
+        sum += intensity;
+        sum *= exp(-density * interval);
+    }
+    return sum * color;
+}
+vec4 lightVolumeRayMarching(
+    vec3 startPoint,
+    vec3 direction,
+    vec3 fragPos,
+    vec3 boxMin,
+    vec3 boxMax,
+    vec4 color) {
+    vec2 rst = rayBoxDst(boxMin, boxMax, startPoint, 1.0 / direction);
+    float boxDepth = rst.x;
+    float boxInsideDepth = rst.y;
+
+    float fragDepth = length(fragPos - startPoint);
+    // skybox
+    if (length(fragPos) == 0) {
+        fragDepth = 10000000.f;
+    }
+
+    if (fragDepth < boxDepth) {
+        // 物体阻挡Box
+        return vec4(0.f);
+    }
+    float depthLimit;
+    if ((fragDepth - boxDepth) < boxInsideDepth) {
+        // 物体嵌入box,步进深度限制减小
+        depthLimit = fragDepth - boxDepth;
+    }
+    else {
+        depthLimit = boxInsideDepth;
+    }
+    return computeLightVolumeRayMarching(startPoint + direction * rst.x, direction, depthLimit, boxMin, boxMax, color);
+}
+
+vec4 lightVolume(
+    vec3 startPoint,
+    vec3 direction,
+    vec3 fragPos,
+    vec3 boxMin,
+    vec3 boxMax,
+    vec4 color) {
+    return lightVolumeRayMarching(startPoint, direction, fragPos, boxMin, boxMax, color);
+}
+/*******************************Lighting******************************************************/
+float computeDirLightShadow(vec3 fragPos, vec3 fragNormal, in DirLight dirLight) {
+    // perform perspective divide
+    if (DirShadow == 0) {
+        return 0.f;
+    }
+    vec4 lightSpaceFragPos = dirLight.spaceMatrix * vec4(fragPos, 1.0f);
+
+    // // 计算遮挡物与接受物的平均距离
+    // float d = 0.f;
+    // int occlusion_times = 0;
+    // for (int k = 0; k < n_samples; ++k)
+    // {
+    //     vec4 sampleOffset = dirLight.spaceMatrix * vec4(TBN * shadowSamples[k] * blurRadius, 0.0f);
+    //     vec4 fragPosLightSpace = lightSpaceFragPos + sampleOffset; // Dir Light View Space
+    //     vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
+    //     // transform to [0,1] range
+    //     projCoords = projCoords * 0.5 + 0.5;
+    //     // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+    //     float closestDepth = texture(dirLight.depthMap, projCoords.xy).r;
+    //     // get depth of current fragment from light's perspective
+    //     float currentDepth = projCoords.z;
+
+    //     float bias = 0.00003f;
+
+    //     if (currentDepth - closestDepth - bias > 0)
+    //     {
+    //         occlusion_times++;
+    //         d += (currentDepth - closestDepth) * 2000; // 深度值换算与光源farplane数值有关
+    //     }
+    // }
+    // d = d / occlusion_times;
+    // PCF Only
+    float factor = 0.f;
+    for (int j = 0; j < n_samples; ++j) {
+        // vec4 sampleOffset = dirLight.spaceMatrix * vec4(
+        //                                                TBN *
+        //                                                    shadowSamples[j] *
+        //                                                    blurRadius * 20 * pow(d, 2),
+        //                                                0.0f);
+        vec4 sampleOffset = dirLight.spaceMatrix * vec4(
+            TBN *
+            shadowSamples[j] *
+            blurRadius * 5.f,
+            0.0f);
+        vec4 fragPosLightSpace = lightSpaceFragPos + sampleOffset; // Dir Light View Space
+        vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
+        // transform to [0,1] range
+        projCoords = projCoords * 0.5 + 0.5;
+        // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+        float closestDepth = texture(dirLight.depthMap, projCoords.xy).r;
+        // get depth of current fragment from light's perspective
+        float currentDepth = projCoords.z;
+        float cosine = dot(fragNormal, dirLight.pos) / length(fragNormal) / length(dirLight.pos);
+        // float texel = 4e-5; // texel = (ortho_scale,farPlane)
+        float texel = dirLight.orthoScale / dirLight.farplane;
+
+        float bias = sqrt(1 - cosine * cosine) / cosine * texel;
+        // check whether current frag pos is in shadow
+        factor += currentDepth - closestDepth - bias > 0 ? 1.0f : 0.0f;
+    }
+
+    return factor / n_samples;
+    // return dirLight.orthoScale * 1e-1 + 0.f;
+}
+
+float computePointLightShadow(vec3 fragPos, vec3 fragNorm, vec3 pointLightPos, samplerCube _depthMap) {
+    if (PointShadow == 0) {
+        return 0.f;
+    }
+    vec3 dir = fragPos - pointLightPos;
+
+    float curr_depth = length(dir);
+    float omega = -dot(fragNorm, dir) / curr_depth;
+    float bias = 0.05f / tan(omega); // idea: bias increase based on center distance
+    // shadow test
+
+    // 计算遮挡物与接受物的平均距离
+    float d = 0.f;
+    int occlusion_times = 0;
+    for (int k = 0; k < n_samples; ++k) {
+        vec3 sampleOffset = TBN * shadowSamples[k] * 4.f;
+        vec3 dir_sample = sampleOffset + fragPos - pointLightPos;
+        float curr_depth_sample = length(dir_sample);
+        float cloest_depth_sample = texture(_depthMap, dir_sample).r;
+
+        cloest_depth_sample *= pointLightFar;
+        if (curr_depth_sample - cloest_depth_sample - bias > 0.01f) {
+            occlusion_times++;
+            d += curr_depth_sample - cloest_depth_sample;
+        }
+    }
+    d = d / occlusion_times;
+    float factor = 0.f;
+    for (int j = 0; j < n_samples; ++j) {
+        vec3 sampleOffset = TBN * shadowSamples[j] * blurRadius * pow(curr_depth / 12, 2) * d / n_samples * 64;
+        vec3 dir_sample = sampleOffset + fragPos - pointLightPos;
+        float curr_depth_sample = length(dir_sample);
+        float cloest_depth_sample = texture(_depthMap, dir_sample).r;
+        cloest_depth_sample *= pointLightFar;
+        factor += (curr_depth_sample - cloest_depth_sample - bias > 0.f ? 1.0 : 0.0);
+        // factor = curr_depth_sample;
+    }
+    return (factor) / n_samples; // return shadow
+}
+
+vec3 fragViewSpaceDir(vec2 uv)
+{
+    vec3 dir = vec3(uv - vec2(0.5f, 0.5f), 0.f);
+    dir.y = dir.y * tan(radians(fov / 2)) * 2;
+    dir.x = dir.x * tan(radians(fov / 2)) * (float(width) / float(height)) * 2;
+    dir.z = -1.0f;
+    dir = normalize(inverse(mat3(view)) * dir);
+    return dir;
+}
+
+vec3 sampleSkybox(vec2 uv, samplerCube _skybox)
+{
+    // vec3 uv_centered = vec3(uv-vec2(0.5f,0.5f),0.f);
+    vec3 dir = fragViewSpaceDir(uv);
+    // vec3 dir = normalize(eyeFront+nearPlane*uv_centered*2*tan(radians(fov)/2));
+    return vec3(texture(_skybox, dir));
+    // return dir;
+}
+
+vec3 computeSkyboxAmbient(samplerCube _skybox)
+{
+    vec3 ambient = vec3(0.f);
+    int samplesN = 32;
+    for (int i = 0; i < samplesN; ++i)
+    {
+        vec3 sample_dir = TBN * (skyboxSamples[i] + vec3(0.0, 0.0, 1.f));
+        ambient += texture(_skybox, normalize(sample_dir)).rgb;
+    }
+    return ambient / samplesN;
+}
+
+vec3 computeSkyboxAmbientMipMap(samplerCube _skybox, vec3 dir)
+{
+    vec3 ambient = textureLod(_skybox, dir, 6).rgb;
+
+    return ambient;
+}
+
+vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
 {
 
-    LightResult = vec4(0.f, 0.f, 0.f, 1.f); // Initialize LightResult
+    vec3 diffuse = vec3(0.0f);
+    for (int i = 0; i < numDirLights; ++i)
+    {
+
+        vec3 l = normalize(dirLightArray[i].pos);
+        float rr = dot(l, l);
+        float shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
+
+        if (i == 0) // 太阳光处理
+        {
+            diffuse += shadowFactor * dirLightArray[i].intensity / rr * max(0.f, dot(n, l)) * sunlightDecay;
+        }
+        else
+        {
+            diffuse +=
+                shadowFactor * dirLightArray[i].intensity / rr * max(0.f, dot(n, l));
+        }
+    }
+    return diffuse;
+}
+
+vec3 dirLightSpec(vec3 fragPos, vec3 n)
+{
+    vec3 specular = vec3(0.0f);
+    for (int i = 0; i < numDirLights; ++i)
+    {
+        // 太阳光处理
+
+        vec3 l = normalize(dirLightArray[i].pos);
+        float specularStrength = 0.01f;
+        vec3 viewDir = normalize(eyePos - fragPos);
+        vec3 reflectDir = reflect(-l, n);
+        float shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 128);
+
+        if (i == 0) // 太阳光处理
+        {
+            specular += shadowFactor * specularStrength * spec * dirLightArray[i].intensity * sunlightDecay * 160;
+        }
+        else
+        {
+            specular += shadowFactor * specularStrength * spec * dirLightArray[i].intensity * 160;
+        }
+    }
+    return specular;
+}
+
+vec3 pointLightDiffuse(vec3 fragPos, vec3 n)
+{
+    vec3 diffuse = vec3(0.f, 0.f, 0.f);
+
+    for (int i = 0; i < numPointLights; ++i)
+    {
+        vec3 l = pointLightPos[i] - fragPos;
+        float rr = pow(dot(l, l), 0.6) * 10;
+        l = normalize(l);
+
+        float shadow_factor = 1 - computePointLightShadow(fragPos, n, pointLightPos[i], shadowCubeMaps[i]);
+        diffuse += pointLightIntensity[i] / rr * max(0.f, dot(n, l)) * shadow_factor;
+    }
+    return diffuse;
+}
+
+vec3 pointLightSpec(vec3 fragPos, vec3 n)
+{
+    vec3 specular = vec3(0.f, 0.f, 0.f);
+
+    for (int i = 0; i < numPointLights; ++i)
+    {
+        vec3 l = pointLightPos[i] - fragPos;
+        float rr = pow(dot(l, l), 0.6) * 10;
+        l = normalize(l);
+        float spec = 0.f;
+        float specularStrength = 0.005f;
+
+        float shadow_factor = 1 - computePointLightShadow(fragPos, n, pointLightPos[i], shadowCubeMaps[i]);
+
+        vec3 viewDir = normalize(eyePos - fragPos);
+        vec3 reflectDir = reflect(-l, n);
+        spec = pow(max(dot(viewDir, reflectDir), 0.0), 64);
+        specular += specularStrength * spec * pointLightIntensity[i] * shadow_factor;
+    }
+    return specular;
+}
+
+void initializeAtmosphereParameters()
+{
 
     camDir = fragViewSpaceDir(TexCoord);
     camPos = eyePos;
     earthCenter = vec3(0.0f, -earthRadius, 0.0f); // 地球球心，位于地面原点正下方
-    sunDir = dirLightPos[0];
-    sunlightDecay = computeSunlightDecay(camPos, camDir, dirLightPos[0]);
+    sunDir = dirLightArray[0].pos;
+    sunlightDecay = computeSunlightDecay(camPos, camDir, dirLightArray[0].pos);
+}
+
+void computeSky(inout vec4 LightResult, inout vec3 ambient, in vec3 n)
+{
+    vec3 camEarthIntersection = intersectEarth(camPos, camDir);
+    if (Skybox == 1)
+    {
+        if (camEarthIntersection == NO_INTERSECTION)
+        {
+            LightResult = vec4(sampleSkybox(TexCoord, skybox), 1.0f); // 采样天空盒
+        }
+        else
+        {
+            // 击中地球,渲染大气透视
+            LightResult = computeAerialPerspective(camEarthIntersection, dirLightArray[0].intensity);
+
+            vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f); // 走样
+                                                                         // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection); // TODO: 修复近地面错误
+            if (Skybox == 1)
+            {
+                ambient += computeSkyboxAmbientMipMap(skybox, n);
+                // ambient = vec3(0.f);
+            }
+            // 渲染地面
+            vec3 normal = normalize(camEarthIntersection - earthCenter);
+            vec3 lighting = dirLightDiffuse(camEarthIntersection, normal) + ambient;
+            vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
+            LightResult.rgb += lighting * earthBaseColor * t1.rgb;
+        }
+    }
+    else
+    {
+        float camHeight = length(camPos - earthCenter) - earthRadius;
+
+        if (camEarthIntersection != NO_INTERSECTION)
+        {
+
+            // 击中地球,渲染大气透视
+            LightResult = computeAerialPerspective(camEarthIntersection, dirLightArray[0].intensity);
+
+            vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f); // 走样
+            // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);
+
+            // 渲染地面
+            vec3 normal = normalize(camEarthIntersection - earthCenter);
+            vec3 lighting = dirLightDiffuse(camEarthIntersection, normal);
+            vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
+            LightResult.rgb += lighting * earthBaseColor * t1.rgb;
+        }
+        else
+        {
+            if (camHeight > skyHeight)
+            {
+                // 摄像机在大气层外
+            }
+            else
+            {
+                LightResult += computeSkyColor(dirLightArray[0].intensity);
+            }
+        }
+    }
+    if (camEarthIntersection == NO_INTERSECTION)
+    {
+        LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightArray[0].intensity, 2.0f);
+    }
+}
+
+void computeSceneAtmosphere(in vec3 FragPos)
+{
+    if (Skybox == 0) // 关闭天空盒
+    {
+        // vec4 t1 = transmittance(camPos, FragPos, 1.0f);
+    }
+    vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, FragPos);
+    LightResult *= t1;
+    LightResult += computeAerialPerspective(FragPos, dirLightArray[0].intensity);
 }
 void main()
 {
@@ -911,73 +983,14 @@ void main()
     vec3 diffuse;
     vec3 specular;
     vec3 ambient;
+    LightResult = vec4(0.f, 0.f, 0.f, 1.f);
 
-    initialize();
+    initializeAtmosphereParameters();
 
     // 天空计算
     if (length(FragPos) == 0)
     {
-        vec3 camEarthIntersection = intersectEarth(camPos, camDir);
-        if (Skybox == 1)
-        {
-            if (camEarthIntersection == NO_INTERSECTION)
-            {
-                LightResult = vec4(sampleSkybox(TexCoord, skybox), 1.0f); // 采样天空盒
-            }
-            else
-            {
-                // 击中地球,渲染大气透视
-                LightResult = computeAerialPerspective(camEarthIntersection, dirLightIntensity[0]);
-
-                vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f); // 走样
-                                                                             // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection); // TODO: 修复近地面错误
-                if (Skybox == 1)
-                {
-                    ambient += computeSkyboxAmbientMipMap(skybox, n);
-                    // ambient = vec3(0.f);
-                }
-                // 渲染地面
-                vec3 normal = normalize(camEarthIntersection - earthCenter);
-                vec3 lighting = dirLightDiffuse(camEarthIntersection, normal) + ambient;
-                vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
-                LightResult.rgb += lighting * earthBaseColor * t1.rgb;
-            }
-        }
-        else
-        {
-            float camHeight = length(camPos - earthCenter) - earthRadius;
-
-            if (camEarthIntersection != NO_INTERSECTION)
-            {
-
-                // 击中地球,渲染大气透视
-                LightResult = computeAerialPerspective(camEarthIntersection, dirLightIntensity[0]);
-
-                vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f); // 走样
-                // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);
-
-                // 渲染地面
-                vec3 normal = normalize(camEarthIntersection - earthCenter);
-                vec3 lighting = dirLightDiffuse(camEarthIntersection, normal);
-                vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
-                LightResult.rgb += lighting * earthBaseColor * t1.rgb;
-            }
-            else
-            {
-                if (camHeight > skyHeight)
-                {
-                    // 摄像机在大气层外
-                }
-                else
-                {
-                    LightResult += computeSkyColor(dirLightIntensity[0]);
-                }
-            }
-        }
-        if (camEarthIntersection == NO_INTERSECTION)
-        {
-            LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightIntensity[0], 2.0f);
-        }
+        computeSky(LightResult, ambient, n);
     }
     else
     {
@@ -993,22 +1006,15 @@ void main()
         if (Skybox == 1)
         {
             ambient += computeSkyboxAmbientMipMap(skybox, n);
-            // ambient = vec3(0.f);
+            // ambient = (ambientLight +
+            //            computeSkyboxAmbient(skybox));
         }
-        // ambient = (ambientLight +
-        //            computeSkyboxAmbient(skybox));
 
         LightResult += vec4(diffuse * texture(gAlbedoSpec, TexCoord).rgb, 1.f);
         LightResult += vec4(specular * texture(gAlbedoSpec, TexCoord).a, 1.f);
         LightResult += vec4(ambient * texture(gAlbedoSpec, TexCoord).rgb, 1.f);
 
-        if (Skybox == 0) // 关闭天空盒
-        {
-            // vec4 t1 = transmittance(camPos, FragPos, 1.0f);
-        }
-        vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, FragPos);
-        LightResult *= t1;
-        LightResult += computeAerialPerspective(FragPos, dirLightIntensity[0]);
+        computeSceneAtmosphere(FragPos);
     }
 
     const vec3 BoxMin = vec3(2.0f, -2.0f, -2.0f);

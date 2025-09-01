@@ -246,8 +246,8 @@ private:
         rendererGUI.renderPassInspector(allLights.dirLights[0].depthMap);
         ImGui::Begin("RendererGUI");
         {
-            ImGui::DragFloat("ortho_scale", &allLights.dirLights[0].ortho_scale, 1e1, 1e3);
-            ImGui::DragFloat("farPlane", &allLights.dirLights[0].farPlane, 1e2, 1e7);
+            ImGui::DragFloat("OrthoScale", &allLights.dirLights[0].orthoScale, 1e1, 1e3);
+            ImGui::DragFloat("FarPlane", &allLights.dirLights[0].farPlane, 1e2, 1e7);
             ImGui::End();
         }
 

@@ -67,12 +67,12 @@ glm::vec3 PointLight::getPosition() const
 /********************************DirectionLight******************************************************************** */
 // TODO: 根据Camera位置优化ProjectionMatrix
 DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution)
-    : LightSource(_intensity, _position), ortho_scale(100.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
+    : LightSource(_intensity, _position), orthoScale(100.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
 {
-    lightProjection = glm::ortho(-1.0f * ortho_scale,
-                                 1.0f * ortho_scale,
-                                 -1.0f * ortho_scale,
-                                 1.0f * ortho_scale,
+    lightProjection = glm::ortho(-1.0f * orthoScale,
+                                 1.0f * orthoScale,
+                                 -1.0f * orthoScale,
+                                 1.0f * orthoScale,
                                  nearPlane, farPlane);
     lightView = glm::lookAt(position,
                             glm::vec3(0.0f, 0.0f, 0.0f),
@@ -93,18 +93,20 @@ void DirectionLight::setToShaderLightArray(Shader &shaders, size_t index)
 {
     combIntensity = CombineIntensity(colorIntensity);
 
-    shaders.setTextureAuto(depthMap, GL_TEXTURE_2D, 0, std::format("dirDepthMap[{}]", index));
-    shaders.setUniform3fv(std::format("dirLightPos[{}]", index), position);
-    shaders.setUniform3fv(std::format("dirLightIntensity[{}]", index), combIntensity);
-    shaders.setMat4(std::format("dirLightSpaceMatrix[{}]", index), lightSpaceMatrix);
+    shaders.setTextureAuto(depthMap, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].depthMap", index));
+    shaders.setUniform3fv(std::format("dirLightArray[{}].pos", index), position);
+    shaders.setUniform3fv(std::format("dirLightArray[{}].intensity", index), combIntensity);
+    shaders.setMat4(std::format("dirLightArray[{}].spaceMatrix", index), lightSpaceMatrix);
+    shaders.setUniform(std::format("dirLightArray[{}].farPlane", index), farPlane);
+    shaders.setUniform(std::format("dirLightArray[{}].orthoScale", index), orthoScale);
 }
 void DirectionLight::setPosition(glm::vec3 &_position)
 {
     position = _position;
-    lightProjection = glm::ortho(-1.0f * ortho_scale,
-                                 1.0f * ortho_scale,
-                                 -1.0f * ortho_scale,
-                                 1.0f * ortho_scale,
+    lightProjection = glm::ortho(-1.0f * orthoScale,
+                                 1.0f * orthoScale,
+                                 -1.0f * orthoScale,
+                                 1.0f * orthoScale,
                                  nearPlane, farPlane);
     lightView = glm::lookAt(position,
                             glm::vec3(0.0f, 0.0f, 0.0f),
