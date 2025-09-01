@@ -65,7 +65,7 @@ public:
           postProcessPass(PostProcessPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/postProcess.fs")),
           bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs")),
           unfoldPass(CubemapUnfoldPass(width, height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 256)),
-          skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 64)),
+          skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 256)),
           transmittanceLUTPass(TransmittanceLUTPass(128, 32, "Shaders/screenQuad.vs", "Shaders/SkyTexPass/transmittanceLUT.fs"))
     {
     }
@@ -242,7 +242,14 @@ private:
 
         // rendererGUI.renderPassInspector(bloomPassTex4);
         // rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
-        rendererGUI.renderPassInspector(transmittanceLUTTex);
+
+        rendererGUI.renderPassInspector(allLights.dirLights[0].depthMap);
+        ImGui::Begin("RendererGUI");
+        {
+            ImGui::DragFloat("ortho_scale", &allLights.dirLights[0].ortho_scale, 1e1, 1e3);
+            ImGui::DragFloat("farPlane", &allLights.dirLights[0].farPlane, 1e2, 1e7);
+            ImGui::End();
+        }
 
         auto renderWindowSize = rendererGUI.getRenderWindowSize();
         resize(static_cast<int>(renderWindowSize.x), static_cast<int>(renderWindowSize.y));

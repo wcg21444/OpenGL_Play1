@@ -124,6 +124,19 @@ namespace GUI
         ImGui::SetNextItemWidth(150.f);
         ImGui::DragFloat3("Tr", matrixTranslation);
         ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, matrix);
+        /*         if (mCurrentGizmoOperation != ImGuizmo::SCALE)
+                {
+                    if (ImGui::RadioButton("Local", mCurrentGizmoMode == ImGuizmo::LOCAL))
+                        mCurrentGizmoMode = ImGuizmo::LOCAL;
+                    ImGui::SameLine();
+                    if (ImGui::RadioButton("World", mCurrentGizmoMode == ImGuizmo::WORLD))
+                        mCurrentGizmoMode = ImGuizmo::WORLD;
+                }
+                if (ImGui::RadioButton("Translate", mCurrentGizmoOperation == ImGuizmo::TRANSLATE))
+                    mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+                ImGui::SameLine();
+                if (ImGui::RadioButton("Rotate", mCurrentGizmoOperation == ImGuizmo::ROTATE))
+                    mCurrentGizmoOperation = ImGuizmo::ROTATE; */
     }
 
     static void Transform(glm::mat4 &_matrix)

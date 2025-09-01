@@ -65,6 +65,7 @@ glm::vec3 PointLight::getPosition() const
     return position;
 }
 /********************************DirectionLight******************************************************************** */
+// TODO: 根据Camera位置优化ProjectionMatrix
 DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution)
     : LightSource(_intensity, _position), ortho_scale(100.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
 {
@@ -100,6 +101,11 @@ void DirectionLight::setToShaderLightArray(Shader &shaders, size_t index)
 void DirectionLight::setPosition(glm::vec3 &_position)
 {
     position = _position;
+    lightProjection = glm::ortho(-1.0f * ortho_scale,
+                                 1.0f * ortho_scale,
+                                 -1.0f * ortho_scale,
+                                 1.0f * ortho_scale,
+                                 nearPlane, farPlane);
     lightView = glm::lookAt(position,
                             glm::vec3(0.0f, 0.0f, 0.0f),
                             glm::vec3(0.0f, 1.0f, 0.0f));

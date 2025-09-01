@@ -385,7 +385,7 @@ float computeDirLightShadow(vec3 fragPos, vec3 fragNormal, mat4 _dirLightSpaceMa
         // get depth of current fragment from light's perspective
         float currentDepth = projCoords.z;
         float cosine = dot(fragNormal, dirLightPos[0]) / length(fragNormal) / length(dirLightPos[0]); // 只考虑阳光
-        float texel = 5e-6;
+        float texel = 4e-5;                                                                           // texel = (ortho_scale,farPlane)
         float bias = sqrt(1 - cosine * cosine) / cosine * texel;
         // check whether current frag pos is in shadow
         factor += currentDepth - closestDepth - bias > 0 ? 1.0f : 0.0f;
@@ -573,17 +573,19 @@ vec4 computeSkyColor()
     itvl = length(camSkyIntersection - camPos) / float(maxStep);
     for (int i = 0; i < maxStep; ++i)
     {
-        if (camSkyIntersection == vec3(0.0f))
+        if (camSkyIntersection == NO_INTERSECTION)
         {
             return vec4(0.000f); // 散射点阳光被地面阻挡
         }
         vec3 scatterPoint = camPos + i * itvl * camDir;
         vec3 scatterSkyIntersection = intersectSky(scatterPoint, sunDir);     // 散射点与天空交点
         vec3 scatterEarthIntersection = intersectEarth(scatterPoint, sunDir); // 散射点与地面交点
-        if (scatterEarthIntersection != vec3(0.0f) && length(scatterEarthIntersection - scatterPoint) < length(scatterSkyIntersection - scatterPoint))
+        if (scatterEarthIntersection != NO_INTERSECTION && length(scatterEarthIntersection - scatterPoint) < length(scatterSkyIntersection - scatterPoint))
         {
             continue; // 散射点阳光被地面阻挡
         }
+        // vec4 t1 = transmittance(camPos, scatterPoint, 1.0f);                 // 摄像机到散射点的透射率
+        // vec4 t2 = transmittance(scatterPoint, scatterSkyIntersection, 1.0f); // 散射点到天空边界的透射率
 
         vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, scatterPoint);                    // 摄像机到散射点的透射率
         vec4 t2 = getTransmittanceFromLUTSky(transmittanceLUT, earthRadius, earthRadius + skyHeight, scatterPoint, scatterSkyIntersection); // 散射点到天空边界的透射率
@@ -609,19 +611,22 @@ vec4 computeAerialPerspective(vec3 camEarthIntersection)
     vec4 aerialColor;
     vec4 scatterRayleigh = vec4(0.0f);
     vec4 scatterMie = vec4(0.0f);
-
+    vec4 t1 = vec4(1.0f);
     itvl = length(camEarthIntersection - camPos) / float(maxStep);
     for (int i = 0; i < maxStep; ++i)
     {
         vec3 scatterPoint = camPos + i * itvl * camDir;
         vec3 scatterSkyIntersection = intersectSky(scatterPoint, sunDir);     // 散射点与天空交点
         vec3 scatterEarthIntersection = intersectEarth(scatterPoint, sunDir); // 散射点与地面交点
-        if (scatterEarthIntersection != vec3(0.0f) && length(scatterEarthIntersection - scatterPoint) < length(scatterSkyIntersection - scatterPoint))
+        if (scatterEarthIntersection != NO_INTERSECTION && length(scatterEarthIntersection - scatterPoint) < length(scatterSkyIntersection - scatterPoint))
         {
             continue; // 散射点阳光被地面阻挡
         }
         vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, scatterPoint);                    // 摄像机到散射点的透射率
         vec4 t2 = getTransmittanceFromLUTSky(transmittanceLUT, earthRadius, earthRadius + skyHeight, scatterPoint, scatterSkyIntersection); // 散射点到天空边界的透射率
+
+        // vec4 t1 = transmittance(camPos, scatterPoint, 1.0f);                 // 摄像机到散射点的透射率
+        // vec4 t2 = transmittance(scatterPoint, scatterSkyIntersection, 1.0f); // 散射点到天空边界的透射率
 
         scatterRayleigh += scatterCoefficientRayleigh(scatterPoint) * t1 * t2;
 
@@ -693,7 +698,7 @@ void main()
         vec3 camEarthIntersection = intersectEarth(camPos, camDir);
         if (Skybox == 1)
         {
-            if (camEarthIntersection == vec3(0.0f))
+            if (camEarthIntersection == NO_INTERSECTION)
             {
                 LightResult = vec4(sampleSkybox(TexCoord, skybox), 1.0f); // 采样天空盒
             }
@@ -702,12 +707,16 @@ void main()
                 // 击中地球,渲染大气透视
                 LightResult = computeAerialPerspective(camEarthIntersection);
 
-                vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
-                // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);// TODO: 修复近地面错误
-
+                vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f); // 走样
+                                                                             // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection); // TODO: 修复近地面错误
+                if (Skybox == 1)
+                {
+                    ambient += computeSkyboxAmbientMipMap(skybox, n);
+                    // ambient = vec3(0.f);
+                }
                 // 渲染地面
                 vec3 normal = normalize(camEarthIntersection - earthCenter);
-                vec3 lighting = dirLightDiffuse(camEarthIntersection, normal);
+                vec3 lighting = dirLightDiffuse(camEarthIntersection, normal) + ambient;
                 vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
                 LightResult.rgb += lighting * earthBaseColor * t1.rgb;
             }
@@ -716,13 +725,13 @@ void main()
         {
             float camHeight = length(camPos - earthCenter) - earthRadius;
 
-            if (camEarthIntersection != vec3(0.0f))
+            if (camEarthIntersection != NO_INTERSECTION)
             {
 
                 // 击中地球,渲染大气透视
                 LightResult = computeAerialPerspective(camEarthIntersection);
 
-                vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
+                vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f); // 走样
                 // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);
 
                 // 渲染地面
@@ -743,7 +752,7 @@ void main()
                 }
             }
         }
-        if (camEarthIntersection == vec3(0.0f))
+        if (camEarthIntersection == NO_INTERSECTION)
         {
             LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightIntensity[0], 2.0f);
         }
@@ -773,10 +782,11 @@ void main()
 
         if (Skybox == 0) // 关闭天空盒
         {
-            vec4 t1 = transmittance(camPos, FragPos, 1.0f);
-            LightResult *= t1;
-            LightResult += computeAerialPerspective(FragPos);
+            // vec4 t1 = transmittance(camPos, FragPos, 1.0f);
         }
+        vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, FragPos);
+        LightResult *= t1;
+        LightResult += computeAerialPerspective(FragPos);
     }
 
     const vec3 BoxMin = vec3(2.0f, -2.0f, -2.0f);

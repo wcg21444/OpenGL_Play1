@@ -1,3 +1,4 @@
+#define NO_INTERSECTION vec3(1.0f / 0.0f)
 
 vec3 intersectSky(vec3 ori, vec3 dir) {
     float kAtmosphereRadius = earthRadius + skyHeight;
@@ -15,7 +16,7 @@ vec3 intersectSky(vec3 ori, vec3 dir) {
     float discrS = b * b - 4.0f * a * cS;
     if (discrS < 0.0f) {
         // 判别式小于0，光线没有与大气层相交
-        return vec3(0.0f);
+        return NO_INTERSECTION;
     }
 
     // 计算大气层的两个交点参数 t
@@ -53,7 +54,7 @@ vec3 intersectEarth(vec3 ori, vec3 dir) {
     // 如果判别式小于0，说明没有交点
     if (discr < 0.0f) {
         // 返回一个特殊值来表示没有交点，例如一个“无效”向量
-        return vec3(0.0f);
+        return vec3(1.f / 0.0f);
     }
 
     // 计算两个交点参数t
@@ -72,7 +73,7 @@ vec3 intersectEarth(vec3 ori, vec3 dir) {
     else {
         // 两个t值都小于等于0，表示光线从球体内部射出，或球体在光线背后
         // 此时可以认为没有有效交点
-        return vec3(0.0f); // 同样，返回一个特殊值
+        return vec3(1.f / 0.0f); // 同样，返回一个特殊值
     }
 
     // 根据找到的有效t值计算交点坐标
@@ -131,19 +132,16 @@ vec2 transmittanceUVInverseMapping(float earthRadius, float skyRadius, vec2 uv) 
 
     return vec2(mu, r);
 }
-/// @brief 起始点,终点 到 mu, r映射
-/// @param earthRadius 地面半径
-/// @param skyRadius 天空半径
-/// @param ori 参考原点的起始点
-/// @param end 参考原点的终点
-/// @return (mu,r)
 vec2 rayToMuR(float earthRadius, float skyRadius, vec3 ori, vec3 end) {
-    float r = length(ori - vec3(0.0f, -earthRadius, 0.0f));
-    vec3 n = normalize(vec3(ori.x, r, ori.z));
-    vec3 dir = normalize(end - ori);
-    float mu = dot(n, dir);
+    vec3 center = vec3(0.0, -earthRadius, 0.0);
+    float R = length(ori - center);
 
-    return vec2(mu, r);
+    vec3 n = normalize(ori - center);
+
+    vec3 dir = normalize(end - ori);
+
+    float mu = dot(dir, n);
+    return vec2(mu, R);
 }
 
 void MuRToRay(vec2 MuR, float earthRadius, out vec3 ori, out vec3 dir) {
@@ -156,34 +154,37 @@ void MuRToRay(vec2 MuR, float earthRadius, out vec3 ori, out vec3 dir) {
     dir = vec3(dir_x, dir_y, dir_z);
 }
 
-//从LUT获取两点透射率
+// 从LUT获取两点透射率
 vec4 getTransmittanceFromLUT(sampler2D LUT, float earthRadius, float skyRadius, vec3 ori, vec3 end) {
     vec3 dir = normalize(ori - end);
     vec3 n = normalize(ori - vec3(0.0f, -earthRadius, 0.0f));
-    int inverse = 0;
+    vec3 earthIntersection = intersectEarth(ori, -dir) ;
+    int hitEarth = 0;
 
-    if (intersectEarth(ori,-dir)!=vec3(0.0f)) {
-        inverse = 1;
+    if (earthIntersection != NO_INTERSECTION) {
+        hitEarth = 1;
     }
-    vec2 MuR_ori ;
+    vec2 MuR_ori;
     vec2 MuR_end;
-    if(inverse==1) {
-        MuR_ori = rayToMuR(earthRadius, skyRadius, ori, 2*ori-end);
+    if (hitEarth == 1) {
+        MuR_ori = rayToMuR(earthRadius, skyRadius, ori, 2 * ori - end);
         MuR_end = rayToMuR(earthRadius, skyRadius, end, ori);
+        float bias = 0.3f;//加上这个magic bias 近地面透射率的artifcat减少了
+        MuR_end.y+=bias;
     }
     else {
-        MuR_ori = rayToMuR(earthRadius, skyRadius, ori, end);
-        MuR_end = rayToMuR(earthRadius, skyRadius, end, 2*end-ori);
+        MuR_ori = rayToMuR(earthRadius, skyRadius, ori, end);//高空地平线走样严重
+        MuR_end = rayToMuR(earthRadius, skyRadius, end, 2 * end - ori);
     }
     vec4 tori = texture(LUT, transmittanceUVMapping(earthRadius, skyRadius, MuR_ori.x, MuR_ori.y));
     vec4 tend = texture(LUT, transmittanceUVMapping(earthRadius, skyRadius, MuR_end.x, MuR_end.y));
 
-    if (inverse==1) {
-        return tend /tori;
+    if (hitEarth == 1) {
+        return tend / tori;
     }
     return tori / tend;
 }
-//从LUT获取起点到天空透射率
+// 从LUT获取起点到天空透射率
 vec4 getTransmittanceFromLUTSky(sampler2D LUT, float earthRadius, float skyRadius, vec3 ori, vec3 skyIntersection) {
     vec3 dir = normalize(ori - skyIntersection);
     vec3 n = normalize(ori - vec3(0.0f, -earthRadius, 0.0f));

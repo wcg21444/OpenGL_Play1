@@ -19,6 +19,7 @@
 class Shader
 {
 public:
+    // 增改成员变量记得在operator=()更新
     std::string vs_path;
     std::string fs_path;
     std::string gs_path;
