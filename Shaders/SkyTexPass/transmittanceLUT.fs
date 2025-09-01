@@ -32,5 +32,5 @@ void main()
     vec3 dir;
     MuRToRay(MuR, _earthRadius, ori, dir);
     vec3 end = intersectSky(ori, dir);
-    Transmittance = transmittance(ori, end, 1.f);
+    Transmittance = transmittanceOpticalDepth(ori, end, 1.f);
 }

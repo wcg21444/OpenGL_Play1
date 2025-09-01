@@ -79,8 +79,9 @@ void main()
         // 击中地球,渲染大气透视
         SkyResult = computeAerialPerspective(camEarthIntersection, dirLightIntensity);
 
-        // vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
-        vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);
+        vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
+        // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);
+
         // vec2 MuR = rayToMuR(earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);
         // vec2 uv = transmittanceUVMapping(earthRadius, earthRadius + skyHeight, MuR.x, MuR.y);
         // vec4 t1 = texture(transmittanceLUT, uv);

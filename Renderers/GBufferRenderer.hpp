@@ -66,7 +66,7 @@ public:
           bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs")),
           unfoldPass(CubemapUnfoldPass(width, height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 256)),
           skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 256)),
-          transmittanceLUTPass(TransmittanceLUTPass(128, 32, "Shaders/screenQuad.vs", "Shaders/SkyTexPass/transmittanceLUT.fs"))
+          transmittanceLUTPass(TransmittanceLUTPass(256, 64, "Shaders/screenQuad.vs", "Shaders/SkyTexPass/transmittanceLUT.fs"))
     {
     }
     void reloadCurrentShaders() override

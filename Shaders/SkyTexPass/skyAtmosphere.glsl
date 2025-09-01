@@ -8,6 +8,7 @@ vec4 computeSkyColor(in vec3 sunLightIntensity) {
     vec4 scatterRayleigh = vec4(0.0f);
     vec4 scatterMie = vec4(0.0f);
 
+    vec4 op1 = vec4(0.0f);
     vec3 camSkyIntersection = intersectSky(camPos, camDir); // 摄像机视线与天空交点
     itvl = length(camSkyIntersection - camPos) / float(maxStep);
     for (int i = 0; i < maxStep; ++i) {
@@ -18,13 +19,16 @@ vec4 computeSkyColor(in vec3 sunLightIntensity) {
         vec3 scatterSkyIntersection = intersectSky(scatterPoint, sunDir);     // 散射点与天空交点
         vec3 scatterEarthIntersection = intersectEarth(scatterPoint, sunDir); // 散射点与地面交点
         if (scatterEarthIntersection != NO_INTERSECTION && length(scatterEarthIntersection - scatterPoint) < length(scatterSkyIntersection - scatterPoint)) {
-            continue; // 散射点阳光被地面阻挡
+            break; // 散射点阳光被地面阻挡
         }
-        // vec4 t1 = transmittance(camPos, scatterPoint, 1.0f);                 // 摄像机到散射点的透射率
-        // vec4 t2 = transmittance(scatterPoint, scatterSkyIntersection, 1.0f); // 散射点到天空边界的透射率
 
-        vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, scatterPoint);                    // 摄像机到散射点的透射率
+        // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, scatterPoint);
+        accumulateOpticalDepth(op1, scatterPoint, scatterPoint + itvl * camDir);
+        vec4 t1 = exp(-op1);
         vec4 t2 = getTransmittanceFromLUTSky(transmittanceLUT, earthRadius, earthRadius + skyHeight, scatterPoint, scatterSkyIntersection); // 散射点到天空边界的透射率
+
+        // vec4 t1 = transmittance(camPos, scatterPoint, 1.0f); // 摄像机到散射点的透射率
+        // vec4 t2 = transmittance(scatterPoint, scatterSkyIntersection, 1.0f); // 散射点到天空边界的透射率
         scatterRayleigh += scatterCoefficientRayleigh(scatterPoint) * t1 * t2;
 
         scatterMie += scatterCoefficientMie(scatterPoint) * t1 * t2;
@@ -45,16 +49,21 @@ vec4 computeAerialPerspective(vec3 camEarthIntersection, in vec3 sunLightIntensi
     vec4 aerialColor;
     vec4 scatterRayleigh = vec4(0.0f);
     vec4 scatterMie = vec4(0.0f);
-    vec4 t1 = vec4(1.0f);
     itvl = length(camEarthIntersection - camPos) / float(maxStep);
+
+    vec4 op1 = vec4(0.0f);
     for (int i = 0; i < maxStep; ++i) {
         vec3 scatterPoint = camPos + i * itvl * camDir;
         vec3 scatterSkyIntersection = intersectSky(scatterPoint, sunDir);     // 散射点与天空交点
         vec3 scatterEarthIntersection = intersectEarth(scatterPoint, sunDir); // 散射点与地面交点
         if (scatterEarthIntersection != NO_INTERSECTION && length(scatterEarthIntersection - scatterPoint) < length(scatterSkyIntersection - scatterPoint)) {
-            continue; // 散射点阳光被地面阻挡
+            break; // 散射点阳光被地面阻挡
         }
-        vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, scatterPoint);                    // 摄像机到散射点的透射率
+
+        accumulateOpticalDepth(op1, scatterPoint, scatterPoint + itvl * camDir);
+
+        vec4 t1 = exp(-op1);
+        // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, scatterPoint);                    // 摄像机到散射点的透射率
         vec4 t2 = getTransmittanceFromLUTSky(transmittanceLUT, earthRadius, earthRadius + skyHeight, scatterPoint, scatterSkyIntersection); // 散射点到天空边界的透射率
 
         // vec4 t1 = transmittance(camPos, scatterPoint, 1.0f);                 // 摄像机到散射点的透射率

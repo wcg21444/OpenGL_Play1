@@ -170,20 +170,18 @@ vec4 getTransmittanceFromLUT(sampler2D LUT, float earthRadius, float skyRadius, 
     if (hitEarth == 1) {
         MuR_ori = rayToMuR(earthRadius, skyRadius, ori, 2 * ori - end);
         MuR_end = rayToMuR(earthRadius, skyRadius, end, ori);
-        float bias = 0.3f; // 加上这个magic bias 近地面透射率的artifcat减少了
-        MuR_end.y += bias;
     }
     else {
         MuR_ori = rayToMuR(earthRadius, skyRadius, ori, end); // 高空地平线走样严重
         MuR_end = rayToMuR(earthRadius, skyRadius, end, 2 * end - ori);
     }
-    vec4 tori = texture(LUT, transmittanceUVMapping(earthRadius, skyRadius, MuR_ori.x, MuR_ori.y));
-    vec4 tend = texture(LUT, transmittanceUVMapping(earthRadius, skyRadius, MuR_end.x, MuR_end.y));
+    vec4 tOpOri = texture(LUT, transmittanceUVMapping(earthRadius, skyRadius, MuR_ori.x, MuR_ori.y));
+    vec4 tOpEnd = texture(LUT, transmittanceUVMapping(earthRadius, skyRadius, MuR_end.x, MuR_end.y));
 
     if (hitEarth == 1) {
-        return tend / tori;
+        return exp(tOpOri-tOpEnd);
     }
-    return tori / tend;
+    return exp(tOpEnd-tOpOri);
 }
 // 从LUT获取起点到天空透射率
 vec4 getTransmittanceFromLUTSky(sampler2D LUT, float earthRadius, float skyRadius, vec3 ori, vec3 skyIntersection) {
@@ -191,7 +189,7 @@ vec4 getTransmittanceFromLUTSky(sampler2D LUT, float earthRadius, float skyRadiu
     vec3 n = normalize(ori - earthCenter);
 
     vec2 MuR_ori = rayToMuR(earthRadius, skyRadius, ori, skyIntersection);
-    vec4 tori = texture(LUT, transmittanceUVMapping(earthRadius, skyRadius, MuR_ori.x, MuR_ori.y));
+    vec4 tOpOri = texture(LUT, transmittanceUVMapping(earthRadius, skyRadius, MuR_ori.x, MuR_ori.y));
 
-    return tori;
+    return vec4(exp(-tOpOri.r),exp(-tOpOri.g),exp(-tOpOri.b),1.0f);
 }
