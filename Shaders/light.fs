@@ -11,6 +11,8 @@ struct DirLight
     sampler2D depthMap;
     float farPlane;
     float orthoScale;
+    sampler2D VSMTexture;
+    int useVSM;
 };
 
 /*****************视口大小******************************************************************/
@@ -148,8 +150,15 @@ vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
 
         vec3 l = normalize(dirLightArray[i].pos);
         float rr = dot(l, l);
-        float shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
-
+        float shadowFactor = 0.0f;
+        if (dirLightArray[i].useVSM == 0)
+        {
+            shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
+        }
+        else
+        {
+            shadowFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
+        }
         if (i == 0) // 太阳光处理
         {
             diffuse += shadowFactor * dirLightArray[i].intensity / rr * max(0.f, dot(n, l)) * sunlightDecay;
@@ -174,7 +183,15 @@ vec3 dirLightSpec(vec3 fragPos, vec3 n)
         float specularStrength = 0.01f;
         vec3 viewDir = normalize(eyePos - fragPos);
         vec3 reflectDir = reflect(-l, n);
-        float shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
+        float shadowFactor = 0.0f;
+        if (dirLightArray[i].useVSM == 0)
+        {
+            shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
+        }
+        else
+        {
+            shadowFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
+        }
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), 128);
 
         if (i == 0) // 太阳光处理

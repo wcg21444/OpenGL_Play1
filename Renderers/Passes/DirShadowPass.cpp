@@ -50,3 +50,34 @@ void DirShadowPass::renderToTexture(
     Renderer::DrawScene(scene, model, shaders);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
+DirShadowVSMPass::DirShadowVSMPass(std::string _vs_path, std::string _fs_path)
+    : Pass(0, 0, _vs_path, _fs_path)
+{
+    initializeGLResources();
+    contextSetup();
+}
+inline void DirShadowVSMPass::initializeGLResources()
+{
+    glGenFramebuffers(1, &FBO);
+}
+inline void DirShadowVSMPass::contextSetup()
+{
+}
+void DirShadowVSMPass::resize(int _width, int _height)
+{
+}
+/// @brief 输入存在的Tex对象,绑定Tex对象到FBO,结果输出到Tex.
+void DirShadowVSMPass::renderToVSMTexture(const DirectionLight &light, int width, int height)
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, light.VSMTexture->ID, 0);
+
+    glViewport(0, 0, width, height);
+
+    shaders.use();
+    shaders.setTextureAuto(light.depthMap, GL_TEXTURE_2D, 0, "depthMap");
+
+    Renderer::DrawQuad();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}

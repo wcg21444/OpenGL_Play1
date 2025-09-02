@@ -82,10 +82,10 @@ void LightPass::render(RenderParameters &renderParameters,
     {
         shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps[" + std::to_string(i) + "]"); // 给sampler数组赋空
     }
-    for (size_t i = 0; i < MAX_DIR_LIGHTS; ++i)
-    {
-        shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, "dirDepthMap[" + std::to_string(i) + "]"); // 给sampler数组赋空
-    }
+    // for (size_t i = 0; i < MAX_DIR_LIGHTS; ++i)
+    // {
+    //     shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, "dirDepthMap[" + std::to_string(i) + "]"); // 给sampler数组赋空
+    // }
     // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skybox");
 
     /****************************************点光源输入**************************************************/

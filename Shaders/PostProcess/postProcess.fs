@@ -135,8 +135,14 @@ void main()
     // HDR
     if (HDR == 1)
     {
-        FragColor *= HDRExposure;
+        FragColor *= HDRExposure - 0.5f;
         FragColor.rgb = aces(FragColor.rgb);
+    }
+
+    // Gamma 矫正
+    if (GammaCorrection == 1)
+    {
+        FragColor.rgb = pow(FragColor.rgb, vec3(1.0 / gamma));
     }
     if (Bloom == 1)
     {
@@ -148,12 +154,6 @@ void main()
         FragColor += BloomColor0 + BloomColor1 + BloomColor2 + BloomColor3 + BloomColor4;
     }
 
-    // Gamma 矫正
-    if (GammaCorrection == 1)
-    {
-        FragColor.rgb = pow(FragColor.rgb, vec3(1.0 / gamma));
-    }
-
     // FragColor = vec4(1.f);
     // 暗角
     if (Vignetting == 1)
@@ -163,6 +163,7 @@ void main()
         vign = pow(vign, vignettingPower);
         FragColor *= vign;
     }
+    FragColor *= 1.2f;
 
     /***均匀采样核*****************************************/
     // vec4 result = vec4(0.0f);

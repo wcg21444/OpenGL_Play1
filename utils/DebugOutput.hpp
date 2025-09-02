@@ -8,21 +8,7 @@
 #include <chrono>
 
 #include "Utils.hpp"
-
-/**
- * @brief 获取当前时间的格式化字符串
- * @return 格式化后的时间字符串
- **/
-inline std::string FormatTime()
-{
-    std::time_t now = std::time(nullptr);
-    std::tm *local_time = std::localtime(&now);
-
-    char buffer[80];
-    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", local_time);
-
-    return std::string(buffer);
-}
+#include "LogFormat.hpp"
 
 /**
  * @brief 静态调试日志输出类，支持格式化文本和可视化控制面板。
@@ -124,7 +110,7 @@ inline void DebugOutput::Draw(const char *title, bool *p_open)
 
     for (const auto &log : s_logs)
     {
-        ImGui::TextUnformatted(log.c_str());
+        RenderColoredText(log);
     }
 
     if (s_autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())

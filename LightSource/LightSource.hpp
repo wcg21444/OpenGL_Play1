@@ -6,25 +6,14 @@
 
 // TODO 阴影开关功能
 // TODO 运行时类型切换
-// class LightSource
-// {
-// public:
-//     enum LightType
-//     {
-//         point;
-//         direction;
-//         spot;
-//     }
-//     glm::vec3 intensity;
-//     glm::vec3 position;
-//     bool enableShadow;
-//     virtual void generateShadowTexResource();
-// };
+class Texture; // fwd declaration
+
 struct ColorIntensity
 {
     glm::vec3 color;
     float intensity;
 };
+
 inline ColorIntensity SeparateIntensity(glm::vec3 combined_intensity)
 {
     ColorIntensity result;
@@ -43,16 +32,19 @@ inline ColorIntensity SeparateIntensity(glm::vec3 combined_intensity)
     }
     return result;
 }
+
 inline glm::vec3 CombineIntensity(const ColorIntensity &separatedData)
 {
     return separatedData.color * separatedData.intensity;
 }
+
 enum class LightType
 {
     TypePointLight,
     TypeDirLight,
     TypeSpotLight,
 };
+
 class LightSource
 {
 protected:
@@ -97,6 +89,8 @@ private:
 public:
     unsigned int depthMap = 0;
     int texResolution;
+    std::shared_ptr<Texture> VSMTexture;
+    bool useVSM = false;
 
     float nearPlane;
     float farPlane;

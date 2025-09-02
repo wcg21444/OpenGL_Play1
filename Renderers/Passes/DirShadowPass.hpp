@@ -30,3 +30,17 @@ public:
         int width,
         int height);
 };
+
+class DirShadowVSMPass : public Pass
+{
+    void initializeGLResources();
+
+public:
+    DirShadowVSMPass(std::string _vs_path, std::string _fs_path);
+
+    void contextSetup() override;
+
+    void resize(int _width, int _height) override;
+
+    void renderToVSMTexture(const DirectionLight &light, int width, int height);
+};

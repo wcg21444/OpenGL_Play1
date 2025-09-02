@@ -50,6 +50,7 @@ private:
     CubemapUnfoldPass unfoldPass;
     SkyTexPass skyTexPass;
     TransmittanceLUTPass transmittanceLUTPass;
+    DirShadowVSMPass dirShadowVSMPass;
 
     GBufferRendererGUI rendererGUI;
 
@@ -66,7 +67,8 @@ public:
           bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs")),
           unfoldPass(CubemapUnfoldPass(width, height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 256)),
           skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 256)),
-          transmittanceLUTPass(TransmittanceLUTPass(256, 64, "Shaders/screenQuad.vs", "Shaders/SkyTexPass/transmittanceLUT.fs"))
+          transmittanceLUTPass(TransmittanceLUTPass(256, 64, "Shaders/screenQuad.vs", "Shaders/SkyTexPass/transmittanceLUT.fs")),
+          dirShadowVSMPass(DirShadowVSMPass("Shaders/screenQuad.vs", "Shaders/DirShadow/dirShadowVSM.fs"))
     {
     }
     void reloadCurrentShaders() override
@@ -83,6 +85,7 @@ public:
         unfoldPass.reloadCurrentShaders();
         skyTexPass.reloadCurrentShaders();
         transmittanceLUTPass.reloadCurrentShaders();
+        dirShadowVSMPass.reloadCurrentShaders();
         contextSetup();
     }
 
@@ -151,6 +154,7 @@ private:
 
         for (auto &light : dirLights)
         {
+            light.useVSM = true; // 先强制为use. 暂时不处理切换问题
             light.generateShadowTexResource();
             if (rendererGUI.toggleDirShadow)
             {
@@ -160,6 +164,10 @@ private:
                     model,
                     light.texResolution,
                     light.texResolution);
+                if (light.useVSM)
+                {
+                    dirShadowVSMPass.renderToVSMTexture(light, light.texResolution, light.texResolution);
+                }
             }
         }
 
@@ -243,7 +251,7 @@ private:
         // rendererGUI.renderPassInspector(bloomPassTex4);
         // rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
 
-        rendererGUI.renderPassInspector(allLights.dirLights[0].depthMap);
+        rendererGUI.renderPassInspector({allLights.dirLights[0].VSMTexture->ID, allLights.dirLights[0].depthMap});
         ImGui::Begin("RendererGUI");
         {
             ImGui::DragFloat("OrthoScale", &allLights.dirLights[0].orthoScale, 1e1, 1e3);

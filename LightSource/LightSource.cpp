@@ -1,4 +1,5 @@
 #include "LightSource.hpp"
+#include "../Shading/Texture.hpp"
 
 LightSource::LightSource(const glm::vec3 &_intensity, const glm::vec3 &_position)
     : combIntensity(_intensity),
@@ -69,6 +70,7 @@ glm::vec3 PointLight::getPosition() const
 DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution)
     : LightSource(_intensity, _position), orthoScale(100.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
 {
+    VSMTexture = std::make_shared<Texture>();
     lightProjection = glm::ortho(-1.0f * orthoScale,
                                  1.0f * orthoScale,
                                  -1.0f * orthoScale,
@@ -85,6 +87,11 @@ void DirectionLight::setToShader(Shader &shaders)
     combIntensity = CombineIntensity(colorIntensity);
 
     shaders.setTextureAuto(depthMap, GL_TEXTURE_2D, 0, "dirDepthMap");
+    if (useVSM)
+    {
+        shaders.setTextureAuto(VSMTexture->ID, GL_TEXTURE_2D, 0, "VSMTexture");
+        shaders.setUniform("useVSM", useVSM);
+    }
     shaders.setUniform3fv("dirLightPos", position);
     shaders.setUniform3fv("dirLightIntensity", combIntensity);
     shaders.setMat4("dirLightSpaceMatrix", lightSpaceMatrix);
@@ -94,6 +101,11 @@ void DirectionLight::setToShaderLightArray(Shader &shaders, size_t index)
     combIntensity = CombineIntensity(colorIntensity);
 
     shaders.setTextureAuto(depthMap, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].depthMap", index));
+    if (useVSM)
+    {
+        shaders.setTextureAuto(VSMTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].VSMTexture", index));
+        shaders.setUniform(std::format("dirLightArray[{}].useVSM", index), useVSM);
+    }
     shaders.setUniform3fv(std::format("dirLightArray[{}].pos", index), position);
     shaders.setUniform3fv(std::format("dirLightArray[{}].intensity", index), combIntensity);
     shaders.setMat4(std::format("dirLightArray[{}].spaceMatrix", index), lightSpaceMatrix);
@@ -119,17 +131,24 @@ glm::vec3 DirectionLight::getPosition() const
     return position;
 }
 
-// 在渲染器中调用,等待GL上下文
+// 在渲染器中逐帧调用,等待GL上下文
 void DirectionLight::generateShadowTexResource()
 {
     if (depthMap == 0)
     {
         glGenTextures(1, &depthMap);
         glBindTexture(GL_TEXTURE_2D, depthMap);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, texResolution, texResolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, texResolution, texResolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    }
+    if (useVSM && VSMTexture->ID == 0)
+    {
+        VSMTexture->SetFilterMax(GL_LINEAR);
+        VSMTexture->SetFilterMin(GL_LINEAR);
+        VSMTexture->SetWrapMode(GL_CLAMP_TO_EDGE);
+        VSMTexture->Generate(texResolution, texResolution, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
     }
 }
