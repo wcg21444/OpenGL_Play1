@@ -257,68 +257,44 @@ void initializeAtmosphereParameters()
 void computeSkyAtmosphere(in out vec4 LightResult, in vec3 ambient, in vec3 n)
 {
     vec3 camEarthIntersection = intersectEarth(camPos, camDir);
-    if (Skybox == 1) // 开启天空盒
+
+    if (camEarthIntersection == NO_INTERSECTION)
     {
-        if (camEarthIntersection == NO_INTERSECTION)
+        if (Skybox == 1) // 开启天空盒
         {
-            LightResult = vec4(sampleSkybox(TexCoord, skybox), 1.0f); // 采样天空盒
+            LightResult.rgb += vec4(sampleSkybox(TexCoord, skybox), 1.0f).rgb; // 采样天空盒
         }
         else
         {
-            // 击中地球,渲染大气透视
-            LightResult = computeAerialPerspective(camEarthIntersection, dirLightArray[0].intensity);
-            ambient += computeSkyboxAmbientMipMap(skybox, n);
-            vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f); // 走样
-            // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection); // TODO: 修复近地面错误
-            // 渲染地面
-            vec3 normal = normalize(camEarthIntersection - earthCenter);
-            vec3 lighting = dirLightDiffuse(camEarthIntersection, normal) + ambient;
-            vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
-            LightResult.rgb += lighting * earthBaseColor * t1.rgb;
+            LightResult.rgb += computeSkyColor(dirLightArray[0].intensity).rgb;
         }
     }
     else
     {
-        float camHeight = length(camPos - earthCenter) - earthRadius;
+        // 击中地球,渲染大气透视
+        LightResult.rgb += computeAerialPerspective(camEarthIntersection, dirLightArray[0].intensity).rgb;
 
-        if (camEarthIntersection != NO_INTERSECTION)
-        {
-
-            // 击中地球,渲染大气透视
-            LightResult = computeAerialPerspective(camEarthIntersection, dirLightArray[0].intensity);
-
-            vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f); // 走样
-            // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);
-            ambient += computeSkyboxAmbientMipMap(skybox, n);
-            // 渲染地面
-            vec3 normal = normalize(camEarthIntersection - earthCenter);
-            vec3 lighting = dirLightDiffuse(camEarthIntersection, normal) + ambient;
-            vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
-            LightResult.rgb += lighting * earthBaseColor * t1.rgb;
-        }
-        else
-        {
-            if (camHeight > skyHeight)
-            {
-                // 摄像机在大气层外
-            }
-            else
-            {
-                LightResult += computeSkyColor(dirLightArray[0].intensity);
-            }
-        }
+        vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
+        // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);
+        ambient += computeSkyboxAmbientMipMap(skybox, n);
+        // 渲染地面
+        vec3 normal = normalize(camEarthIntersection - earthCenter);
+        vec3 lighting = dirLightDiffuse(camEarthIntersection, normal) + ambient;
+        vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
+        LightResult.rgb += (lighting) * (earthBaseColor)*t1.rgb;
     }
+
     if (camEarthIntersection == NO_INTERSECTION)
     {
         LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightArray[0].intensity, 2.0f);
     }
 }
 
-void computeSceneAtmosphere(in vec3 FragPos)
+void computeSceneAtmosphere(in vec3 FragPos, in out vec4 SceneColor)
 {
     vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, FragPos);
-    LightResult *= t1;
-    LightResult += computeAerialPerspective(FragPos, dirLightArray[0].intensity);
+    SceneColor *= t1;
+    SceneColor.rgb += computeAerialPerspective(FragPos, dirLightArray[0].intensity).rgb;
 }
 void main()
 {
@@ -340,6 +316,7 @@ void main()
     }
     else
     {
+        vec4 sceneColor = vec4(0.0f);
         diffuse =
             pointLightDiffuse(FragPos, n) +
             dirLightDiffuse(FragPos, n);
@@ -354,11 +331,12 @@ void main()
         // ambient = (ambientLight +
         //            computeSkyboxAmbient(skybox));
 
-        LightResult += vec4(diffuse * texture(gAlbedoSpec, TexCoord).rgb, 1.f);
-        LightResult += vec4(specular * texture(gAlbedoSpec, TexCoord).a, 1.f);
-        LightResult += vec4(ambient * texture(gAlbedoSpec, TexCoord).rgb, 1.f);
+        sceneColor += vec4(diffuse * texture(gAlbedoSpec, TexCoord).rgb, 1.f);
+        sceneColor += vec4(specular * texture(gAlbedoSpec, TexCoord).a, 1.f);
+        sceneColor += vec4(ambient * texture(gAlbedoSpec, TexCoord).rgb, 1.f);
 
-        computeSceneAtmosphere(FragPos);
+        computeSceneAtmosphere(FragPos, sceneColor);
+        LightResult += sceneColor;
     }
 
     const vec3 BoxMin = vec3(2.0f, -2.0f, -2.0f);

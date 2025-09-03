@@ -100,7 +100,7 @@ void main()
         }
         else
         {
-            SkyResult += computeSkyColor(dirLightIntensity);
+            SkyResult.rgb += computeSkyColor(dirLightIntensity).rgb;
         }
     }
     // SkyResult.rgb = clamp(SkyResult.rgb, vec3(0.0f), vec3(1.0f));
