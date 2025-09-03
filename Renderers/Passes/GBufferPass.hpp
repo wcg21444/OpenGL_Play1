@@ -3,7 +3,8 @@
 class GBufferPass : public Pass
 {
 private:
-    unsigned int gViewPosition;
+    unsigned int gViewPositionID;
+    Texture gViewPosition;
     Texture gPosition;
     Texture gNormal;
     Texture gAlbedoSpec;
@@ -21,6 +22,6 @@ public:
 
     inline auto getTextures()
     {
-        return std::make_tuple(gPosition.ID, gNormal.ID, gAlbedoSpec.ID, gViewPosition);
+        return std::make_tuple(gPosition.ID, gNormal.ID, gAlbedoSpec.ID, gViewPosition.ID);
     }
 };

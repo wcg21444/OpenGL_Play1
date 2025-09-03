@@ -6,7 +6,7 @@ Texture::Texture()
     Target = GL_TEXTURE_2D;
     InternalFormat = GL_RGBA;
     Format = GL_RGBA;
-    Type = GL_UNSIGNED_BYTE;
+    Type = GL_FLOAT;
     FilterMin = GL_LINEAR_MIPMAP_LINEAR;
     FilterMax = GL_LINEAR;
     WrapS = GL_REPEAT;
@@ -55,7 +55,7 @@ void Texture::Generate(unsigned int width, unsigned int height, GLenum internalF
 }
 
 /// @brief 设置纹理数据 在Generate()之后调用 通常是逐帧调用
-/// @param data 纹理数据指针 注意与纹理格式对齐
+/// @param data 纹理数据指针 注意与纹理格式一致
 void Texture::SetData(void *data)
 {
     glBindTexture(Target, ID);
@@ -127,22 +127,130 @@ void Texture::SetFilterMax(GLenum filter)
 
 void Texture::Resize(int ResizeWidth, int ResizeHeight)
 {
-    // 设置大小
-    // 重新生成Tex
-    // ResizeTexture 需要删除原有Texture GL对象
-    // assert(ResizeWidth >= 0);
-    // assert(ResizeHeight >= 0);
-    // clamp
     ResizeWidth = (ResizeWidth <= 0) ? 1 : ResizeWidth;
     ResizeHeight = (ResizeHeight <= 0) ? 1 : ResizeHeight;
 
     Width = static_cast<unsigned int>(ResizeWidth);
     Height = static_cast<unsigned int>(ResizeHeight);
 
-    Generate(Width, Height, InternalFormat, Format, Type, NULL);
+    glBindTexture(Target, ID);
+    {
+        glTexImage2D(Target, 0, InternalFormat, Width, Height, 0, Format, Type, NULL);
+        if (Mipmapping)
+            glGenerateMipmap(Target);
+    }
+    glBindTexture(Target, 0);
 }
 
 Texture::~Texture()
+{
+    glDeleteTextures(1, &ID);
+}
+
+/*************************************************************************************************************** */
+
+TextureCube::TextureCube()
+{
+}
+
+///@brief 生成CubeTexture对象,设置属性
+///@param width 纹理的宽度，以像素为单位。
+///@param height 纹理的高度，以像素为单位。
+///@param internalFormat 纹理内部存储的颜色格式（例如 GL_RGBA, GL_RGBA16F）。
+///@param format 纹理源数据（即 data 指向的数据）的颜色格式（例如 GL_RGBA, GL_BGR）。
+///@param type 纹理源数据的每个颜色分量的数据类型（例如 GL_UNSIGNED_BYTE, GL_FLOAT）。
+///@param filterMax 放大过滤模式
+///@param filterMin 缩小过滤模式
+void TextureCube::Generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, GLenum filterMax, GLenum filterMin, bool mipmap)
+{
+    Width = width;
+    Height = height;
+    Format = format;
+    InternalFormat = internalFormat;
+    Type = type;
+    FilterMin = filterMin;
+    FilterMax = filterMax;
+    WrapS = GL_REPEAT;
+    WrapT = GL_REPEAT;
+    WrapR = GL_REPEAT;
+    Mipmapping = mipmap;
+
+    if (ID != 0)
+    {
+        glDeleteTextures(1, &ID);
+    }
+    glGenTextures(1, &ID);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, filterMax);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, filterMin); // 三线性插值
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, WrapS);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, WrapT);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, WrapR);
+
+    for (auto &faceTarget : TextureCube::FaceTargets)
+    {
+        glTexImage2D(faceTarget, 0, InternalFormat, width, height, 0, format, type, NULL);
+    }
+    if (mipmap)
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+}
+
+void TextureCube::SetFaceData(FaceEnum faceTarget, void *data)
+{
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
+    glTexImage2D(faceTarget,
+                 0, InternalFormat, Width, Height, 0, Format, Type, data);
+}
+
+void TextureCube::SetFilterMin(GLenum filter)
+{
+    FilterMin = filter;
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, FilterMin);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+}
+void TextureCube::SetFilterMax(GLenum filter)
+{
+    FilterMax = filter;
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, FilterMax);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+}
+
+void TextureCube::Resize(int ResizeWidth, int ResizeHeight)
+{
+    ResizeWidth = (ResizeWidth <= 0) ? 1 : ResizeWidth;
+    ResizeHeight = (ResizeHeight <= 0) ? 1 : ResizeHeight;
+
+    Width = static_cast<unsigned int>(ResizeWidth);
+    Height = static_cast<unsigned int>(ResizeHeight);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
+    for (auto &faceTarget : TextureCube::FaceTargets)
+    {
+        glTexImage2D(faceTarget, 0, InternalFormat, Width, Height, 0, Format, Type, NULL);
+    }
+    if (Mipmapping)
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+}
+void TextureCube::SetWrapMode(GLenum wrapMode)
+{
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
+    {
+        WrapS = wrapMode;
+        WrapT = wrapMode;
+        WrapR = wrapMode;
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, WrapS);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, WrapT);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, WrapR);
+    }
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+}
+
+TextureCube::~TextureCube()
 {
     glDeleteTextures(1, &ID);
 }

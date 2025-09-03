@@ -212,7 +212,6 @@ private:
         auto lightPassTex = lightPass.getTextures();
 
         /************************************Bloom*******************************************/
-        unsigned int bloomPassTex = 0;
         auto [bloomPassTex0,
               bloomPassTex1,
               bloomPassTex2,
@@ -220,7 +219,16 @@ private:
               bloomPassTex4] = bloomPass.getTextures();
         if (rendererGUI.toggleBloom)
         {
+
             bloomPass.render(lightPassTex);
+        }
+        else
+        {
+            bloomPassTex0 = 0;
+            bloomPassTex1 = 0;
+            bloomPassTex2 = 0;
+            bloomPassTex3 = 0;
+            bloomPassTex4 = 0;
         }
 
         /****************************PostProcess*********************************************/
@@ -251,7 +259,8 @@ private:
         // rendererGUI.renderPassInspector(bloomPassTex4);
         // rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
 
-        rendererGUI.renderPassInspector({allLights.dirLights[0].VSMTexture->ID, allLights.dirLights[0].depthMap});
+        // rendererGUI.renderPassInspector({allLights.dirLights[0].VSMTexture->ID, allLights.dirLights[0].depthMap});
+        rendererGUI.renderPassInspector({gPosition, ssaoBlurTex, lightPassTex});
         ImGui::Begin("RendererGUI");
         {
             ImGui::DragFloat("OrthoScale", &allLights.dirLights[0].orthoScale, 1e1, 1e3);

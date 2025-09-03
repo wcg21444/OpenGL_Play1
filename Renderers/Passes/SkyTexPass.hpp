@@ -1,7 +1,7 @@
 
 #pragma once
 #include "Pass.hpp"
-
+#include "../../Shading/Texture.hpp"
 class SkyTexPass : public Pass
 {
 private:
@@ -9,8 +9,7 @@ private:
     float aspect;
     float nearPlane;
     int cubemapSize;
-
-    unsigned int skyCubemapTex;
+    TextureCube skyCubemapTex;
 
 private:
     void initializeGLResources();

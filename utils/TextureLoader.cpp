@@ -1,6 +1,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "TextureLoader.hpp"
 
+/*"right", "left ","top ","bottom ","front ","back "*/
 unsigned int LoadCubemap(std::vector<std::string> faces)
 {
     unsigned int textureID;

@@ -11,11 +11,24 @@ GBufferPass::GBufferPass(int _vp_width, int _vp_height, std::string _vs_path, st
 void GBufferPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
-    // glGenTextures(1, &gPosition);
-    gPosition.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
-    gNormal.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
-    gAlbedoSpec.Generate(vp_width, vp_height, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glGenTextures(1, &gViewPosition);
+
+    gPosition.SetFilterMin(GL_NEAREST);
+    gPosition.SetFilterMax(GL_NEAREST);
+    gPosition.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL, false);
+
+    gNormal.SetFilterMin(GL_NEAREST);
+    gNormal.SetFilterMax(GL_NEAREST);
+    gNormal.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL, false);
+
+    gAlbedoSpec.SetFilterMin(GL_NEAREST);
+    gAlbedoSpec.SetFilterMax(GL_NEAREST);
+    gAlbedoSpec.Generate(vp_width, vp_height, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, NULL, false);
+
+    gViewPosition.SetFilterMin(GL_NEAREST);
+    gViewPosition.SetFilterMax(GL_NEAREST);
+    gViewPosition.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL, false);
+
+    glGenTextures(1, &gViewPositionID);
     glGenRenderbuffers(1, &depthMap);
 }
 void GBufferPass::contextSetup()
@@ -32,11 +45,8 @@ void GBufferPass::contextSetup()
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec.ID, 0);
 
     // BUG 改为Texture SSAO 通道不正常,有大量噪点
-    glBindTexture(GL_TEXTURE_2D, gViewPosition);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, vp_width, vp_height, 0, GL_RGBA, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gViewPosition, 0);
+    // 三线性过滤导致的
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gViewPosition.ID, 0);
 
     // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering
     // 分配多个写入对象.对应Shader input layout
@@ -56,6 +66,7 @@ void GBufferPass::resize(int _width, int _height)
     gPosition.Resize(vp_width, vp_height);
     gNormal.Resize(vp_width, vp_height);
     gAlbedoSpec.Resize(vp_width, vp_height);
+    gViewPosition.Resize(vp_width, vp_height);
     // TODO non Texure Resize
     contextSetup();
 }

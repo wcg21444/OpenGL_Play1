@@ -16,7 +16,7 @@ void LightPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
 
-    lightPassTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    lightPassTex.Generate(vp_width, vp_height, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
     shadowNoiseTex.Generate(8, 8, GL_RGBA16F, GL_RGB, GL_FLOAT, NULL);
 }
 void LightPass::contextSetup()

@@ -14,28 +14,12 @@ SkyTexPass::SkyTexPass(std::string _vs_path, std::string _fs_path, int _cubemapS
 
 SkyTexPass::~SkyTexPass()
 {
-    glDeleteTextures(1, &skyCubemapTex);
 }
 
 inline void SkyTexPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
-
-    glGenTextures(1, &skyCubemapTex);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, skyCubemapTex);
-    for (unsigned int i = 0; i < 6; ++i)
-    {
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA16F,
-                     cubemapSize, cubemapSize, 0, GL_RGBA, GL_FLOAT, NULL);
-    }
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // 三线性插值
-
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    // glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+    skyCubemapTex.Generate(cubemapSize, cubemapSize, GL_RGBA16F, GL_RGBA, GL_FLOAT, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, true);
 }
 
 inline void SkyTexPass::contextSetup()
@@ -55,25 +39,12 @@ void SkyTexPass::render(
 
     auto &[allLights, cam, scene, model, window] = renderParameters;
 
-    static std::vector<glm::mat4> camTransforms;
-    glViewport(0, 0, cubemapSize, cubemapSize);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glViewport(0, 0, cubemapSize, cubemapSize);
+
     shaders.use();
     if (!shaders.used)
         throw(std::exception("Shader failed to setup."));
-    for (unsigned int i = 0; i < 6; ++i)
-    {
-        cam.setCubemapViewMatrix(shaders, i);
-        auto cubemapProjection = glm::perspective(glm::radians(90.0f), 1.0f, nearPlane, farPlane);
-        shaders.setMat4("projection", cubemapProjection);
-        shaders.setTextureAuto(transmittanceLUT, GL_TEXTURE_2D, 0, "transmittanceLUT");
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                               GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, skyCubemapTex, 0);
-        Renderer::DrawSphere();
-        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-    }
-    /****************************************方向光源输入**************************************************/
-    allLights.dirLights[0].setToShader(shaders);
 
     /****************************************视口设置***************************************************/
     shaders.setUniform("width", cubemapSize);
@@ -85,7 +56,6 @@ void SkyTexPass::render(
     shaders.setFloat("farPlane", cam.farPlane);
     shaders.setFloat("nearPlane", cam.nearPlane);
     shaders.setFloat("fov", cam.fov);
-    // cam.setViewMatrix(shaders);
     /****************************************天空设置*****************************************************/
     shaders.setFloat("skyHeight", SkyGUI::skyHeight);
     shaders.setFloat("earthRadius", SkyGUI::earthRadius);
@@ -99,13 +69,29 @@ void SkyTexPass::render(
     shaders.setFloat("absorbMie", SkyGUI::absorbMie);
     shaders.setFloat("MieIntensity", SkyGUI::MieIntensity);
     shaders.setUniform("betaMie", SkyGUI::betaMie);
+    /****************************************方向光源输入**************************************************/
+    shaders.setTextureAuto(transmittanceLUT, GL_TEXTURE_2D, 0, "transmittanceLUT");
+
+    for (unsigned int i = 0; i < 6; ++i)
+    {
+        cam.setCubemapViewMatrix(shaders, i);
+        auto cubemapProjection = glm::perspective(glm::radians(90.0f), 1.0f, nearPlane, farPlane);
+        shaders.setMat4("projection", cubemapProjection);
+
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                               TextureCube::FaceTargets[i], skyCubemapTex.ID, 0);
+
+        Renderer::DrawSphere();
+    }
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+    allLights.dirLights[0].setToShader(shaders);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 unsigned int SkyTexPass::getCubemap()
 {
-    return skyCubemapTex;
+    return skyCubemapTex.ID;
 }
 
 void TransmittanceLUTPass::render()
