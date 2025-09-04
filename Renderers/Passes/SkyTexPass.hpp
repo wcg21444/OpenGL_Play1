@@ -2,12 +2,11 @@
 #pragma once
 #include "Pass.hpp"
 #include "../../Shading/Texture.hpp"
+class CubemapParameters;
+
 class SkyTexPass : public Pass
 {
-private:
-    glm::mat4 camProj;
-    float aspect;
-    float nearPlane;
+    std::shared_ptr<CubemapParameters> cubemapParam;
     int cubemapSize;
     TextureCube skyCubemapTex;
 
@@ -15,8 +14,6 @@ private:
     void initializeGLResources();
 
 public:
-    float farPlane;
-
 public:
     SkyTexPass(std::string _vs_path, std::string _fs_path, /*  std::string _gs_path, */ int _cubemapSize);
     ~SkyTexPass();

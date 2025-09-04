@@ -180,3 +180,22 @@ float computeDirLightShadow(vec3 fragPos, vec3 fragNormal, in DirLight dirLight)
     return factor / n_samples;
     // return dirLight.orthoScale * 1e-1 + 0.f;
 }
+
+float bezier(float t, float p0, float p1, float p2, float p3)
+{
+    return (1.0 - t) * (1.0 - t) * (1.0 - t) * p0 +
+           3.0 * (1.0 - t) * (1.0 - t) * t * p1 +
+           3.0 * (1.0 - t) * t * t * p2 +
+           t * t * t * p3;
+}
+
+vec3 shadowEdgeTone(float shadowFactor)
+{
+    // p0 = (0,0), p3 = (1,1)
+    // 调整 p1 和 p2 来塑造曲线
+    float r = bezier(shadowFactor, 0.0, 0.1, 0.8, 1.0); // 线性贝塞尔曲线，近似线性
+    float g = bezier(shadowFactor, 0.0, 0.3, 0.7, 1.0); // 标准的S形贝塞尔曲线
+    float b = bezier(shadowFactor, 0.0, 0.8, 0.9, 1.0); // 快速上升，然后趋于平缓
+
+    return vec3(r, g, b);
+}

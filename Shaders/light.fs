@@ -38,8 +38,8 @@ uniform samplerCube depthMap; // debug
 uniform sampler2D ssaoTex;
 
 /*****************点光源设置******************************************************************/
-const int MAX_POINT_LIGHTS = 3; // Maximum number of lights supported
-uniform int numPointLights;     // actual number of lights used
+const int MAX_POINT_LIGHTS = 10; // Maximum number of lights supported
+uniform int numPointLights;      // actual number of lights used
 uniform PointLight pointLightArray[MAX_POINT_LIGHTS];
 
 /*****************定向光源设置******************************************************************/
@@ -165,7 +165,7 @@ vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
         }
         if (i == 0) // 太阳光处理
         {
-            diffuse += shadowFactor * dirLightArray[i].intensity / rr * max(0.f, dot(n, l)) * sunlightDecay;
+            diffuse += (shadowFactor)*dirLightArray[i].intensity / rr * max(0.f, dot(n, l)) * sunlightDecay;
         }
         else
         {
@@ -229,7 +229,7 @@ vec3 pointLightDiffuse(vec3 fragPos, vec3 n)
         {
             shadow_factor = 1 - computePointLightShadowVSM(fragPos, n, pointLightArray[i]);
         }
-        diffuse += pointLightArray[i].intensity / rr * max(0.f, dot(n, l)) * shadow_factor;
+        diffuse += pointLightArray[i].intensity / rr * max(0.f, dot(n, l)) * (shadow_factor);
     }
     return diffuse;
 }

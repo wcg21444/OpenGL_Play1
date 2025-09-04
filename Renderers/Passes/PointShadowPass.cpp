@@ -1,4 +1,5 @@
 #include "PointShadowPass.hpp"
+#include "../../Shading/Cubemap.hpp"
 PointShadowPass::PointShadowPass(std::string _vs_path, std::string _fs_path, std::string _gs_path)
     : Pass(0, 0, _vs_path, _fs_path, _gs_path)
 {
@@ -41,23 +42,6 @@ void PointShadowPass::renderToTexture(
     // attachDepthMap(light.depthCubemapID);
     attachDepthMap(light.depthCubemap->ID);
 
-    static std::vector<glm::mat4> shadowTransforms;
-    auto &shadowProj = light.shadowProj;
-    // 视图变换需要知道光源位置
-    auto position = light.getPosition();
-    shadowTransforms.clear();
-    shadowTransforms.push_back(shadowProj *
-                               glm::lookAt(position, position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-    shadowTransforms.push_back(shadowProj *
-                               glm::lookAt(position, position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-    shadowTransforms.push_back(shadowProj *
-                               glm::lookAt(position, position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
-    shadowTransforms.push_back(shadowProj *
-                               glm::lookAt(position, position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
-    shadowTransforms.push_back(shadowProj *
-                               glm::lookAt(position, position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
-    shadowTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
-
     glViewport(0, 0, width, height);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     {
@@ -69,10 +53,10 @@ void PointShadowPass::renderToTexture(
             throw(std::exception("Shader failed to setup."));
         for (unsigned int i = 0; i < 6; ++i)
         {
-            shaders.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+            shaders.setMat4("shadowMatrices[" + std::to_string(i) + "]", light.cubemapParam->projectionMartix * light.cubemapParam->viewMatrices[i]);
         }
         shaders.setFloat("farPlane", light.getFarPlane());
-        shaders.setUniform3fv("lightPos", position);
+        shaders.setUniform3fv("lightPos", light.getPosition());
 
         Renderer::DrawScene(scene, model, shaders);
     }
@@ -100,23 +84,6 @@ void PointShadowVSMPass::resize(int _width, int _height)
 
 void PointShadowVSMPass::renderToVSMTexture(const PointLight &light)
 {
-
-    auto position = light.getPosition();
-    static std::vector<glm::mat4> viewMatrices;
-    viewMatrices.clear();
-    viewMatrices.push_back(
-        glm::lookAt(position, position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-    viewMatrices.push_back(
-        glm::lookAt(position, position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-    viewMatrices.push_back(
-        glm::lookAt(position, position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
-    viewMatrices.push_back(
-        glm::lookAt(position, position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
-    viewMatrices.push_back(
-        glm::lookAt(position, position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
-    viewMatrices.push_back(
-        glm::lookAt(position, position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
-
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     glViewport(0, 0, light.texResolution, light.texResolution);
     shaders.use();
@@ -125,8 +92,8 @@ void PointShadowVSMPass::renderToVSMTexture(const PointLight &light)
 
     for (unsigned int i = 0; i < 6; ++i)
     {
-        shaders.setMat4("projection", light.shadowProj);
-        shaders.setMat4("view", viewMatrices[i]);
+        shaders.setMat4("projection", light.cubemapParam->projectionMartix);
+        shaders.setMat4("view", light.cubemapParam->viewMatrices[i]);
         shaders.setTextureAuto(light.depthCubemap->ID, GL_TEXTURE_CUBE_MAP, 0, "depthCubemap");
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                TextureCube::FaceTargets[i], light.VSMCubemap->ID, 0);

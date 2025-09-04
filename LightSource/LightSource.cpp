@@ -1,5 +1,20 @@
 #include "LightSource.hpp"
 #include "../Shading/Texture.hpp"
+#include "Cubemap.hpp"
+
+void LightSource::InitialzeShaderLightArray(Shader &shaders)
+{
+    for (size_t i = 0; i < MAX_POINT_LIGHTS; ++i)
+    {
+        shaders.setUniform3fv(std::format("pointLightArray[{}].pos", i), glm::vec3(0.0f));
+        shaders.setUniform3fv(std::format("pointLightArray[{}].intensity", i), glm::vec3(0.0f));
+        shaders.setUniform(std::format("pointLightArray[{}].farPlane", i), 0.f);
+        shaders.setUniform(std::format("pointLightArray[{}].useVSM", i), 0);
+
+        shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, std::format("pointLightArray[{}].depthCubemap", i));
+        shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, std::format("pointLightArray[{}].VSMCubemap", i));
+    }
+}
 
 LightSource::LightSource(const glm::vec3 &_intensity, const glm::vec3 &_position)
     : combIntensity(_intensity),
@@ -10,14 +25,11 @@ LightSource::LightSource(const glm::vec3 &_intensity, const glm::vec3 &_position
 
 /********************************PointLight******************************************************************** */
 PointLight::PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution = 1024, float _farPlane = 250.f)
-    : LightSource(_intensity, _position), texResolution(_texResolution), farPlane(_farPlane)
+    : LightSource(_intensity, _position), texResolution(_texResolution)
 {
     depthCubemap = std::make_shared<TextureCube>();
     VSMCubemap = std::make_shared<TextureCube>();
-
-    aspect = 1.f;
-    nearPlane = 0.1f;
-    shadowProj = glm::perspective(glm::radians(90.0f), aspect, nearPlane, farPlane);
+    cubemapParam = std::make_shared<CubemapParameters>(0.1f, _farPlane, _position);
 }
 
 void PointLight::setToShader(Shader &shaders)
@@ -25,7 +37,7 @@ void PointLight::setToShader(Shader &shaders)
     combIntensity = CombineIntensity(colorIntensity);
     shaders.setUniform3fv("pointLightPos", position);
     shaders.setUniform3fv("pointLightIntensity", combIntensity);
-    shaders.setUniform("pointLightFarPlane", farPlane);
+    shaders.setUniform("pointLightFarPlane", cubemapParam->farPlane);
     shaders.setUniform("pointLightUseVSM", useVSM);
 
     if (depthCubemap->ID != 0)
@@ -45,7 +57,7 @@ void PointLight::setToShaderLightArray(Shader &shaders, size_t index)
 
     shaders.setUniform3fv(std::format("pointLightArray[{}].pos", index), position);
     shaders.setUniform3fv(std::format("pointLightArray[{}].intensity", index), combIntensity);
-    shaders.setUniform(std::format("pointLightArray[{}].farPlane", index), farPlane);
+    shaders.setUniform(std::format("pointLightArray[{}].farPlane", index), cubemapParam->farPlane);
     shaders.setUniform(std::format("pointLightArray[{}].useVSM", index), useVSM);
 
     shaders.setTextureAuto(depthCubemap->ID, GL_TEXTURE_CUBE_MAP, 0, std::format("pointLightArray[{}].depthCubemap", index));
@@ -72,11 +84,16 @@ void PointLight::generateShadowTexResource()
 void PointLight::setPosition(glm::vec3 &_position)
 {
     position = _position;
+    cubemapParam->update(position);
 }
 
 glm::vec3 PointLight::getPosition() const
 {
     return position;
+}
+float PointLight::getFarPlane() const
+{
+    return cubemapParam->farPlane;
 }
 /********************************DirectionLight******************************************************************** */
 // TODO: 根据Camera位置优化ProjectionMatrix

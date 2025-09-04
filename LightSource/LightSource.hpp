@@ -8,6 +8,7 @@
 // TODO 运行时类型切换
 class Texture; // fwd declaration
 class TextureCube;
+class CubemapParameters;
 
 struct ColorIntensity
 {
@@ -56,13 +57,7 @@ public:
     static const int MAX_POINT_LIGHTS = 10;
     static const int MAX_DIR_LIGHTS = 5;
 
-    inline static void InitialzeShaderLightArray(Shader &shaders)
-    {
-        for (size_t i = 0; i < MAX_POINT_LIGHTS; ++i)
-        {
-            // shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, std::format("pointLightArray[{}].depthCubemap", i));
-        }
-    }
+    static void InitialzeShaderLightArray(Shader &shaders);
 
 public:
     ColorIntensity colorIntensity;
@@ -78,17 +73,13 @@ public:
 
 class PointLight : public LightSource
 {
-private:
-    float aspect;
-    float nearPlane;
-    float farPlane;
 
 public:
     int texResolution;
+    std::shared_ptr<CubemapParameters> cubemapParam;
     std::shared_ptr<TextureCube> depthCubemap;
     std::shared_ptr<TextureCube> VSMCubemap;
     bool useVSM = false;
-    glm::mat4 shadowProj;
 
 public:
     PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution, float _farPlane);
@@ -96,7 +87,7 @@ public:
     void setToShaderLightArray(Shader &shaders, size_t index) override;
     void setPosition(glm::vec3 &_position) override;
     glm::vec3 getPosition() const override;
-    float getFarPlane() const { return farPlane; }
+    float getFarPlane() const;
 
     void generateShadowTexResource();
 };

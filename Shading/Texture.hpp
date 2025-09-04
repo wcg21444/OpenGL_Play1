@@ -7,10 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <vector>
-#include <fstream>
-#include <sstream>
 #include <string>
-#include <unordered_map>
 #include <iostream>
 
 /// @brief 管理GL Texture资源
@@ -69,6 +66,24 @@ public:
     //{ Right, Left, Top, Bottom, Front, Back }
     inline static const std::vector<FaceEnum> FaceTargets = {Right, Left, Top, Bottom, Front, Back};
 
+    inline static std::vector<glm::mat4> GenearteViewMatrices(const glm::vec3 &position)
+    {
+        std::vector<glm::mat4> viewMatrices;
+        viewMatrices.push_back(
+            glm::lookAt(position, position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+        viewMatrices.push_back(
+            glm::lookAt(position, position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+        viewMatrices.push_back(
+            glm::lookAt(position, position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+        viewMatrices.push_back(
+            glm::lookAt(position, position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+        viewMatrices.push_back(
+            glm::lookAt(position, position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+        viewMatrices.push_back(
+            glm::lookAt(position, position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+        return viewMatrices;
+    }
+
 private:
     GLenum InternalFormat; // 纹理在 GPU 中存储的内部格式（例如：GL_RGBA8）
     GLenum Format;         // 纹理在 CPU 中存储的格式（例如：GL_RGBA）
@@ -86,6 +101,7 @@ public:
     unsigned int Height; // 纹理的高度（以像素为单位）
 
     TextureCube();
+
     void Generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, GLenum filterMax, GLenum filterMin, bool mipmap);
 
     void SetFaceData(FaceEnum faceTarget, void *data);

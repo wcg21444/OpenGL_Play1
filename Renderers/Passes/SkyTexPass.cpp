@@ -1,13 +1,11 @@
 #include "SkyTexPass.hpp"
+#include "../../Shading/Cubemap.hpp"
 #include "../../ShaderGUI.hpp"
 SkyTexPass::SkyTexPass(std::string _vs_path, std::string _fs_path, int _cubemapSize)
     : Pass(0, 0, _vs_path, _fs_path),
-      cubemapSize(_cubemapSize),
-      aspect(1.0f),
-      nearPlane(0.1f),
-      farPlane(1e4),
-      camProj(glm::perspective(glm::radians(90.0f), aspect, nearPlane, farPlane))
+      cubemapSize(_cubemapSize)
 {
+    cubemapParam = std::make_shared<CubemapParameters>(0.1f, 1e4f, glm::vec3(0.f));
     initializeGLResources();
     contextSetup();
 }
@@ -73,11 +71,12 @@ void SkyTexPass::render(
     shaders.setTextureAuto(transmittanceLUT, GL_TEXTURE_2D, 0, "transmittanceLUT");
     allLights.dirLights[0].setToShader(shaders);
 
+    cubemapParam->update(cam.getPosition());
     for (unsigned int i = 0; i < 6; ++i)
     {
-        cam.setCubemapViewMatrix(shaders, i);
-        auto cubemapProjection = glm::perspective(glm::radians(90.0f), 1.0f, nearPlane, farPlane);
-        shaders.setMat4("projection", cubemapProjection);
+        shaders.setMat4("view", cubemapParam->viewMatrices[i]);
+        shaders.setUniform3fv("eyePos", cubemapParam->viewPosition);
+        shaders.setMat4("projection", cubemapParam->projectionMartix);
 
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                TextureCube::FaceTargets[i], skyCubemapTex.ID, 0);
