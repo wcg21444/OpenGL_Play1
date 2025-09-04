@@ -120,7 +120,7 @@ int main()
     Lights allLights;
     auto &[pointLights, dirLights] = allLights;
     pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f),
-                             glm::vec3(8.f, 10.f, 4.f));
+                             glm::vec3(8.f, 10.f, 4.f), 1024, 250.f);
 
     // pointLights.emplace_back(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
     // define quad light: quad: (0.0f,0.0f)  (4.0f,4.0f)
@@ -143,9 +143,9 @@ int main()
     // pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f),
     // glm::vec3(-16.f, 10.f, 24.f));
     pointLights.emplace_back(glm::vec3(10.f, 30.f, 20.f),
-                             glm::vec3(2.f, 10.f, 14.f));
+                             glm::vec3(2.f, 10.f, 14.f), 1024, 250.f);
     pointLights.emplace_back(glm::vec3(30.f, 20.f, 40.f),
-                             glm::vec3(16.f, 4.f, 8.f));
+                             glm::vec3(16.f, 4.f, 8.f), 1024, 250.f);
 
     dirLights.emplace_back(
         DirectionLight(glm::vec3(1.0f), glm::vec3(50.f, 20.f, 10.f), 4096));

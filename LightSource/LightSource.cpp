@@ -9,9 +9,15 @@ LightSource::LightSource(const glm::vec3 &_intensity, const glm::vec3 &_position
 }
 
 /********************************PointLight******************************************************************** */
-PointLight::PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution)
-    : LightSource(_intensity, _position), texResolution(_texResolution)
+PointLight::PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution = 1024, float _farPlane = 250.f)
+    : LightSource(_intensity, _position), texResolution(_texResolution), farPlane(_farPlane)
 {
+    depthCubemap = std::make_shared<TextureCube>();
+    VSMCubemap = std::make_shared<TextureCube>();
+
+    aspect = 1.f;
+    nearPlane = 0.1f;
+    shadowProj = glm::perspective(glm::radians(90.0f), aspect, nearPlane, farPlane);
 }
 
 void PointLight::setToShader(Shader &shaders)
@@ -19,40 +25,47 @@ void PointLight::setToShader(Shader &shaders)
     combIntensity = CombineIntensity(colorIntensity);
     shaders.setUniform3fv("pointLightPos", position);
     shaders.setUniform3fv("pointLightIntensity", combIntensity);
+    shaders.setUniform("pointLightFarPlane", farPlane);
+    shaders.setUniform("pointLightUseVSM", useVSM);
 
-    if (depthCubemap != 0)
+    if (depthCubemap->ID != 0)
     {
-        shaders.setTextureAuto(depthCubemap, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps");
+        shaders.setTextureAuto(depthCubemap->ID, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps");
+    }
+
+    if (VSMCubemap->ID != 0 && useVSM)
+    {
+        shaders.setTextureAuto(VSMCubemap->ID, GL_TEXTURE_CUBE_MAP, 0, "VSMCubemap");
     }
 }
 
 void PointLight::setToShaderLightArray(Shader &shaders, size_t index)
 {
     combIntensity = CombineIntensity(colorIntensity);
-    shaders.setUniform3fv("pointLightPos[" + std::to_string(index) + "]", position);
-    shaders.setUniform3fv("pointLightIntensity[" + std::to_string(index) + "]", combIntensity);
 
-    // 阴影贴图绑定
-    if (depthCubemap != 0)
+    shaders.setUniform3fv(std::format("pointLightArray[{}].pos", index), position);
+    shaders.setUniform3fv(std::format("pointLightArray[{}].intensity", index), combIntensity);
+    shaders.setUniform(std::format("pointLightArray[{}].farPlane", index), farPlane);
+    shaders.setUniform(std::format("pointLightArray[{}].useVSM", index), useVSM);
+
+    shaders.setTextureAuto(depthCubemap->ID, GL_TEXTURE_CUBE_MAP, 0, std::format("pointLightArray[{}].depthCubemap", index));
+    if (useVSM)
     {
-        shaders.setTextureAuto(depthCubemap, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps[" + std::to_string(index) + "]");
+        shaders.setTextureAuto(VSMCubemap->ID, GL_TEXTURE_CUBE_MAP, 0, std::format("pointLightArray[{}].VSMCubemap", index));
     }
 }
 
 void PointLight::generateShadowTexResource()
 {
-    if (depthCubemap == 0)
+    if (depthCubemap->ID == 0)
     {
-        glGenTextures(1, &depthCubemap);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
-        for (unsigned int i = 0; i < 6; ++i)
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
-                         texResolution, texResolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        depthCubemap->SetWrapMode(GL_CLAMP_TO_EDGE);
+        depthCubemap->Generate(texResolution, texResolution, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, GL_NEAREST, GL_NEAREST, false);
+    }
+    if (VSMCubemap->ID == 0 && useVSM)
+    {
+        VSMCubemap->SetWrapMode(GL_CLAMP_TO_EDGE);
+        VSMCubemap->Generate(texResolution, texResolution, GL_RGBA32F, GL_RGBA, GL_FLOAT, GL_NEAREST, GL_NEAREST, false);
     }
 }
 
@@ -71,6 +84,7 @@ DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_po
     : LightSource(_intensity, _position), orthoScale(100.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
 {
     VSMTexture = std::make_shared<Texture>();
+    depthTexture = std::make_shared<Texture>();
     lightProjection = glm::ortho(-1.0f * orthoScale,
                                  1.0f * orthoScale,
                                  -1.0f * orthoScale,
@@ -86,10 +100,10 @@ void DirectionLight::setToShader(Shader &shaders)
 {
     combIntensity = CombineIntensity(colorIntensity);
 
-    shaders.setTextureAuto(depthMap, GL_TEXTURE_2D, 0, "dirDepthMap");
+    shaders.setTextureAuto(depthTexture->ID, GL_TEXTURE_2D, 0, "dirDepthMap");
     if (useVSM)
     {
-        shaders.setTextureAuto(VSMTexture->ID, GL_TEXTURE_2D, 0, "VSMTexture");
+        shaders.setTextureAuto(VSMTexture->ID, GL_TEXTURE_2D, 0, "dirVSMTexture");
         shaders.setUniform("useVSM", useVSM);
     }
     shaders.setUniform3fv("dirLightPos", position);
@@ -100,12 +114,16 @@ void DirectionLight::setToShaderLightArray(Shader &shaders, size_t index)
 {
     combIntensity = CombineIntensity(colorIntensity);
 
-    shaders.setTextureAuto(depthMap, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].depthMap", index));
+    shaders.setTextureAuto(depthTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].depthMap", index));
     if (useVSM)
     {
         shaders.setTextureAuto(VSMTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].VSMTexture", index));
-        shaders.setUniform(std::format("dirLightArray[{}].useVSM", index), useVSM);
     }
+    else
+    {
+        shaders.setTextureAuto(0, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].VSMTexture", index));
+    }
+    shaders.setUniform(std::format("dirLightArray[{}].useVSM", index), useVSM);
     shaders.setUniform3fv(std::format("dirLightArray[{}].pos", index), position);
     shaders.setUniform3fv(std::format("dirLightArray[{}].intensity", index), combIntensity);
     shaders.setMat4(std::format("dirLightArray[{}].spaceMatrix", index), lightSpaceMatrix);
@@ -134,15 +152,12 @@ glm::vec3 DirectionLight::getPosition() const
 // 在渲染器中逐帧调用,等待GL上下文
 void DirectionLight::generateShadowTexResource()
 {
-    if (depthMap == 0)
+    if (depthTexture->ID == 0)
     {
-        glGenTextures(1, &depthMap);
-        glBindTexture(GL_TEXTURE_2D, depthMap);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, texResolution, texResolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        depthTexture->SetFilterMax(GL_NEAREST);
+        depthTexture->SetFilterMin(GL_NEAREST);
+        depthTexture->SetWrapMode(GL_CLAMP_TO_EDGE);
+        depthTexture->Generate(texResolution, texResolution, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, NULL, false);
     }
     if (useVSM && VSMTexture->ID == 0)
     {

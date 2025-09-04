@@ -5,7 +5,7 @@
 
 class PointShadowPassDeprecated
 {
-    Shader depthShader = Shader("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs");
+    Shader depthShader = Shader("Shaders/ShadowDepthTexture/shadow_depth.vs", "Shaders/ShadowDepthTexture/shadow_depth.fs", "Shaders/ShadowDepthTexture/shadow_depth.gs");
 
     int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
@@ -59,7 +59,7 @@ public:
     }
     void reloadCurrentShader()
     {
-        depthShader = Shader("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs");
+        depthShader = Shader("Shaders/ShadowDepthTexture/shadow_depth.vs", "Shaders/ShadowDepthTexture/shadow_depth.fs", "Shaders/ShadowDepthTexture/shadow_depth.gs");
     }
 
     void render(PointLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)

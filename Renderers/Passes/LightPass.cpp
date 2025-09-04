@@ -44,8 +44,7 @@ void LightPass::render(RenderParameters &renderParameters,
                        unsigned int gNormal,
                        unsigned int gAlbedoSpec,
                        unsigned int skybox,
-                       unsigned int transmittanceLUT,
-                       float pointLightFar)
+                       unsigned int transmittanceLUT)
 {
 
     auto &[allLights, cam, scene, model, window] = renderParameters;
@@ -74,32 +73,14 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setTextureAuto(shadowNoiseTex.ID, GL_TEXTURE_2D, 0, "shadowNoiseTex");
     /****************************************天空盒输入**************************************************/
     shaders.setTextureAuto(skybox, GL_TEXTURE_CUBE_MAP, 0, "skybox");
-
-    /****************************************阴影贴图输入**************************************************/
-    // TODO Shader 多DirLight 渲染
-
-    for (size_t i = 0; i < MAX_LIGHTS; ++i)
-    {
-        shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps[" + std::to_string(i) + "]"); // 给sampler数组赋空
-    }
-    // for (size_t i = 0; i < MAX_DIR_LIGHTS; ++i)
-    // {
-    //     shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, "dirDepthMap[" + std::to_string(i) + "]"); // 给sampler数组赋空
-    // }
-    // shaders.setTextureAuto(cubemapTexture, GL_TEXTURE_CUBE_MAP, 31, "skybox");
-
     /****************************************点光源输入**************************************************/
+    LightSource::InitialzeShaderLightArray(shaders);
     shaders.setInt("numPointLights", static_cast<int>(pointLights.size()));
     for (size_t i = 0; i < pointLights.size(); ++i)
     {
         pointLights[i].setToShaderLightArray(shaders, i);
     }
     /****************************************方向光源输入**************************************************/
-    // TODO Shader 多DirLight 渲染
-
-    // shaders.setUniform3fv("dirLightPos", dirLights[0].position);
-    // shaders.setUniform3fv("dirLightIntensity", dirLights[0].combIntensity);
-    // shaders.setMat4("dirLightSpaceMatrix", dirLights[0].lightSpaceMatrix);
     shaders.setInt("numDirLights", static_cast<int>(dirLights.size()));
     for (size_t i = 0; i < dirLights.size(); ++i)
     {
@@ -114,7 +95,6 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setUniform3fv("eyeUp", cam.getUp());
     shaders.setFloat("farPlane", cam.farPlane);
     shaders.setFloat("nearPlane", cam.nearPlane);
-    shaders.setFloat("pointLightFar", pointLightFar);
     shaders.setFloat("fov", cam.fov);
     cam.setViewMatrix(shaders);
     /****************************************天空设置*****************************************************/

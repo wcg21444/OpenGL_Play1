@@ -28,6 +28,7 @@ public:
     bool toggleGammaCorrection = true;
     bool toggleBloom = true;
     bool toggleSkybox = true;
+    bool toggleVSM = true;
 
     void render()
     {
@@ -41,6 +42,7 @@ public:
             ImGui::Checkbox("GammaCorrection", &toggleGammaCorrection);
             ImGui::Checkbox("Bloom", &toggleBloom);
             ImGui::Checkbox("SkyBox", &toggleSkybox);
+            ImGui::Checkbox("VSM", &toggleVSM);
         }
         ImGui::End();
     }
@@ -109,6 +111,7 @@ public:
         }
         ImGui::End();
     }
+    // 无法渲染Cubemap
     void renderPassInspector(const std::vector<GLuint> &passTextures)
     {
         ImGui::Begin("PassInspector", nullptr);

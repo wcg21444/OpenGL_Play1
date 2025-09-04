@@ -36,7 +36,7 @@ private:
 
     unsigned int skyboxCube;
 
-    const int MAX_LIGHTS = 10;
+    const int MAX_POINT_LIGHTS = 10;
 
     PointShadowPass pointShadowPass;
     DirShadowPass dirShadowPass;
@@ -51,6 +51,7 @@ private:
     SkyTexPass skyTexPass;
     TransmittanceLUTPass transmittanceLUTPass;
     DirShadowVSMPass dirShadowVSMPass;
+    PointShadowVSMPass pointShadowVSMPass;
 
     GBufferRendererGUI rendererGUI;
 
@@ -61,14 +62,15 @@ public:
           screenPass(ScreenPass(width, height, "Shaders/screenQuad.vs", "Shaders/GBuffer/texture.fs")),
           ssaoPass(SSAOPass(width, height, "Shaders/screenQuad.vs", "Shaders/SSAOPass/ssao.fs")),
           ssaoBlurPass(SSAOBlurPass(width, height, "Shaders/screenQuad.vs", "Shaders/SSAOPass/blur.fs")),
-          dirShadowPass(DirShadowPass("Shaders/DirShadow/dirShadow.vs", "Shaders/DirShadow/dirShadow.fs")),
-          pointShadowPass(PointShadowPass("Shaders/PointShadow/shadow_depth.vs", "Shaders/PointShadow/shadow_depth.fs", "Shaders/PointShadow/shadow_depth.gs")),
+          dirShadowPass(DirShadowPass("Shaders/ShadowDepthTexture/dirShadow.vs", "Shaders/ShadowDepthTexture/dirShadow.fs")),
+          pointShadowPass(PointShadowPass("Shaders/ShadowDepthTexture/shadow_depth.vs", "Shaders/ShadowDepthTexture/shadow_depth.fs", "Shaders/ShadowDepthTexture/shadow_depth.gs")),
           postProcessPass(PostProcessPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/postProcess.fs")),
           bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs")),
           unfoldPass(CubemapUnfoldPass(width, height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 256)),
           skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 256)),
           transmittanceLUTPass(TransmittanceLUTPass(256, 64, "Shaders/screenQuad.vs", "Shaders/SkyTexPass/transmittanceLUT.fs")),
-          dirShadowVSMPass(DirShadowVSMPass("Shaders/screenQuad.vs", "Shaders/DirShadow/dirShadowVSM.fs"))
+          dirShadowVSMPass(DirShadowVSMPass("Shaders/screenQuad.vs", "Shaders/ShadowMapping/VSMPreprocessDir.fs")),
+          pointShadowVSMPass(PointShadowVSMPass("Shaders/cubemapSphere.vs", "Shaders/ShadowMapping/VSMPreprocessPoint.fs"))
     {
     }
     void reloadCurrentShaders() override
@@ -86,6 +88,7 @@ public:
         skyTexPass.reloadCurrentShaders();
         transmittanceLUTPass.reloadCurrentShaders();
         dirShadowVSMPass.reloadCurrentShaders();
+        pointShadowVSMPass.reloadCurrentShaders();
         contextSetup();
     }
 
@@ -136,10 +139,15 @@ private:
         auto &[pointLights, dirLights] = allLights;
 
         rendererGUI.render();
-
         /****************************阴影贴图渲染*********************************************/
+        // 点光源阴影贴图
         for (auto &light : pointLights)
         {
+            light.useVSM = true;
+            if (!rendererGUI.toggleVSM)
+            {
+                light.useVSM = false;
+            }
             light.generateShadowTexResource();
             if (rendererGUI.togglePointShadow)
             {
@@ -149,15 +157,24 @@ private:
                     model,
                     light.texResolution,
                     light.texResolution);
+                if (light.useVSM)
+                {
+                    pointShadowVSMPass.renderToVSMTexture(light);
+                }
             }
         }
-
+        // 平行光源阴影贴图
         for (auto &light : dirLights)
         {
-            light.useVSM = true; // 先强制为use. 暂时不处理切换问题
+            light.useVSM = true;
+            if (!rendererGUI.toggleVSM)
+            {
+                light.useVSM = false;
+            }
             light.generateShadowTexResource();
             if (rendererGUI.toggleDirShadow)
             {
+
                 dirShadowPass.renderToTexture(
                     light,
                     scene,
@@ -195,20 +212,12 @@ private:
         lightPass.setToggle(rendererGUI.toggleSkybox, "Skybox");
         lightPass.setToggle(rendererGUI.togglePointShadow, "PointShadow");
         lightPass.setToggle(rendererGUI.toggleDirShadow, "DirShadow");
-
-        // lightPass.render(renderParameters,
-        //                  gPosition,
-        //                  gNormal,
-        //                  gAlbedoSpec,
-        //                  skyboxCube,
-        //                  pointShadowPass.farPlane);
         lightPass.render(renderParameters,
                          gPosition,
                          gNormal,
                          gAlbedoSpec,
                          skyPassCubemap,
-                         transmittanceLUTTex,
-                         pointShadowPass.farPlane);
+                         transmittanceLUTTex);
         auto lightPassTex = lightPass.getTextures();
 
         /************************************Bloom*******************************************/
@@ -230,7 +239,6 @@ private:
             bloomPassTex3 = 0;
             bloomPassTex4 = 0;
         }
-
         /****************************PostProcess*********************************************/
 
         postProcessPass.setToggle(rendererGUI.toggleSSAO, "SSAO");
@@ -248,19 +256,17 @@ private:
              bloomPassTex3,
              bloomPassTex4});
         auto postProcessPassTex = postProcessPass.getTextures();
-
         /****************************Screen渲染*********************************************/
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         // screenPass.render(postProcessPassTex); // 渲染到底层窗口
 
-        unfoldPass.render(skyPassCubemap); // 删掉这一行天空盒无法渲染 为什么?
-        // auto unfoldedTex = unfoldPass.getUnfoldedCubemap();
+        unfoldPass.render(pointLights[0].VSMCubemap->ID);
+        auto unfoldedTex = unfoldPass.getUnfoldedCubemap();
 
-        // rendererGUI.renderPassInspector(bloomPassTex4);
+        rendererGUI.renderPassInspector(unfoldedTex);
         // rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
 
-        // rendererGUI.renderPassInspector({allLights.dirLights[0].VSMTexture->ID, allLights.dirLights[0].depthMap});
-        rendererGUI.renderPassInspector({gPosition, ssaoBlurTex, lightPassTex});
+        // rendererGUI.renderPassInspector({gPosition, ssaoBlurTex, lightPassTex});
         ImGui::Begin("RendererGUI");
         {
             ImGui::DragFloat("OrthoScale", &allLights.dirLights[0].orthoScale, 1e1, 1e3);

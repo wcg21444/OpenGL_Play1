@@ -151,6 +151,12 @@ Texture::~Texture()
 
 TextureCube::TextureCube()
 {
+    ID = 0;
+    Width = 0;
+    Height = 0;
+    WrapS = GL_REPEAT;
+    WrapT = GL_REPEAT;
+    WrapR = GL_REPEAT;
 }
 
 ///@brief 生成CubeTexture对象,设置属性
@@ -170,9 +176,7 @@ void TextureCube::Generate(unsigned int width, unsigned int height, GLenum inter
     Type = type;
     FilterMin = filterMin;
     FilterMax = filterMax;
-    WrapS = GL_REPEAT;
-    WrapT = GL_REPEAT;
-    WrapR = GL_REPEAT;
+
     Mipmapping = mipmap;
 
     if (ID != 0)

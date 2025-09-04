@@ -71,6 +71,7 @@ void SkyTexPass::render(
     shaders.setUniform("betaMie", SkyGUI::betaMie);
     /****************************************方向光源输入**************************************************/
     shaders.setTextureAuto(transmittanceLUT, GL_TEXTURE_2D, 0, "transmittanceLUT");
+    allLights.dirLights[0].setToShader(shaders);
 
     for (unsigned int i = 0; i < 6; ++i)
     {
@@ -80,11 +81,9 @@ void SkyTexPass::render(
 
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                TextureCube::FaceTargets[i], skyCubemapTex.ID, 0);
-
         Renderer::DrawSphere();
     }
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-    allLights.dirLights[0].setToShader(shaders);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

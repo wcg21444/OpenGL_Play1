@@ -44,6 +44,7 @@ void Renderer::GenerateQuad(unsigned int &quadVAO, unsigned int &quadVBO)
 }
 
 // 绘制公共Quad .单一职责:不负责视口管理.
+// 使用screenQuad.vs 作为顶点着色器
 void Renderer::DrawQuad()
 {
     static float quadVertices[] = {
@@ -72,6 +73,8 @@ void Renderer::DrawQuad()
     glBindVertexArray(0);
 }
 
+// 绘制公共球体. 用于生成cubemap或处理cubemap
+// 使用cubemapSphere.vs 作为顶点着色器
 void Renderer::DrawSphere()
 {
     // 静态变量，用于存储球体的VAO和顶点数量，确保只生成一次

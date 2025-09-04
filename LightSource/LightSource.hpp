@@ -7,6 +7,7 @@
 // TODO 阴影开关功能
 // TODO 运行时类型切换
 class Texture; // fwd declaration
+class TextureCube;
 
 struct ColorIntensity
 {
@@ -52,6 +53,18 @@ protected:
     glm::vec3 position;
 
 public:
+    static const int MAX_POINT_LIGHTS = 10;
+    static const int MAX_DIR_LIGHTS = 5;
+
+    inline static void InitialzeShaderLightArray(Shader &shaders)
+    {
+        for (size_t i = 0; i < MAX_POINT_LIGHTS; ++i)
+        {
+            // shaders.setTextureAuto(0, GL_TEXTURE_CUBE_MAP, 0, std::format("pointLightArray[{}].depthCubemap", i));
+        }
+    }
+
+public:
     ColorIntensity colorIntensity;
 
 public:
@@ -66,16 +79,24 @@ public:
 class PointLight : public LightSource
 {
 private:
-public:
-    unsigned int depthCubemap = 0;
-    int texResolution;
+    float aspect;
+    float nearPlane;
+    float farPlane;
 
 public:
-    PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution = 1024);
+    int texResolution;
+    std::shared_ptr<TextureCube> depthCubemap;
+    std::shared_ptr<TextureCube> VSMCubemap;
+    bool useVSM = false;
+    glm::mat4 shadowProj;
+
+public:
+    PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution, float _farPlane);
     void setToShader(Shader &shaders) override;
     void setToShaderLightArray(Shader &shaders, size_t index) override;
     void setPosition(glm::vec3 &_position) override;
     glm::vec3 getPosition() const override;
+    float getFarPlane() const { return farPlane; }
 
     void generateShadowTexResource();
 };
@@ -87,8 +108,8 @@ private:
     glm::mat4 lightView;
 
 public:
-    unsigned int depthMap = 0;
     int texResolution;
+    std::shared_ptr<Texture> depthTexture;
     std::shared_ptr<Texture> VSMTexture;
     bool useVSM = false;
 

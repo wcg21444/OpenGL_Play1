@@ -4,11 +4,6 @@ PointShadowPass::PointShadowPass(std::string _vs_path, std::string _fs_path, std
 {
     initializeGLResources();
     contextSetup();
-
-    aspect = 1.f;
-    nearPlane = 0.1f;
-    farPlane = 250.f;
-    shadowProj = glm::perspective(glm::radians(90.0f), aspect, nearPlane, farPlane);
 }
 
 inline void PointShadowPass::initializeGLResources()
@@ -43,9 +38,11 @@ void PointShadowPass::renderToTexture(
     int width,
     int height)
 {
-    attachDepthMap(light.depthCubemap);
+    // attachDepthMap(light.depthCubemapID);
+    attachDepthMap(light.depthCubemap->ID);
 
     static std::vector<glm::mat4> shadowTransforms;
+    auto &shadowProj = light.shadowProj;
     // 视图变换需要知道光源位置
     auto position = light.getPosition();
     shadowTransforms.clear();
@@ -74,10 +71,66 @@ void PointShadowPass::renderToTexture(
         {
             shaders.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
         }
-        shaders.setFloat("farPlane", farPlane);
+        shaders.setFloat("farPlane", light.getFarPlane());
         shaders.setUniform3fv("lightPos", position);
 
         Renderer::DrawScene(scene, model, shaders);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+inline void PointShadowVSMPass::initializeGLResources()
+{
+    glGenFramebuffers(1, &FBO);
+}
+PointShadowVSMPass::PointShadowVSMPass(std::string _vs_path, std::string _fs_path)
+    : Pass(0, 0, _vs_path, _fs_path)
+{
+    initializeGLResources();
+    contextSetup();
+}
+
+void PointShadowVSMPass::contextSetup()
+{
+}
+
+void PointShadowVSMPass::resize(int _width, int _height)
+{
+}
+
+void PointShadowVSMPass::renderToVSMTexture(const PointLight &light)
+{
+
+    auto position = light.getPosition();
+    static std::vector<glm::mat4> viewMatrices;
+    viewMatrices.clear();
+    viewMatrices.push_back(
+        glm::lookAt(position, position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+    viewMatrices.push_back(
+        glm::lookAt(position, position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+    viewMatrices.push_back(
+        glm::lookAt(position, position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+    viewMatrices.push_back(
+        glm::lookAt(position, position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+    viewMatrices.push_back(
+        glm::lookAt(position, position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+    viewMatrices.push_back(
+        glm::lookAt(position, position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glViewport(0, 0, light.texResolution, light.texResolution);
+    shaders.use();
+    if (!shaders.used)
+        throw(std::exception("Shader failed to setup."));
+
+    for (unsigned int i = 0; i < 6; ++i)
+    {
+        shaders.setMat4("projection", light.shadowProj);
+        shaders.setMat4("view", viewMatrices[i]);
+        shaders.setTextureAuto(light.depthCubemap->ID, GL_TEXTURE_CUBE_MAP, 0, "depthCubemap");
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                               TextureCube::FaceTargets[i], light.VSMCubemap->ID, 0);
+        Renderer::DrawSphere();
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

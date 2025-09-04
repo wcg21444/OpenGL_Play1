@@ -34,6 +34,85 @@ float computeDirLightShadowVSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLig
     return 1 - Pmax;
 }
 
+float computePointLightShadowVSM(vec3 fragPos, vec3 fragNorm, in PointLight pointLight)
+{
+    if (PointShadow == 0)
+    {
+        return 0.f;
+    }
+    vec3 dir = fragPos - pointLight.pos;
+
+    float currentDepth = length(dir);
+    currentDepth /= pointLight.farPlane; // 归一化
+    float bias = 1e-4;
+    currentDepth -= bias;
+    if (currentDepth > 1.0)
+    {
+        return 0.0f;
+    }
+    vec2 moments = texture(pointLight.VSMCubemap, dir).rg;
+    float depthAvg = moments.r;
+    float depthSquareAvg = moments.g;
+
+    if (currentDepth <= depthAvg)
+    {
+        return 0.f; // 当前深度<平均深度,没有遮挡
+    }
+
+    const float MIN_VAR = 1e-11;
+    float variance = depthSquareAvg - depthAvg * depthAvg;
+    variance = max(variance, MIN_VAR);
+
+    float d = currentDepth - depthAvg;
+    float Pmax = variance / (variance + d * d);
+    return 1 - Pmax;
+}
+
+float computePointLightShadow(vec3 fragPos, vec3 fragNorm, in PointLight pointLight)
+{
+    if (PointShadow == 0)
+    {
+        return 0.f;
+    }
+    vec3 dir = fragPos - pointLight.pos;
+
+    float curr_depth = length(dir);
+    float omega = -dot(fragNorm, dir) / curr_depth;
+    float bias = 0.05f / tan(omega); // idea: bias increase based on center distance
+    // shadow test
+
+    // 计算遮挡物与接受物的平均距离
+    float d = 0.f;
+    int occlusion_times = 0;
+    for (int k = 0; k < n_samples; ++k)
+    {
+        vec3 sampleOffset = TBN * shadowSamples[k] * 4.f;
+        vec3 dir_sample = sampleOffset + fragPos - pointLight.pos;
+        float curr_depth_sample = length(dir_sample);
+        float cloest_depth_sample = texture(pointLight.depthCubemap, dir_sample).r;
+
+        cloest_depth_sample *= pointLight.farPlane;
+        if (curr_depth_sample - cloest_depth_sample - bias > 0.01f)
+        {
+            occlusion_times++;
+            d += curr_depth_sample - cloest_depth_sample;
+        }
+    }
+    d = d / occlusion_times;
+    float factor = 0.f;
+    for (int j = 0; j < n_samples; ++j)
+    {
+        vec3 sampleOffset = TBN * shadowSamples[j] * blurRadius * pow(curr_depth / 12, 2) * d / n_samples * 64;
+        vec3 dir_sample = sampleOffset + fragPos - pointLight.pos;
+        float curr_depth_sample = length(dir_sample);
+        float cloest_depth_sample = texture(pointLight.depthCubemap, dir_sample).r;
+        cloest_depth_sample *= pointLight.farPlane;
+        factor += (curr_depth_sample - cloest_depth_sample - bias > 0.f ? 1.0 : 0.0);
+        // factor = curr_depth_sample;
+    }
+    return (factor) / n_samples; // return shadow
+}
+
 float computeDirLightShadow(vec3 fragPos, vec3 fragNormal, in DirLight dirLight)
 {
     // perform perspective divide
@@ -100,49 +179,4 @@ float computeDirLightShadow(vec3 fragPos, vec3 fragNormal, in DirLight dirLight)
 
     return factor / n_samples;
     // return dirLight.orthoScale * 1e-1 + 0.f;
-}
-
-float computePointLightShadow(vec3 fragPos, vec3 fragNorm, vec3 pointLightPos, samplerCube _depthMap)
-{
-    if (PointShadow == 0)
-    {
-        return 0.f;
-    }
-    vec3 dir = fragPos - pointLightPos;
-
-    float curr_depth = length(dir);
-    float omega = -dot(fragNorm, dir) / curr_depth;
-    float bias = 0.05f / tan(omega); // idea: bias increase based on center distance
-    // shadow test
-
-    // 计算遮挡物与接受物的平均距离
-    float d = 0.f;
-    int occlusion_times = 0;
-    for (int k = 0; k < n_samples; ++k)
-    {
-        vec3 sampleOffset = TBN * shadowSamples[k] * 4.f;
-        vec3 dir_sample = sampleOffset + fragPos - pointLightPos;
-        float curr_depth_sample = length(dir_sample);
-        float cloest_depth_sample = texture(_depthMap, dir_sample).r;
-
-        cloest_depth_sample *= pointLightFar;
-        if (curr_depth_sample - cloest_depth_sample - bias > 0.01f)
-        {
-            occlusion_times++;
-            d += curr_depth_sample - cloest_depth_sample;
-        }
-    }
-    d = d / occlusion_times;
-    float factor = 0.f;
-    for (int j = 0; j < n_samples; ++j)
-    {
-        vec3 sampleOffset = TBN * shadowSamples[j] * blurRadius * pow(curr_depth / 12, 2) * d / n_samples * 64;
-        vec3 dir_sample = sampleOffset + fragPos - pointLightPos;
-        float curr_depth_sample = length(dir_sample);
-        float cloest_depth_sample = texture(_depthMap, dir_sample).r;
-        cloest_depth_sample *= pointLightFar;
-        factor += (curr_depth_sample - cloest_depth_sample - bias > 0.f ? 1.0 : 0.0);
-        // factor = curr_depth_sample;
-    }
-    return (factor) / n_samples; // return shadow
 }

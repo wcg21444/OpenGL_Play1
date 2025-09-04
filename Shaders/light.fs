@@ -15,6 +15,15 @@ struct DirLight
     int useVSM;
 };
 
+struct PointLight
+{
+    vec3 pos;
+    vec3 intensity;
+    samplerCube depthCubemap;
+    float farPlane;
+    samplerCube VSMCubemap;
+    int useVSM;
+};
 /*****************视口大小******************************************************************/
 uniform int width = 1600;
 uniform int height = 900;
@@ -29,19 +38,14 @@ uniform samplerCube depthMap; // debug
 uniform sampler2D ssaoTex;
 
 /*****************点光源设置******************************************************************/
-const int MAX_LIGHTS = 10;  // Maximum number of lights supported
-uniform int numPointLights; // actual number of lights used
-uniform samplerCube shadowCubeMaps[MAX_LIGHTS];
-uniform vec3 pointLightPos[MAX_LIGHTS];
-uniform vec3 pointLightIntensity[MAX_LIGHTS];
-uniform float pointLightFar;
+const int MAX_POINT_LIGHTS = 3; // Maximum number of lights supported
+uniform int numPointLights;     // actual number of lights used
+uniform PointLight pointLightArray[MAX_POINT_LIGHTS];
 
 /*****************定向光源设置******************************************************************/
 const int MAX_DIR_LIGHTS = 5; // Maximum number of lights supported
 uniform int numDirLights;     // actual number of lights used
-
 uniform DirLight dirLightArray[MAX_DIR_LIGHTS];
-
 vec3 sunlightDecay;
 /*****************阴影采样设置******************************************************************/
 vec2 noiseScale = vec2(width / 16.0, height / 16.0);
@@ -212,12 +216,20 @@ vec3 pointLightDiffuse(vec3 fragPos, vec3 n)
 
     for (int i = 0; i < numPointLights; ++i)
     {
-        vec3 l = pointLightPos[i] - fragPos;
+        vec3 l = pointLightArray[i].pos - fragPos;
         float rr = pow(dot(l, l), 0.6) * 10;
         l = normalize(l);
 
-        float shadow_factor = 1 - computePointLightShadow(fragPos, n, pointLightPos[i], shadowCubeMaps[i]);
-        diffuse += pointLightIntensity[i] / rr * max(0.f, dot(n, l)) * shadow_factor;
+        float shadow_factor = 0.0f;
+        if (pointLightArray[i].useVSM == 0)
+        {
+            shadow_factor = 1 - computePointLightShadow(fragPos, n, pointLightArray[i]);
+        }
+        else
+        {
+            shadow_factor = 1 - computePointLightShadowVSM(fragPos, n, pointLightArray[i]);
+        }
+        diffuse += pointLightArray[i].intensity / rr * max(0.f, dot(n, l)) * shadow_factor;
     }
     return diffuse;
 }
@@ -228,18 +240,26 @@ vec3 pointLightSpec(vec3 fragPos, vec3 n)
 
     for (int i = 0; i < numPointLights; ++i)
     {
-        vec3 l = pointLightPos[i] - fragPos;
+        vec3 l = pointLightArray[i].pos - fragPos;
         float rr = pow(dot(l, l), 0.6) * 10;
         l = normalize(l);
         float spec = 0.f;
         float specularStrength = 0.005f;
 
-        float shadow_factor = 1 - computePointLightShadow(fragPos, n, pointLightPos[i], shadowCubeMaps[i]);
+        float shadow_factor = 0.0f;
+        if (pointLightArray[i].useVSM == 0)
+        {
+            shadow_factor = 1 - computePointLightShadow(fragPos, n, pointLightArray[i]);
+        }
+        else
+        {
+            shadow_factor = 1 - computePointLightShadowVSM(fragPos, n, pointLightArray[i]);
+        }
 
         vec3 viewDir = normalize(eyePos - fragPos);
         vec3 reflectDir = reflect(-l, n);
         spec = pow(max(dot(viewDir, reflectDir), 0.0), 64);
-        specular += specularStrength * spec * pointLightIntensity[i] * shadow_factor;
+        specular += specularStrength * spec * pointLightArray[i].intensity * shadow_factor;
     }
     return specular;
 }
@@ -354,8 +374,8 @@ void main()
             eyePos.xyz,
             dir,
             FragPos,
-            LightVolueBoxMin + pointLightPos[i],
-            LightVolueBoxMax + pointLightPos[i],
-            vec4(pow(pointLightIntensity[i] / 8.f, vec3(1.2f)), 1.0f));
+            LightVolueBoxMin + pointLightArray[i].pos,
+            LightVolueBoxMax + pointLightArray[i].pos,
+            vec4(pow(pointLightArray[i].intensity / 8.f, vec3(1.2f)), 1.0f));
     }
 }

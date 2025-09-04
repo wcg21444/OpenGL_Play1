@@ -5,9 +5,6 @@ class LightShaderUI;
 class LightPass : public Pass
 {
 private:
-    const int MAX_LIGHTS = 10;
-    const int MAX_DIR_LIGHTS = 5;
-
     Texture lightPassTex;
     Texture shadowNoiseTex;
 
@@ -30,6 +27,5 @@ public:
                 unsigned int gNormal,
                 unsigned int gAlbedoSpec,
                 unsigned int skybox,
-                unsigned int transmittanceLUT,
-                float pointLightFar);
+                unsigned int transmittanceLUT);
 };

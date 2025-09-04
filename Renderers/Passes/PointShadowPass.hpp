@@ -11,16 +11,8 @@ Feature:
 class PointShadowPass : public Pass
 {
 private:
-    glm::mat4 shadowProj;
-    float aspect;
-    float nearPlane;
-
-private:
     void initializeGLResources();
     void attachDepthMap(const unsigned int _depthCubemap);
-
-public:
-    float farPlane;
 
 public:
     PointShadowPass(std::string _vs_path, std::string _fs_path, std::string _gs_path);
@@ -35,4 +27,20 @@ public:
         glm::mat4 &model,
         int width,
         int height);
+};
+
+class PointShadowVSMPass : public Pass
+{
+private:
+    void initializeGLResources();
+
+public:
+    PointShadowVSMPass(std::string _vs_path, std::string _fs_path);
+
+    void contextSetup() override;
+
+    void resize(int _width, int _height) override;
+
+    void renderToVSMTexture(
+        const PointLight &light);
 };

@@ -35,7 +35,7 @@ void DirShadowPass::renderToTexture(
     int width,
     int height)
 {
-    attachDepthMap(light.depthMap);
+    attachDepthMap(light.depthTexture->ID);
 
     glClearColor(0.f, 0.f, 0.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -76,7 +76,7 @@ void DirShadowVSMPass::renderToVSMTexture(const DirectionLight &light, int width
     glViewport(0, 0, width, height);
 
     shaders.use();
-    shaders.setTextureAuto(light.depthMap, GL_TEXTURE_2D, 0, "depthMap");
+    shaders.setTextureAuto(light.depthTexture->ID, GL_TEXTURE_2D, 0, "depthMap");
 
     Renderer::DrawQuad();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
