@@ -12,6 +12,7 @@ PostProcessPass::PostProcessPass(int _vp_width, int _vp_height, std::string _vs_
 
 PostProcessPass::~PostProcessPass()
 {
+    cleanUpGLResources();
 }
 
 void PostProcessPass::initializeGLResources()
@@ -20,6 +21,10 @@ void PostProcessPass::initializeGLResources()
     postProcessPassTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
 }
 
+void PostProcessPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBO);
+}
 void PostProcessPass::contextSetup()
 {
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);

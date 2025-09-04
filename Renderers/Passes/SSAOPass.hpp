@@ -10,6 +10,7 @@ private:
 
     std::unique_ptr<SSAOShaderUI> shaderUI;
     void initializeGLResources();
+    void cleanUpGLResources() override;
 
 public:
     SSAOPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path);
@@ -36,7 +37,9 @@ private:
     Texture blurPassTex;
 
 private:
-    void initializeGLResources();
+    void initializeGLResources() override;
+    void cleanUpGLResources() override;
+
     void contextSetup();
 
 public:

@@ -10,13 +10,17 @@ SSAOPass::SSAOPass(int _vp_width, int _vp_height, std::string _vs_path, std::str
     initializeGLResources();
     contextSetup();
 }
-SSAOPass::~SSAOPass() = default;
+SSAOPass::~SSAOPass() { cleanUpGLResources(); }
 
 void SSAOPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
     SSAOPassTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
     noiseTex.Generate(8, 8, GL_RGBA16F, GL_RGB, GL_FLOAT, NULL);
+}
+void SSAOPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBO);
 }
 void SSAOPass::contextSetup()
 {
@@ -100,13 +104,18 @@ SSAOBlurPass::SSAOBlurPass(int _vp_width, int _vp_height, std::string _vs_path, 
 
 SSAOBlurPass::~SSAOBlurPass()
 {
-    glDeleteFramebuffers(1, &FBO);
+    cleanUpGLResources();
 }
 
 void SSAOBlurPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
     blurPassTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+}
+
+void SSAOBlurPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBO);
 }
 
 void SSAOBlurPass::resize(int _width, int _height)

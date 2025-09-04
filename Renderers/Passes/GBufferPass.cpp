@@ -31,6 +31,12 @@ void GBufferPass::initializeGLResources()
     glGenTextures(1, &gViewPositionID);
     glGenRenderbuffers(1, &depthMap);
 }
+
+void GBufferPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBO);
+}
+
 void GBufferPass::contextSetup()
 {
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);

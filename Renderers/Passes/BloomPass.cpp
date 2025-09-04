@@ -18,6 +18,7 @@ BloomPass::BloomPass(int _vp_width, int _vp_height, std::string _vs_path,
 
 BloomPass::~BloomPass()
 {
+    cleanUpGLResources();
 }
 
 void BloomPass::initializeGLResources()
@@ -39,6 +40,11 @@ void BloomPass::initializeGLResources()
 
     bloomPassTex4.SetFilterMin(GL_LINEAR);
     bloomPassTex4.Generate(vp_width / 16, vp_height / 16, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+}
+
+void BloomPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBO);
 }
 
 void BloomPass::contextSetup()

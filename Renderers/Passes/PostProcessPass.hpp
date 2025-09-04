@@ -10,6 +10,7 @@ private:
 
 private:
     void initializeGLResources() override;
+    void cleanUpGLResources() override;
 
 public:
     PostProcessPass(int _vp_width, int _vp_height, std::string _vs_path,

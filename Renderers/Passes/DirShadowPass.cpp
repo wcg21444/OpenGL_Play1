@@ -9,6 +9,10 @@ inline void DirShadowPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
 }
+void DirShadowPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBO);
+}
 inline void DirShadowPass::contextSetup()
 {
 }
@@ -60,6 +64,10 @@ DirShadowVSMPass::DirShadowVSMPass(std::string _vs_path, std::string _fs_path)
 inline void DirShadowVSMPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
+}
+void DirShadowVSMPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBO);
 }
 inline void DirShadowVSMPass::contextSetup()
 {

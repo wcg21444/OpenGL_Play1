@@ -11,13 +11,20 @@ LightPass::LightPass(int _vp_width, int _vp_height, std::string _vs_path, std::s
     initializeGLResources();
     contextSetup();
 }
-LightPass::~LightPass() = default;
+LightPass::~LightPass()
+{
+    cleanUpGLResources();
+}
 void LightPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
 
     lightPassTex.Generate(vp_width, vp_height, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
     shadowNoiseTex.Generate(8, 8, GL_RGBA16F, GL_RGB, GL_FLOAT, NULL);
+}
+void LightPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBO);
 }
 void LightPass::contextSetup()
 {

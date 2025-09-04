@@ -14,6 +14,10 @@ private:
         pingpongTex[0].Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
         pingpongTex[1].Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
     }
+    void cleanUpGLResources() override
+    {
+        glDeleteFramebuffers(2, pingpongFBO);
+    }
 
 public:
     GaussianBlurPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
@@ -24,7 +28,7 @@ public:
     }
     ~GaussianBlurPass()
     {
-        glDeleteFramebuffers(2, pingpongFBO);
+        cleanUpGLResources();
     }
 
     void contextSetup() override

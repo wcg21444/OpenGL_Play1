@@ -10,9 +10,14 @@ private:
     Texture gAlbedoSpec;
     unsigned int depthMap;
     void initializeGLResources();
+    void cleanUpGLResources() override;
 
 public:
     GBufferPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path);
+    ~GBufferPass()
+    {
+        cleanUpGLResources();
+    }
 
     void contextSetup() override;
 

@@ -12,10 +12,12 @@ class DirShadowPass : public Pass
 {
 
     void initializeGLResources();
+    void cleanUpGLResources() override;
     void attachDepthMap(const unsigned int _depthMap);
 
 public:
     DirShadowPass(std::string _vs_path, std::string _fs_path);
+    ~DirShadowPass() { cleanUpGLResources(); }
 
     void contextSetup() override;
 
@@ -33,10 +35,12 @@ public:
 
 class DirShadowVSMPass : public Pass
 {
-    void initializeGLResources();
+    void initializeGLResources() override;
+    void cleanUpGLResources() override;
 
 public:
     DirShadowVSMPass(std::string _vs_path, std::string _fs_path);
+    ~DirShadowVSMPass() { cleanUpGLResources(); }
 
     void contextSetup() override;
 

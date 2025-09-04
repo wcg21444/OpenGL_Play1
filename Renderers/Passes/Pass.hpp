@@ -18,8 +18,11 @@ protected:
     int vp_width;
     int vp_height;
 
-    // 初始化内部OpenGL资源,如获取FBO,Texture,绑定framebuffer等
+    // 管理GL资源
+    //  初始化内部OpenGL资源,如获取FBO,Texture,绑定framebuffer等
     virtual void initializeGLResources() = 0;
+    // 对称方法 清理裸GL资源. 析构函数调用
+    virtual void cleanUpGLResources() = 0;
 
 public:
     Pass(int _vp_width = 0, int _vp_height = 0, std::string _vs_path = "",
@@ -39,10 +42,7 @@ public:
     virtual void contextSetup() = 0;
 
     virtual void resize(int _width, int _height) = 0;
-    virtual ~Pass()
-    {
-        glDeleteFramebuffers(1, &FBO);
-    }
+    virtual ~Pass() = default;
     void setToggle(bool status, std::string toggle)
     {
         shaders.use();
@@ -56,6 +56,7 @@ class ScreenPass : public Pass
 {
 private:
     void initializeGLResources() {}
+    void cleanUpGLResources() override {};
 
 public:
     ScreenPass(int _vp_width, int _vp_height, std::string _vs_path,
@@ -64,6 +65,10 @@ public:
     {
         initializeGLResources();
         contextSetup();
+    }
+    ~ScreenPass()
+    {
+        cleanUpGLResources();
     }
 
     void contextSetup() {}

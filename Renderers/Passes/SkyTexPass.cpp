@@ -12,12 +12,18 @@ SkyTexPass::SkyTexPass(std::string _vs_path, std::string _fs_path, int _cubemapS
 
 SkyTexPass::~SkyTexPass()
 {
+    cleanUpGLResources();
 }
 
 inline void SkyTexPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
     skyCubemapTex.Generate(cubemapSize, cubemapSize, GL_RGBA16F, GL_RGBA, GL_FLOAT, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, true);
+}
+
+void SkyTexPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBO);
 }
 
 inline void SkyTexPass::contextSetup()

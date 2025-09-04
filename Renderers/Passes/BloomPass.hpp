@@ -21,6 +21,7 @@ private:
     std::unique_ptr<BloomShaderUI> shaderUI;
 
     void initializeGLResources() override;
+    void cleanUpGLResources() override;
     void contextSetup() override;
 
 public:

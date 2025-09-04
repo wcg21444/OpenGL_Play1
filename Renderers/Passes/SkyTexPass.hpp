@@ -12,6 +12,7 @@ class SkyTexPass : public Pass
 
 private:
     void initializeGLResources();
+    void cleanUpGLResources() override;
 
 public:
 public:
@@ -42,6 +43,10 @@ private:
         lutTex.SetWrapMode(GL_CLAMP_TO_EDGE);
         lutTex.Generate(vp_width, vp_height, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL, false); // 使用32F,否则地平线出走样严重
     }
+    void cleanUpGLResources() override
+    {
+        glDeleteFramebuffers(1, &FBO);
+    }
 
 public:
     TransmittanceLUTPass(int lutWidth, int lutHeight, std::string _vs_path,
@@ -53,6 +58,7 @@ public:
     }
     ~TransmittanceLUTPass()
     {
+        cleanUpGLResources();
     }
     void contextSetup() override
     {

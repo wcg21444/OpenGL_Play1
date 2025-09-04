@@ -23,11 +23,16 @@ void CubemapUnfoldPass::initializeGLResources()
     Renderer::GenerateQuad(quadVAO, quadVBO);
 }
 
-CubemapUnfoldPass::~CubemapUnfoldPass()
+void CubemapUnfoldPass::cleanUpGLResources()
 {
     glDeleteFramebuffers(1, &FBO);
     glDeleteVertexArrays(1, &quadVAO);
     glDeleteBuffers(1, &quadVBO);
+}
+
+CubemapUnfoldPass::~CubemapUnfoldPass()
+{
+    cleanUpGLResources();
 }
 
 void CubemapUnfoldPass::contextSetup()

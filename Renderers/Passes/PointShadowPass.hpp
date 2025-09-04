@@ -11,12 +11,17 @@ Feature:
 class PointShadowPass : public Pass
 {
 private:
-    void initializeGLResources();
+    void initializeGLResources() override;
+    void cleanUpGLResources() override;
+
     void attachDepthMap(const unsigned int _depthCubemap);
 
 public:
     PointShadowPass(std::string _vs_path, std::string _fs_path, std::string _gs_path);
-
+    ~PointShadowPass()
+    {
+        cleanUpGLResources();
+    }
     void contextSetup() override;
 
     void resize(int _width, int _height) override;
@@ -33,10 +38,11 @@ class PointShadowVSMPass : public Pass
 {
 private:
     void initializeGLResources();
+    void cleanUpGLResources() override;
 
 public:
     PointShadowVSMPass(std::string _vs_path, std::string _fs_path);
-
+    ~PointShadowVSMPass();
     void contextSetup() override;
 
     void resize(int _width, int _height) override;

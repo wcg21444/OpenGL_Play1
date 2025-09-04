@@ -12,6 +12,7 @@ class CubemapUnfoldPass : public Pass
 
 private:
     void initializeGLResources() override;
+    void cleanUpGLResources() override;
 
 public:
     void contextSetup() override;

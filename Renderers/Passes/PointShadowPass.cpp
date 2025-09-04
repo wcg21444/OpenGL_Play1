@@ -12,6 +12,10 @@ inline void PointShadowPass::initializeGLResources()
     glGenFramebuffers(1, &FBO);
 }
 
+void PointShadowPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBO);
+}
 inline void PointShadowPass::contextSetup()
 {
     glEnable(GL_DEPTH_TEST);
@@ -67,11 +71,20 @@ inline void PointShadowVSMPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
 }
+void PointShadowVSMPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBO);
+}
 PointShadowVSMPass::PointShadowVSMPass(std::string _vs_path, std::string _fs_path)
     : Pass(0, 0, _vs_path, _fs_path)
 {
     initializeGLResources();
     contextSetup();
+}
+
+PointShadowVSMPass::~PointShadowVSMPass()
+{
+    cleanUpGLResources();
 }
 
 void PointShadowVSMPass::contextSetup()

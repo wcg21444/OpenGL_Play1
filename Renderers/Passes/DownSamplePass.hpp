@@ -12,6 +12,10 @@ private:
         glGenFramebuffers(1, &FBO);
         downSampleTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
     }
+    void cleanUpGLResources() override
+    {
+        glDeleteFramebuffers(1, &FBO);
+    }
 
 public:
     DownSamplePass(int _vp_width, int _vp_height, std::string _vs_path,
@@ -23,6 +27,7 @@ public:
     }
     ~DownSamplePass()
     {
+        cleanUpGLResources();
     }
 
     void contextSetup() override

@@ -10,6 +10,7 @@ private:
 
     std::unique_ptr<LightShaderUI> shaderUI;
     void initializeGLResources();
+    void cleanUpGLResources() override;
 
 public:
     LightPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path);
