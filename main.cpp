@@ -148,7 +148,7 @@ int main()
                              glm::vec3(16.f, 4.f, 8.f), 1024, 250.f);
 
     dirLights.emplace_back(
-        DirectionLight(glm::vec3(1.0f), glm::vec3(50.f, 20.f, 10.f), 4096));
+        DirectionLight(glm::vec3(1.0f), glm::vec3(50.f, 20.f, 10.f), 512));
 
     // temporary light source variable
     PointLight &light = pointLights[0]; // Assuming the first light is the one we

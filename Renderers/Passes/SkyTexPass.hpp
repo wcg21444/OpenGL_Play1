@@ -6,8 +6,6 @@ class CubemapParameters;
 
 class SkyTexPass : public Pass
 {
-    std::shared_ptr<CubemapParameters> cubemapParam;
-    int cubemapSize;
     TextureCube skyCubemapTex;
 
 private:
@@ -15,6 +13,9 @@ private:
     void cleanUpGLResources() override;
 
 public:
+    int cubemapSize;
+    std::shared_ptr<CubemapParameters> cubemapParam;
+
 public:
     SkyTexPass(std::string _vs_path, std::string _fs_path, /*  std::string _gs_path, */ int _cubemapSize);
     ~SkyTexPass();
@@ -81,4 +82,39 @@ public:
         return lutTex.ID;
     }
     void render();
+};
+
+class SkyEnvmapPass : public Pass
+{
+private:
+    int cubemapSize;
+    TextureCube skyEnvmapTex;
+
+private:
+    void initializeGLResources()
+    {
+        glGenFramebuffers(1, &FBO);
+        skyEnvmapTex.Generate(cubemapSize, cubemapSize, GL_RGBA16F, GL_RGBA, GL_FLOAT, GL_LINEAR, GL_LINEAR, false);
+    }
+    void cleanUpGLResources() override { glDeleteFramebuffers(1, &FBO); }
+
+public:
+    SkyEnvmapPass(std::string _vs_path, std::string _fs_path, int _cubemapSize)
+        : Pass(0, 0, _vs_path, _fs_path), cubemapSize(_cubemapSize)
+    {
+        initializeGLResources();
+        contextSetup();
+    }
+    ~SkyEnvmapPass() { cleanUpGLResources(); }
+    void contextSetup() override {}
+
+    void resize(int _width, int _height) override {}
+
+    unsigned int getTextures()
+    {
+        return skyEnvmapTex.ID;
+    }
+
+    void render(
+        unsigned int &skyTexture, std::shared_ptr<CubemapParameters> cubemapParam);
 };

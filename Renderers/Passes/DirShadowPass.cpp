@@ -61,6 +61,7 @@ DirShadowVSMPass::DirShadowVSMPass(std::string _vs_path, std::string _fs_path)
     initializeGLResources();
     contextSetup();
 }
+
 inline void DirShadowVSMPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
@@ -85,6 +86,63 @@ void DirShadowVSMPass::renderToVSMTexture(const DirectionLight &light, int width
 
     shaders.use();
     shaders.setTextureAuto(light.depthTexture->ID, GL_TEXTURE_2D, 0, "depthMap");
+
+    Renderer::DrawQuad();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+DirShadowSATPass::DirShadowSATPass(std::string _vs_path, std::string _fs_path)
+    : Pass(0, 0, _vs_path, _fs_path)
+{
+    initializeGLResources();
+    contextSetup();
+}
+void DirShadowSATPass::initializeGLResources()
+{
+    glGenFramebuffers(1, &FBOCol);
+    glGenFramebuffers(1, &FBORow);
+
+    SATRowTexture.SetFilterMax(GL_LINEAR);
+    SATRowTexture.SetFilterMin(GL_LINEAR);
+    SATRowTexture.SetWrapMode(GL_CLAMP_TO_EDGE);
+    SATRowTexture.Generate(0, 0, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL, false);
+}
+
+void DirShadowSATPass::cleanUpGLResources()
+{
+    glDeleteFramebuffers(1, &FBOCol);
+    glDeleteFramebuffers(1, &FBORow);
+}
+
+void DirShadowSATPass::contextSetup()
+{
+}
+
+void DirShadowSATPass::resize(int _width, int _height)
+{
+}
+
+void DirShadowSATPass::renderToSATTexture(const DirectionLight &light, int width, int height)
+{
+    SATRowTexture.Resize(width, height);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBORow);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SATRowTexture.ID, 0); // 输出目标绑定
+    Utils::CheckFBOComplete();
+    glViewport(0, 0, width, height);
+
+    shaders.use();
+    shaders.setUniform("RowSummary", 1);
+    shaders.setTextureAuto(light.depthTexture->ID, GL_TEXTURE_2D, 0, "InputTexture");
+    Renderer::DrawQuad();
+
+    glBindFramebuffer(GL_FRAMEBUFFER, FBOCol);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, light.SATTexture->ID, 0); // 输出目标绑定
+
+    glViewport(0, 0, width, height);
+
+    shaders.use();
+    shaders.setUniform("RowSummary", 0);
+    shaders.setTextureAuto(SATRowTexture.ID, GL_TEXTURE_2D, 0, "InputTexture");
 
     Renderer::DrawQuad();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

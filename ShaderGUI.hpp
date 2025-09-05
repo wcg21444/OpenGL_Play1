@@ -122,7 +122,7 @@ public:
     inline static float absorbMie = 0.1f;
     inline static float MieIntensity = 1e-1;
     inline static glm::vec4 betaMie = glm::vec4(21e-6, 21e-6, 21e-6, 1.0f);
-    inline static int maxStep = 32;
+    inline static int maxStep = 72;
     inline static void render()
     {
         ImGui::Begin("ShadersGUI");

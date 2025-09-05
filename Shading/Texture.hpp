@@ -97,8 +97,8 @@ private:
 public:
     unsigned int ID; // 纹理对象的 ID，由 OpenGL 分配
 
-    unsigned int Width;  // 纹理的宽度（以像素为单位）
-    unsigned int Height; // 纹理的高度（以像素为单位）
+    unsigned int Width;  // 正方形纹理的宽度（以像素为单位）
+    unsigned int Height; // 正方形纹理的高度（以像素为单位）
 
     TextureCube();
 

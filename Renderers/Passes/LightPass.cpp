@@ -51,7 +51,8 @@ void LightPass::render(RenderParameters &renderParameters,
                        unsigned int gNormal,
                        unsigned int gAlbedoSpec,
                        unsigned int skybox,
-                       unsigned int transmittanceLUT)
+                       unsigned int transmittanceLUT,
+                       unsigned int skyEnvmap)
 {
 
     auto &[allLights, cam, scene, model, window] = renderParameters;
@@ -80,6 +81,8 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setTextureAuto(shadowNoiseTex.ID, GL_TEXTURE_2D, 0, "shadowNoiseTex");
     /****************************************天空盒输入**************************************************/
     shaders.setTextureAuto(skybox, GL_TEXTURE_CUBE_MAP, 0, "skybox");
+    shaders.setTextureAuto(skyEnvmap, GL_TEXTURE_CUBE_MAP, 0, "skyEnvmap");
+
     /****************************************点光源输入**************************************************/
     LightSource::InitialzeShaderLightArray(shaders);
     shaders.setInt("numPointLights", static_cast<int>(pointLights.size()));

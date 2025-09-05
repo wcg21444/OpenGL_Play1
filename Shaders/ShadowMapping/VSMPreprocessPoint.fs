@@ -11,11 +11,6 @@ void main()
     float sumSquareDepth = 0.f;
     int sampleCount = 0;
 
-    // ------------------------------------------
-    // 简单的三维盒式滤波（在世界空间中进行）
-    // ------------------------------------------
-    // 创建一个采样偏移向量数组，用于在 sampleDir 附近进行采样
-    // 这里的偏移向量是预设的，你也可以用随机或泊松采样来获得更平滑的效果
     float sampleRadius = 5e-3;
     const int numOffsets = 8;
     vec3 offsets[numOffsets] = vec3[](

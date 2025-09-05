@@ -40,6 +40,8 @@ void Texture::Generate(unsigned int width, unsigned int height, GLenum internalF
     Type = type;
     Mipmapping = mipMapping;
 
+    // 关闭Mipmap 不应该采用GL_LINEAR_MIPMAP_LINEAR . 这里应该assert
+    assert((Mipmapping || (FilterMin != GL_LINEAR_MIPMAP_LINEAR)));
     assert(Target == GL_TEXTURE_2D);
     glBindTexture(Target, ID);
     {
@@ -160,8 +162,8 @@ TextureCube::TextureCube()
 }
 
 ///@brief 生成CubeTexture对象,设置属性
-///@param width 纹理的宽度，以像素为单位。
-///@param height 纹理的高度，以像素为单位。
+///@param width 正方形纹理的宽度，以像素为单位。
+///@param height 正方形纹理的高度，以像素为单位。
 ///@param internalFormat 纹理内部存储的颜色格式（例如 GL_RGBA, GL_RGBA16F）。
 ///@param format 纹理源数据（即 data 指向的数据）的颜色格式（例如 GL_RGBA, GL_BGR）。
 ///@param type 纹理源数据的每个颜色分量的数据类型（例如 GL_UNSIGNED_BYTE, GL_FLOAT）。

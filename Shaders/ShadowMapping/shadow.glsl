@@ -34,6 +34,128 @@ float computeDirLightShadowVSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLig
     return 1 - Pmax;
 }
 
+float SATLookUp(in sampler2D SAT, in vec2 uvMin, in vec2 uvMax)
+{
+    vec2 A = uvMin;
+    vec2 B = vec2(uvMax.x, uvMin.y);
+    vec2 C = vec2(uvMin.x, uvMax.y);
+    vec2 D = uvMax;
+    return texture(SAT, D).r - texture(SAT, B).r - texture(SAT, C).r + texture(SAT, A).r;
+}
+float SATLookUpSquare(in sampler2D SAT, in vec2 pointMin, in vec2 uvMax)
+{
+    vec2 A = pointMin;
+    vec2 B = vec2(uvMax.x, pointMin.y);
+    vec2 C = vec2(pointMin.x, uvMax.y);
+    vec2 D = uvMax;
+    return texture(SAT, D).g - texture(SAT, B).g - texture(SAT, C).g + texture(SAT, A).g;
+}
+
+float computeDirLightShadowVSSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLight)
+{
+    // if (DirShadow == 0)
+    // {
+    //     return 0.f;
+    // }
+    // vec4 fragPosLightSpace = dirLight.spaceMatrix * vec4(fragPos, 1.0f);
+    // vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
+    // projCoords = projCoords * 0.5 + 0.5;
+
+    // float cosine = dot(fragNormal, dirLight.pos) / length(fragNormal) / length(dirLight.pos);
+    // float bias = sqrt(1 - cosine * cosine) / cosine * 1e-3;
+    // float currentDepth = projCoords.z - bias;
+
+    // if (currentDepth > 1.0)
+    // {
+    //     return 0.0f;
+    // }
+    // vec2 texSize = textureSize(dirLight.SATTexture, 0);
+    // float kernelSize = 0.1;
+    // vec2 halfKernel = vec2(kernelSize) * 0.5;
+    // // 计算搜索区域的 UV 坐标
+    // vec2 uvMin = projCoords.xy - halfKernel;
+    // vec2 uvMax = projCoords.xy + halfKernel;
+
+    // // 2. 使用 SAT 查询深度均值和深度平方均值
+    // float kernelArea = (uvMax.x - uvMin.x) * (uvMax.y - uvMin.y) * texSize.x * texSize.y;
+
+    // // 获取深度总和，然后计算均值
+    // float sumZ = SATLookUp(dirLight.SATTexture, uvMin, uvMax);
+    // float depthAvg = sumZ / kernelArea;
+
+    // // 获取深度平方总和，然后计算均值
+    // float sumZ2 = SATLookUpSquare(dirLight.SATTexture, uvMin, uvMax);
+    // float depthSquareAvg = sumZ2 / kernelArea;
+
+    // vec4 moments = texture(dirLight.VSMTexture, projCoords.xy);
+    // float depthAvgVSM = moments.r;
+    // float depthSquareAvgVSM = moments.g;
+
+    // if (currentDepth <= depthAvg)
+    // {
+    //     return 0.f; // 当前深度 <= 平均深度，没有遮挡
+    // }
+
+    // const float MIN_VAR = 1e-10;
+    // float variance = depthSquareAvgVSM - depthAvgVSM * depthAvgVSM;
+    // variance = max(variance, MIN_VAR);
+
+    // float d = currentDepth - depthAvgVSM;
+    // float Pmax = variance / (variance + d * d);
+    // return 1 - Pmax;
+    if (DirShadow == 0)
+    {
+        return 0.f;
+    }
+    vec4 fragPosLightSpace = dirLight.spaceMatrix * vec4(fragPos, 1.0f);
+    vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+
+    float cosine = dot(fragNormal, dirLight.pos) / length(fragNormal) / length(dirLight.pos);
+    float bias = sqrt(1 - cosine * cosine) / cosine * 1e-6;
+    float currentDepth = projCoords.z - bias;
+    // float currentDepth = projCoords.z;
+
+    if (currentDepth > 1.0)
+    {
+        return 0.0f;
+    }
+    // vec4 moments = texture(dirLight.VSMTexture, projCoords.xy);
+    // float depthAvg = moments.r;
+    // float depthSquareAvg = moments.g;
+
+    vec2 texSize = textureSize(dirLight.SATTexture, 0);
+    float kernelSize = 0.005;
+    vec2 halfKernel = vec2(kernelSize) * 0.5;
+    // 计算搜索区域的 UV 坐标
+    vec2 uvMin = projCoords.xy - halfKernel;
+    vec2 uvMax = projCoords.xy + halfKernel;
+
+    // 2. 使用 SAT 查询深度均值和深度平方均值
+    float kernelArea = (uvMax.x - uvMin.x) * (uvMax.y - uvMin.y) * texSize.x * texSize.y;
+
+    // 获取深度总和，然后计算均值
+    float sumZ = SATLookUp(dirLight.SATTexture, uvMin, uvMax);
+    float depthAvg = sumZ / kernelArea;
+
+    // 获取深度平方总和，然后计算均值
+    float sumZ2 = SATLookUpSquare(dirLight.SATTexture, uvMin, uvMax);
+    float depthSquareAvg = sumZ2 / kernelArea;
+
+    if (currentDepth <= depthAvg)
+    {
+        return 0.f; // 当前深度<平均深度,没有遮挡
+    }
+
+    const float MIN_VAR = 1e-14;
+    float variance = depthSquareAvg - depthAvg * depthAvg;
+    variance = max(variance, MIN_VAR);
+
+    float d = currentDepth - depthAvg;
+    float Pmax = variance / (variance + d * d);
+    return 1 - Pmax;
+}
+
 float computePointLightShadowVSM(vec3 fragPos, vec3 fragNorm, in PointLight pointLight)
 {
     if (PointShadow == 0)

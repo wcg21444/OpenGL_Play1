@@ -18,7 +18,7 @@ SkyTexPass::~SkyTexPass()
 inline void SkyTexPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
-    skyCubemapTex.Generate(cubemapSize, cubemapSize, GL_RGBA16F, GL_RGBA, GL_FLOAT, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, true);
+    skyCubemapTex.Generate(cubemapSize, cubemapSize, GL_RGBA32F, GL_RGBA, GL_FLOAT, GL_LINEAR, GL_LINEAR, false);
 }
 
 void SkyTexPass::cleanUpGLResources()
@@ -122,5 +122,26 @@ void TransmittanceLUTPass::render()
     shaders.setUniform("betaMie", SkyGUI::betaMie);
 
     Renderer::DrawQuad();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void SkyEnvmapPass::render(unsigned int &skyTexture, std::shared_ptr<CubemapParameters> cubemapParam)
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glViewport(0, 0, cubemapSize, cubemapSize);
+    shaders.use();
+    if (!shaders.used)
+        throw(std::exception("Shader failed to setup."));
+
+    for (unsigned int i = 0; i < 6; ++i)
+    {
+        shaders.setMat4("projection", cubemapParam->projectionMartix);
+        shaders.setMat4("view", cubemapParam->viewMatrices[i]);
+        shaders.setTextureAuto(skyTexture, GL_TEXTURE_CUBE_MAP, 0, "skyTexture"); // 输入原cubemap
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                               TextureCube::FaceTargets[i], skyEnvmapTex.ID, 0); // 绑定输出目标cubemap
+        Renderer::DrawSphere();
+        Utils::CheckGLErrors();
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

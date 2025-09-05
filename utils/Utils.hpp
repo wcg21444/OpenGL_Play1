@@ -8,6 +8,16 @@
 
 namespace Utils
 {
+    inline void CheckFBOComplete()
+    {
+        static GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE)
+        {
+            // 在这里处理错误，例如输出日志
+            std::cerr << "FBO Horizontal pass incomplete: " << status << std::endl;
+            return;
+        }
+    }
     inline void CheckGLErrors()
     {
         GLenum err;

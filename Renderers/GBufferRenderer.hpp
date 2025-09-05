@@ -52,6 +52,8 @@ private:
     TransmittanceLUTPass transmittanceLUTPass;
     DirShadowVSMPass dirShadowVSMPass;
     PointShadowVSMPass pointShadowVSMPass;
+    SkyEnvmapPass skyEnvmapPass;
+    DirShadowSATPass dirShadowSATPass;
 
     GBufferRendererGUI rendererGUI;
 
@@ -67,10 +69,12 @@ public:
           postProcessPass(PostProcessPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/postProcess.fs")),
           bloomPass(BloomPass(width, height, "Shaders/screenQuad.vs", "Shaders/PostProcess/bloom.fs")),
           unfoldPass(CubemapUnfoldPass(width, height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 256)),
-          skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 256)),
+          skyTexPass(SkyTexPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyTex.fs", 128)),
           transmittanceLUTPass(TransmittanceLUTPass(256, 64, "Shaders/screenQuad.vs", "Shaders/SkyTexPass/transmittanceLUT.fs")),
           dirShadowVSMPass(DirShadowVSMPass("Shaders/screenQuad.vs", "Shaders/ShadowMapping/VSMPreprocessDir.fs")),
-          pointShadowVSMPass(PointShadowVSMPass("Shaders/cubemapSphere.vs", "Shaders/ShadowMapping/VSMPreprocessPoint.fs"))
+          pointShadowVSMPass(PointShadowVSMPass("Shaders/cubemapSphere.vs", "Shaders/ShadowMapping/VSMPreprocessPoint.fs")),
+          skyEnvmapPass(SkyEnvmapPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyEnvmap.fs", 16)),
+          dirShadowSATPass(DirShadowSATPass("Shaders/screenQuad.vs", "Shaders/ShadowMapping/SATPreprocessDir.fs"))
     {
     }
     void reloadCurrentShaders() override
@@ -89,6 +93,8 @@ public:
         transmittanceLUTPass.reloadCurrentShaders();
         dirShadowVSMPass.reloadCurrentShaders();
         pointShadowVSMPass.reloadCurrentShaders();
+        skyEnvmapPass.reloadCurrentShaders();
+        dirShadowSATPass.reloadCurrentShaders();
         contextSetup();
     }
 
@@ -184,6 +190,7 @@ private:
                 if (light.useVSM)
                 {
                     dirShadowVSMPass.renderToVSMTexture(light, light.texResolution, light.texResolution);
+                    dirShadowSATPass.renderToSATTexture(light, light.texResolution, light.texResolution);
                 }
             }
         }
@@ -208,6 +215,9 @@ private:
         skyTexPass.render(renderParameters, transmittanceLUTTex);
         auto skyPassCubemap = skyTexPass.getCubemap();
 
+        skyEnvmapPass.render(skyPassCubemap, skyTexPass.cubemapParam);
+        auto skyEnvmap = skyEnvmapPass.getTextures();
+
         /****************************光照渲染*********************************************/
         lightPass.setToggle(rendererGUI.toggleSkybox, "Skybox");
         lightPass.setToggle(rendererGUI.togglePointShadow, "PointShadow");
@@ -217,7 +227,7 @@ private:
                          gNormal,
                          gAlbedoSpec,
                          skyPassCubemap,
-                         transmittanceLUTTex);
+                         transmittanceLUTTex, skyEnvmap);
         auto lightPassTex = lightPass.getTextures();
 
         /************************************Bloom*******************************************/
@@ -260,10 +270,10 @@ private:
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         // screenPass.render(postProcessPassTex); // 渲染到底层窗口
 
-        unfoldPass.render(pointLights[0].VSMCubemap->ID);
+        unfoldPass.render(skyEnvmap);
         auto unfoldedTex = unfoldPass.getUnfoldedCubemap();
 
-        rendererGUI.renderPassInspector(unfoldedTex);
+        rendererGUI.renderPassInspector({dirLights[0].depthTexture->ID, dirShadowSATPass.SATRowTexture.ID, dirLights[0].SATTexture->ID});
         // rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
 
         // rendererGUI.renderPassInspector({gPosition, ssaoBlurTex, lightPassTex});

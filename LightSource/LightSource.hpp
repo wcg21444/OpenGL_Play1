@@ -102,6 +102,7 @@ public:
     int texResolution;
     std::shared_ptr<Texture> depthTexture;
     std::shared_ptr<Texture> VSMTexture;
+    std::shared_ptr<Texture> SATTexture;
     bool useVSM = false;
 
     float nearPlane;

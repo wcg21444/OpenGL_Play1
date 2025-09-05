@@ -101,6 +101,7 @@ DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_po
     : LightSource(_intensity, _position), orthoScale(100.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
 {
     VSMTexture = std::make_shared<Texture>();
+    SATTexture = std::make_shared<Texture>();
     depthTexture = std::make_shared<Texture>();
     lightProjection = glm::ortho(-1.0f * orthoScale,
                                  1.0f * orthoScale,
@@ -135,10 +136,12 @@ void DirectionLight::setToShaderLightArray(Shader &shaders, size_t index)
     if (useVSM)
     {
         shaders.setTextureAuto(VSMTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].VSMTexture", index));
+        shaders.setTextureAuto(SATTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].SATTexture", index));
     }
     else
     {
         shaders.setTextureAuto(0, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].VSMTexture", index));
+        shaders.setTextureAuto(0, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].SATTexture", index));
     }
     shaders.setUniform(std::format("dirLightArray[{}].useVSM", index), useVSM);
     shaders.setUniform3fv(std::format("dirLightArray[{}].pos", index), position);
@@ -182,5 +185,12 @@ void DirectionLight::generateShadowTexResource()
         VSMTexture->SetFilterMin(GL_LINEAR);
         VSMTexture->SetWrapMode(GL_CLAMP_TO_EDGE);
         VSMTexture->Generate(texResolution, texResolution, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
+
+        SATTexture->SetFilterMax(GL_LINEAR);
+        SATTexture->SetFilterMin(GL_LINEAR);
+        SATTexture->SetWrapMode(GL_CLAMP_TO_BORDER);
+        const float borderColor[] = {0.0f, 0.0f, 0.0f, 0.0f};
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+        SATTexture->Generate(texResolution, texResolution, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
     }
 }

@@ -21,10 +21,12 @@ vec4 computeSkyColor(in vec3 sunLightIntensity)
         vec3 scatterPoint = camPos + i * itvl * camDir;
         vec3 scatterSkyIntersection = intersectSky(scatterPoint, sunDir);     // 散射点与天空交点
         vec3 scatterEarthIntersection = intersectEarth(scatterPoint, sunDir); // 散射点与地面交点
-        if (scatterEarthIntersection != NO_INTERSECTION && length(scatterEarthIntersection - scatterPoint) < length(scatterSkyIntersection - scatterPoint))
-        {
-            break; // 散射点阳光被地面阻挡
-        }
+
+        // if (scatterEarthIntersection != NO_INTERSECTION && length(scatterEarthIntersection - scatterPoint) < length(scatterSkyIntersection - scatterPoint))
+        // {
+        //     break; // 散射点阳光被地面阻挡
+        // }
+        // 这一部分导致日落天空亮度突变,不真实
 
         // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, scatterPoint);
         accumulateOpticalDepth(op1, scatterPoint, scatterPoint + itvl * camDir);
@@ -103,8 +105,8 @@ vec3 computeSunlightDecay(vec3 camPos, vec3 fragDir, vec3 sunDir)
 vec3 generateSunDisk(vec3 camPos, vec3 fragDir, vec3 sunDir, vec3 sunIntensity, float sunSize)
 {
     // 计算太阳方向和片段方向之间的余弦值
-    float exponent = 1e3; // 锐利程度
-    float sunSizeInner = 1.f - 1e-4;
+    float exponent = 1e2; // 锐利程度
+    float sunSizeInner = 1.f - 1e-6;
     float sunSizeOuter = 1.f - 1e-3;
 
     float sunDot = dot(normalize(fragDir), normalize(sunDir));

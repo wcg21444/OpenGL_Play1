@@ -13,6 +13,7 @@ struct DirLight
     float orthoScale;
     sampler2D VSMTexture;
     int useVSM;
+    sampler2D SATTexture;
 };
 
 struct PointLight
@@ -48,7 +49,7 @@ uniform int numDirLights;     // actual number of lights used
 uniform DirLight dirLightArray[MAX_DIR_LIGHTS];
 vec3 sunlightDecay;
 /*****************阴影采样设置******************************************************************/
-vec2 noiseScale = vec2(width / 16.0, height / 16.0);
+vec2 noiseScale = vec2(width / 2.0, height / 2.0);
 uniform sampler2D shadowNoiseTex;
 uniform vec3 shadowSamples[128];
 uniform int n_samples;
@@ -61,6 +62,7 @@ uniform vec3 ambientLight;
 uniform vec3 skyboxSamples[32];
 uniform samplerCube skybox;
 uniform mat4 view; // 视图矩阵
+uniform samplerCube skyEnvmap;
 
 /*****************TBN******************************************************************/
 vec3 randomVec = vec3(texture(shadowNoiseTex, TexCoord *noiseScale).xy / 2, 1.0f);
@@ -129,10 +131,10 @@ vec3 sampleSkybox(vec2 uv, samplerCube _skybox)
 vec3 computeSkyboxAmbient(samplerCube _skybox)
 {
     vec3 ambient = vec3(0.f);
-    int samplesN = 32;
+    int samplesN = 16;
     for (int i = 0; i < samplesN; ++i)
     {
-        vec3 sample_dir = TBN * (skyboxSamples[i] + vec3(0.0, 0.0, 1.f));
+        vec3 sample_dir = TBN * (skyboxSamples[i] * 2.f + vec3(0.0, 0.0, 1.f));
         ambient += texture(_skybox, normalize(sample_dir)).rgb;
     }
     return ambient / samplesN;
@@ -161,7 +163,8 @@ vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
         }
         else
         {
-            shadowFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
+            // shadowFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
+            shadowFactor = 1 - computeDirLightShadowVSSM(fragPos, n, dirLightArray[i]);
         }
         if (i == 0) // 太阳光处理
         {
@@ -280,6 +283,7 @@ void computeSkyAtmosphere(in out vec4 LightResult, in vec3 ambient, in vec3 n)
 
     if (camEarthIntersection == NO_INTERSECTION)
     {
+
         if (Skybox == 1) // 开启天空盒
         {
             LightResult.rgb += vec4(sampleSkybox(TexCoord, skybox), 1.0f).rgb; // 采样天空盒
@@ -288,6 +292,7 @@ void computeSkyAtmosphere(in out vec4 LightResult, in vec3 ambient, in vec3 n)
         {
             LightResult.rgb += computeSkyColor(dirLightArray[0].intensity).rgb;
         }
+        LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightArray[0].intensity, 2.0f);
     }
     else
     {
@@ -296,17 +301,13 @@ void computeSkyAtmosphere(in out vec4 LightResult, in vec3 ambient, in vec3 n)
 
         vec4 t1 = transmittance(camPos, camEarthIntersection, 1.0f);
         // vec4 t1 = getTransmittanceFromLUT(transmittanceLUT, earthRadius, earthRadius + skyHeight, camPos, camEarthIntersection);
-        ambient += computeSkyboxAmbientMipMap(skybox, n);
+        // ambient += computeSkyboxAmbientMipMap(skybox, n);
+        ambient += computeSkyboxAmbient(skyEnvmap);
         // 渲染地面
         vec3 normal = normalize(camEarthIntersection - earthCenter);
         vec3 lighting = dirLightDiffuse(camEarthIntersection, normal) + ambient;
         vec3 earthBaseColor = vec3(0.3, 0.3f, 0.34f); // 地面颜色
         LightResult.rgb += (lighting) * (earthBaseColor)*t1.rgb;
-    }
-
-    if (camEarthIntersection == NO_INTERSECTION)
-    {
-        LightResult.rgb += generateSunDisk(camPos, camDir, sunDir, dirLightArray[0].intensity, 2.0f);
     }
 }
 
@@ -347,7 +348,8 @@ void main()
 
         vec3 ambient = ambientLight;
 
-        ambient += computeSkyboxAmbientMipMap(skybox, n);
+        // ambient += computeSkyboxAmbientMipMap(skybox, n);
+        ambient += computeSkyboxAmbient(skyEnvmap);
         // ambient = (ambientLight +
         //            computeSkyboxAmbient(skybox));
 

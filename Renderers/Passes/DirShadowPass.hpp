@@ -48,3 +48,26 @@ public:
 
     void renderToVSMTexture(const DirectionLight &light, int width, int height);
 };
+
+class DirShadowSATPass : public Pass
+{
+public:
+    Texture SATRowTexture;
+
+private:
+    unsigned int FBOCol;
+    unsigned int FBORow;
+
+    void initializeGLResources() override;
+    void cleanUpGLResources() override;
+
+public:
+    DirShadowSATPass(std::string _vs_path, std::string _fs_path);
+    ~DirShadowSATPass() { cleanUpGLResources(); }
+
+    void contextSetup() override;
+
+    void resize(int _width, int _height) override;
+
+    void renderToSATTexture(const DirectionLight &light, int width, int height);
+};
