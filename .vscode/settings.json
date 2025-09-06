@@ -95,7 +95,12 @@
         "variant": "cpp",
         "future": "cpp",
         "*.fs": "c",
-        "*.glsl": "c"
+        "*.glsl": "c",
+        "bitset": "cpp",
+        "coroutine": "cpp",
+        "regex": "cpp",
+        "source_location": "cpp",
+        "stack": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"

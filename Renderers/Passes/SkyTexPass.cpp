@@ -141,7 +141,6 @@ void SkyEnvmapPass::render(unsigned int &skyTexture, std::shared_ptr<CubemapPara
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                TextureCube::FaceTargets[i], skyEnvmapTex.ID, 0); // 绑定输出目标cubemap
         Renderer::DrawSphere();
-        Utils::CheckGLErrors();
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

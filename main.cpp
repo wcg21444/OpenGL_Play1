@@ -25,33 +25,14 @@
 const int InitWidth = 1600;
 const int InitHeight = 900;
 
-// 应用层
-// 将窗口管理与应用管理分离
-class Application
-{
-public:
-    std::shared_ptr<RenderParameters> renderParameters;
-    std::shared_ptr<RenderManager> renderManager;
-
-    Application() {}
-    void
-    Init()
-    {
-    }
-    void
-    Run()
-    {
-    }
-};
-
 int main()
 {
     glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    const char *glsl_version = "#version 330";
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    const char *glsl_version = "#version 460";
     // create window object
     GLFWwindow *window = glfwCreateWindow(InitWidth, InitHeight, "OpenGLPlay", NULL, NULL);
     if (window == NULL)
@@ -104,8 +85,6 @@ int main()
     glm::mat4 backPack_model = glm::translate(model, glm::vec3(0.f, 3.f, 4.f));
     glm::mat4 bass_model = glm::translate(model, glm::vec3(0.f, 4.f, 4.f));
 
-    // scene.push_back(std::make_unique<Grid>());
-
     scene.push_back(std::make_unique<Cube>(glm::vec3(1.f, 1.f, 1.f)));
     scene.back()->setModelTransform(box_model);
 
@@ -115,33 +94,11 @@ int main()
     scene.push_back(std::make_unique<Plane>(200.f, 200.f));
     scene.back()->setModelTransform(plane_model);
 
-    // ModelLoader::loadFile("Resource/backpack.obj");
-
     Lights allLights;
     auto &[pointLights, dirLights] = allLights;
     pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f),
                              glm::vec3(8.f, 10.f, 4.f), 1024, 250.f);
 
-    // pointLights.emplace_back(glm::vec3(20.f), glm::vec3(0.f, 5.f, 4.f));
-    // define quad light: quad: (0.0f,0.0f)  (4.0f,4.0f)
-    // glm::vec2 lb(0.0f, 0.0f);
-    // glm::vec2 rt(4.0f, 4.0f);
-    // int i_samples = 3;
-    // int j_samples = 3;
-    // float i_step = (rt.x - lb.x) / i_samples;
-    // float j_step = (rt.y - lb.y) / j_samples;
-    // for (size_t i = 0; i < i_samples; ++i)
-    // {
-    //     for (size_t j = 0; j < j_samples; ++j)
-    //     {
-    //         pointLights.emplace_back(glm::vec3(30.f), glm::vec3(10.f + i *
-    //         i_step, 1.f, 20.f + j * j_step));
-    //     }
-    // }
-    // pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f),
-    // glm::vec3(8.f, 10.f, 4.f));
-    // pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f),
-    // glm::vec3(-16.f, 10.f, 24.f));
     pointLights.emplace_back(glm::vec3(10.f, 30.f, 20.f),
                              glm::vec3(2.f, 10.f, 14.f), 1024, 250.f);
     pointLights.emplace_back(glm::vec3(30.f, 20.f, 40.f),
