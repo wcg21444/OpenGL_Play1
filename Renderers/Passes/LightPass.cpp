@@ -3,6 +3,7 @@
 #include "../../ShaderGUI.hpp"
 #include "../../Utils/Random.hpp"
 #include "LightPass.hpp"
+#include "../../GUI.hpp"
 
 LightPass::LightPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path),
@@ -96,6 +97,17 @@ void LightPass::render(RenderParameters &renderParameters,
     {
         dirLights[i].setToShaderLightArray(shaders, i);
     }
+    shaders.setInt("useBias", 0);
+    if (GUI::DebugToggleUseBias())
+    {
+        shaders.setInt("useBias", 1);
+    }
+    shaders.setInt("useVSSM", 0);
+    if (GUI::DebugToggleUseVSSM())
+    {
+        shaders.setInt("useVSSM", 1);
+    }
+    shaders.setFloat("VSSMKernelSize", GUI::DebugVSSMKernelSize());
     /****************************************视口设置****************************************************/
     shaders.setInt("width", vp_width);
     shaders.setInt("height", vp_height);

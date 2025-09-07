@@ -48,6 +48,9 @@ const int MAX_DIR_LIGHTS = 5; // Maximum number of lights supported
 uniform int numDirLights;     // actual number of lights used
 uniform DirLight dirLightArray[MAX_DIR_LIGHTS];
 vec3 sunlightDecay;
+uniform int useBias; // 是否使用深度偏移
+uniform int useVSSM;
+uniform float VSSMKernelSize;
 /*****************阴影采样设置******************************************************************/
 vec2 noiseScale = vec2(width / 2.0, height / 2.0);
 uniform sampler2D shadowNoiseTex;
@@ -156,24 +159,30 @@ vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
 
         vec3 l = normalize(dirLightArray[i].pos);
         float rr = dot(l, l);
-        float shadowFactor = 0.0f;
+        float litFactor = 0.0f;
         if (dirLightArray[i].useVSM == 0)
         {
-            shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
+            litFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
         }
         else
         {
-            // shadowFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
-            shadowFactor = 1 - computeDirLightShadowVSSM(fragPos, n, dirLightArray[i]);
+            if (useVSSM == 1)
+            {
+                litFactor = 1 - computeDirLightShadowVSSM(fragPos, n, dirLightArray[i]);
+            }
+            else
+            {
+                litFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
+            }
         }
         if (i == 0) // 太阳光处理
         {
-            diffuse += (shadowFactor)*dirLightArray[i].intensity / rr * max(0.f, dot(n, l)) * sunlightDecay;
+            diffuse += (litFactor)*dirLightArray[i].intensity / rr * max(0.f, dot(n, l)) * sunlightDecay;
         }
         else
         {
             diffuse +=
-                shadowFactor * dirLightArray[i].intensity / rr * max(0.f, dot(n, l));
+                litFactor * dirLightArray[i].intensity / rr * max(0.f, dot(n, l));
         }
     }
     return diffuse;
@@ -190,24 +199,24 @@ vec3 dirLightSpec(vec3 fragPos, vec3 n)
         float specularStrength = 0.01f;
         vec3 viewDir = normalize(eyePos - fragPos);
         vec3 reflectDir = reflect(-l, n);
-        float shadowFactor = 0.0f;
+        float litFactor = 0.0f;
         if (dirLightArray[i].useVSM == 0)
         {
-            shadowFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
+            litFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
         }
         else
         {
-            shadowFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
+            litFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
         }
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), 128);
 
         if (i == 0) // 太阳光处理
         {
-            specular += shadowFactor * specularStrength * spec * dirLightArray[i].intensity * sunlightDecay * 160;
+            specular += litFactor * specularStrength * spec * dirLightArray[i].intensity * sunlightDecay * 160;
         }
         else
         {
-            specular += shadowFactor * specularStrength * spec * dirLightArray[i].intensity * 160;
+            specular += litFactor * specularStrength * spec * dirLightArray[i].intensity * 160;
         }
     }
     return specular;

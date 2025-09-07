@@ -31,6 +31,8 @@ public:
 
     Texture();
     void Generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, void *data, bool mipMapping = true);
+    void GenerateComputeStorage(unsigned int width, unsigned int height, GLenum internalFormat);
+
     void SetData(void *data);
 
     void SetFilterMin(GLenum filter);
@@ -38,6 +40,7 @@ public:
     void SetFilterMax(GLenum filter);
 
     void Resize(int ResizeWidth, int ResizeHeight);
+    void ResizeComputeStorage(int ResizeWidth, int ResizeHeight);
 
     void SetWrapMode(GLenum wrapMode);
 

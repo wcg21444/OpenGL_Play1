@@ -56,6 +56,30 @@ void Texture::Generate(unsigned int width, unsigned int height, GLenum internalF
     glBindTexture(Target, 0);
 }
 
+void Texture::GenerateComputeStorage(unsigned int width, unsigned int height, GLenum internalFormat)
+{
+    if (ID != 0)
+    {
+        glDeleteTextures(1, &ID);
+    }
+    glGenTextures(1, &ID);
+
+    Width = width;
+    Height = height;
+    InternalFormat = internalFormat;
+
+    assert(Target == GL_TEXTURE_2D);
+    glBindTexture(Target, ID);
+    {
+        glTexStorage2D(Target, 1, internalFormat, Width, Height);
+        glTexParameteri(Target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(Target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(Target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(Target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    }
+    glBindTexture(Target, 0);
+}
+
 /// @brief 设置纹理数据 在Generate()之后调用 通常是逐帧调用
 /// @param data 纹理数据指针 注意与纹理格式一致
 void Texture::SetData(void *data)
@@ -142,6 +166,18 @@ void Texture::Resize(int ResizeWidth, int ResizeHeight)
             glGenerateMipmap(Target);
     }
     glBindTexture(Target, 0);
+}
+
+void Texture::ResizeComputeStorage(int ResizeWidth, int ResizeHeight)
+{
+
+    ResizeWidth = (ResizeWidth <= 0) ? 1 : ResizeWidth;
+    ResizeHeight = (ResizeHeight <= 0) ? 1 : ResizeHeight;
+
+    Width = static_cast<unsigned int>(ResizeWidth);
+    Height = static_cast<unsigned int>(ResizeHeight);
+
+    GenerateComputeStorage(Width, Height, InternalFormat);
 }
 
 Texture::~Texture()

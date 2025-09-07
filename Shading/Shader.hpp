@@ -97,6 +97,13 @@ private:
     GLint getUniformLocationSafe(const std::string &name) override;
 
 public:
+    static constexpr int ThreadGroupSize = 32;
+    [[nodiscard]] static int GetGroupSize(int size)
+    {
+        return (size + ThreadGroupSize - 1) / ThreadGroupSize;
+    }
+
+public:
     std::string cs_path;
 
     ComputeShader(std::string cs_path);

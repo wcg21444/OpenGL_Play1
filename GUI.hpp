@@ -34,9 +34,9 @@ namespace GUI
 
     // 状态管理变量
     inline static bool modelLoadView = false; // 控制显示状态
-    int selectedIndex = -1;
+    inline static int selectedIndex = -1;
 
-    void BindRenderApplication(
+    static void BindRenderApplication(
         std::shared_ptr<RenderParameters> _ptrRenderParameters,
         std::shared_ptr<RenderManager> _ptrRenderManager)
     {
@@ -44,7 +44,7 @@ namespace GUI
         ptrRenderParameters = _ptrRenderParameters;
     }
 
-    void RendererShaderManager(RenderManager &renderManager)
+    static void RendererShaderManager(RenderManager &renderManager)
     {
         if (ImGui::Button("Reload Current Shaders"))
         {
@@ -53,7 +53,7 @@ namespace GUI
         }
     }
 
-    void ShadowRendererShaderManager(RenderManager &renderManager)
+    static void ShadowRendererShaderManager(RenderManager &renderManager)
     {
         static char path_buf1[256]{"Shaders/VertShader.vs"};
         static char path_buf2[256]{"Shaders/FragmShader.fs"};
@@ -201,7 +201,7 @@ namespace GUI
         }
     }
 
-    void LightHandle(LightSource &light_source)
+    static void LightHandle(LightSource &light_source)
     {
         auto &[lightColor, lightIntensity] = light_source.colorIntensity;
         glm::vec3 lightPosition = light_source.getPosition();
@@ -217,7 +217,7 @@ namespace GUI
         lightPosition = translate[3];
         light_source.setPosition(lightPosition);
     }
-    void LightSourceManage(Lights &lights)
+    static void LightSourceManage(Lights &lights)
     {
         auto &[pointLights, dirLights] = lights;
         static LightSource *selectedLight = nullptr;
@@ -264,7 +264,7 @@ namespace GUI
         ImGui::EndGroup();
     }
 
-    glm::mat4 MatrixInputWithImGui(const char *label, const glm::mat4 &initial)
+    static glm::mat4 MatrixInputWithImGui(const char *label, const glm::mat4 &initial)
     {
         // TODO : 将矩阵转置
         //  将GLM矩阵转换为ImGui可编辑的格式
@@ -320,7 +320,7 @@ namespace GUI
         return result;
     }
 
-    void RenderSwitchCombo(RenderManager &renderManager)
+    static void RenderSwitchCombo(RenderManager &renderManager)
     {
         static const char *modes[] = {"PointShadow", "ParrllelShadow", "DebugDepth", "Texture", "DepthPass", "GBuffer", "CubemapUnfold"};
         static int current_mode = 0;
@@ -334,7 +334,7 @@ namespace GUI
         }
     }
 
-    void displaySceneHierarchy(Scene &scene, int &selectedIndex)
+    static void displaySceneHierarchy(Scene &scene, int &selectedIndex)
     {
 
         // 列表显示所有对象
@@ -362,7 +362,7 @@ namespace GUI
         }
     }
 
-    void ModelLoadView()
+    static void ModelLoadView()
     {
         static FileSelector fileSelector;
         ImGui::Begin("ModelLoadView", &modelLoadView);
@@ -380,7 +380,7 @@ namespace GUI
         }
     }
 
-    void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, Lights &lights, glm::mat4 &model)
+    static void ShowSidebarToolbar(Scene &scene, RenderManager &renderManager, Lights &lights, glm::mat4 &model)
     {
 
         // 开始侧边栏窗口
@@ -428,5 +428,118 @@ namespace GUI
         ImGui::Text("FPS: %.2f", ImGui::GetIO().Framerate);
         ImGui::Text("DeltaTime: %.3f ms", ImGui::GetIO().DeltaTime * 1e3);
         ImGui::End();
+    }
+
+    static void RenderTextureInspector(const std::vector<GLuint> &passTextures)
+    {
+        ImGui::Begin("TextureInspector", nullptr);
+        {
+            ImGui::BeginChild("TextureDisplay");
+
+            // 获取可用内容区域的尺寸
+            ImVec2 contentSize = ImGui::GetContentRegionAvail();
+
+            // 计算行和列
+            // 简单地假设我们以方形布局排列纹理，并找到最接近的整数开方根
+            int numTextures = passTextures.size();
+            if (numTextures == 0)
+            {
+                ImGui::Text("No textures to display.");
+                ImGui::EndChild();
+                ImGui::End();
+                return;
+            }
+
+            int cols = static_cast<int>(std::ceil(std::sqrt(numTextures)));
+            int rows = static_cast<int>(std::ceil(static_cast<float>(numTextures) / cols));
+
+            // 计算每个纹理的显示尺寸
+            float textureDisplayWidth = contentSize.x / cols;
+            float textureDisplayHeight = contentSize.y / rows;
+            ImVec2 textureSize = ImVec2(textureDisplayWidth, textureDisplayHeight);
+
+            // 获取绘制列表
+            ImDrawList *drawList = ImGui::GetWindowDrawList();
+
+            // 遍历所有纹理并绘制
+            for (int i = 0; i < numTextures; ++i)
+            {
+                GLuint textureID = passTextures[i];
+
+                // 计算当前纹理的屏幕位置
+                int col = i % cols;
+                int row = i / cols;
+
+                ImVec2 cursorScreenPos = ImGui::GetCursorScreenPos();
+                ImVec2 pos = ImVec2(
+                    cursorScreenPos.x + col * textureDisplayWidth,
+                    cursorScreenPos.y + row * textureDisplayHeight);
+
+                // 绘制纹理
+                drawList->AddImage(
+                    (ImTextureID)(intptr_t)textureID,
+                    pos,
+                    ImVec2(pos.x + textureSize.x, pos.y + textureSize.y),
+                    ImVec2(0, 1), // UV 坐标：左上角
+                    ImVec2(1, 0)  // UV 坐标：右下角
+                );
+                // 在纹理的左上角添加文本标签
+                // 文本内容为纹理在向量中的索引
+                std::string label = "Index: " + std::to_string(i);
+
+                // 调整文本位置，稍微留出一些边距
+                ImVec2 textPos = ImVec2(pos.x + 5, pos.y + 5);
+
+                // 绘制文本
+                drawList->AddText(textPos, IM_COL32_WHITE, label.c_str());
+            }
+
+            ImGui::EndChild();
+        }
+        ImGui::End();
+    }
+
+    inline bool useVSSM = false;
+    static bool DebugToggleUseVSSM()
+    {
+        ImGui::Begin("Debug");
+        {
+            ImGui::Checkbox("UseVSSM", &useVSSM);
+
+            ImGui::End();
+        }
+        return useVSSM;
+    }
+    inline bool useBias = false;
+    static bool DebugToggleUseBias()
+    {
+        ImGui::Begin("Debug");
+        {
+            ImGui::Checkbox("UseBias", &useBias);
+
+            ImGui::End();
+        }
+        return useBias;
+    }
+    inline bool useComputeShaderAccelerate = true;
+    static bool DebugToggleUseComputeShaderAccelerate()
+    {
+        ImGui::Begin("Debug");
+        {
+            ImGui::Checkbox("UseCSAccelerate", &useComputeShaderAccelerate);
+
+            ImGui::End();
+        }
+        return useComputeShaderAccelerate;
+    }
+    static float DebugVSSMKernelSize()
+    {
+        static float VSSMKernelSize = 0.01f;
+        ImGui::Begin("Debug");
+        {
+            ImGui::DragFloat("VSSM Kernel Size", &VSSMKernelSize, 0.01f, 0.0f);
+        }
+        ImGui::End();
+        return VSSMKernelSize;
     }
 }

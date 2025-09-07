@@ -20,6 +20,7 @@
 
 #include "../Utils/TextureLoader.hpp"
 #include "../Utils/Utils.hpp"
+#include "../../GUI.hpp"
 
 class GBufferRenderer : public Renderer
 {
@@ -169,6 +170,7 @@ private:
                 }
             }
         }
+
         // 平行光源阴影贴图
         for (auto &light : dirLights)
         {
@@ -190,7 +192,10 @@ private:
                 if (light.useVSM)
                 {
                     dirShadowVSMPass.renderToVSMTexture(light, light.texResolution, light.texResolution);
-                    dirShadowSATPass.renderToSATTexture(light, light.texResolution, light.texResolution);
+                    if (GUI::useVSSM)
+                    {
+                        dirShadowSATPass.renderToSATTexture(light, light.texResolution, light.texResolution);
+                    }
                 }
             }
         }
@@ -273,14 +278,15 @@ private:
         unfoldPass.render(skyEnvmap);
         auto unfoldedTex = unfoldPass.getUnfoldedCubemap();
 
-        rendererGUI.renderPassInspector({dirLights[0].depthTexture->ID, dirShadowSATPass.SATRowTexture.ID, dirLights[0].SATTexture->ID});
+        rendererGUI.renderPassInspector({dirLights[0].depthTexture->ID, dirLights[0].SATTexture->ID});
         // rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
 
         // rendererGUI.renderPassInspector({gPosition, ssaoBlurTex, lightPassTex});
         ImGui::Begin("RendererGUI");
         {
-            ImGui::DragFloat("OrthoScale", &allLights.dirLights[0].orthoScale, 1e1, 1e3);
-            ImGui::DragFloat("FarPlane", &allLights.dirLights[0].farPlane, 1e2, 1e7);
+            ImGui::DragFloat("OrthoScale", &allLights.dirLights[0].orthoScale, 5.f, 1e3);
+            ImGui::DragFloat("FarPlane", &allLights.dirLights[0].farPlane, 1e1f, 1e7);
+            ImGui::DragFloat("NearPlane", &allLights.dirLights[0].nearPlane, 1e-2f, 2.f);
             ImGui::End();
         }
 

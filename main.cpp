@@ -91,21 +91,21 @@ int main()
     scene.push_back(std::make_unique<Sphere>(1.f));
     scene.back()->setModelTransform(sphere_model);
 
-    scene.push_back(std::make_unique<Plane>(200.f, 200.f));
+    scene.push_back(std::make_unique<Plane>(20.f, 20.f));
     scene.back()->setModelTransform(plane_model);
 
     Lights allLights;
     auto &[pointLights, dirLights] = allLights;
-    pointLights.emplace_back(glm::vec3(20.f, 30.f, 40.f),
+    pointLights.emplace_back(glm::vec3(0.1f, 0.1f, 0.1f),
                              glm::vec3(8.f, 10.f, 4.f), 1024, 250.f);
 
-    pointLights.emplace_back(glm::vec3(10.f, 30.f, 20.f),
-                             glm::vec3(2.f, 10.f, 14.f), 1024, 250.f);
-    pointLights.emplace_back(glm::vec3(30.f, 20.f, 40.f),
-                             glm::vec3(16.f, 4.f, 8.f), 1024, 250.f);
+    // pointLights.emplace_back(glm::vec3(10.f, 30.f, 20.f),
+    //                          glm::vec3(2.f, 10.f, 14.f), 1024, 250.f);
+    // pointLights.emplace_back(glm::vec3(30.f, 20.f, 40.f),
+    //                          glm::vec3(16.f, 4.f, 8.f), 1024, 250.f);
 
     dirLights.emplace_back(
-        DirectionLight(glm::vec3(1.0f), glm::vec3(50.f, 20.f, 10.f), 512));
+        DirectionLight(glm::vec3(1.0f), glm::vec3(50.f, 20.f, 10.f), 1024));
 
     // temporary light source variable
     PointLight &light = pointLights[0]; // Assuming the first light is the one we

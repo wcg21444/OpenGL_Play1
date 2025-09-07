@@ -1,0 +1,34 @@
+#version 460 
+layout (local_size_x = 32, local_size_y = 32) in;
+
+// momentsTex 的绑定点，用于写入
+layout(rgba32f, binding = 0) uniform image2D momentsImage;//输出
+
+uniform sampler2D depthMap;
+uniform int useBias;
+
+void main() {
+    ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+    vec2 uv = vec2(coords) / vec2(imageSize(momentsImage));
+
+    // 从深度纹理中采样深度值
+    // texture() 函数返回 vec4，但深度值在 .r 通道
+    float depth = texture(depthMap, uv).r;
+
+    // 根据深度值计算矩量
+    float moment1 = depth;
+    float moment2 = depth * depth;
+
+    // 将矩量写入 moments 纹理的 R 和 G 通道
+    //这里我们将moments 输出偏移-0.5f  获得更好精度
+    // vec4 moments = vec4(moment1 - 0.5f, moment2 - 0.5f, 0.0f, 1.0f);
+    vec4 moments;
+    if(useBias == 0)
+    {
+        moments = vec4(moment1, moment2 , 0.0f, 1.0f);//对比,不进行偏移
+    }
+    else{
+    moments = vec4(moment1 - 0.5f, moment2 - 0.5f, 0.0f, 1.0f);//进行偏移
+    }
+    imageStore(momentsImage, coords, (moments));
+}

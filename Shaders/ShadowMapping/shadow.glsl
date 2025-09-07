@@ -34,75 +34,22 @@ float computeDirLightShadowVSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLig
     return 1 - Pmax;
 }
 
-float SATLookUp(in sampler2D SAT, in vec2 uvMin, in vec2 uvMax)
+vec2 SATLookUp(in sampler2D SAT, in vec2 uvMin, in vec2 uvMax)
 {
     vec2 A = uvMin;
     vec2 B = vec2(uvMax.x, uvMin.y);
     vec2 C = vec2(uvMin.x, uvMax.y);
     vec2 D = uvMax;
-    return texture(SAT, D).r - texture(SAT, B).r - texture(SAT, C).r + texture(SAT, A).r;
+    return texture(SAT, D).rg - texture(SAT, B).rg - texture(SAT, C).rg + texture(SAT, A).rg;
 }
-float SATLookUpSquare(in sampler2D SAT, in vec2 pointMin, in vec2 uvMax)
+// 还原深度偏移
+float reverseDepthBias(float moment)
 {
-    vec2 A = pointMin;
-    vec2 B = vec2(uvMax.x, pointMin.y);
-    vec2 C = vec2(pointMin.x, uvMax.y);
-    vec2 D = uvMax;
-    return texture(SAT, D).g - texture(SAT, B).g - texture(SAT, C).g + texture(SAT, A).g;
+    return moment + 0.5f;
 }
 
-float computeDirLightShadowVSSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLight)
+float computeDirLightShadowVSMSAT(vec3 fragPos, vec3 fragNormal, in DirLight dirLight)
 {
-    // if (DirShadow == 0)
-    // {
-    //     return 0.f;
-    // }
-    // vec4 fragPosLightSpace = dirLight.spaceMatrix * vec4(fragPos, 1.0f);
-    // vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
-    // projCoords = projCoords * 0.5 + 0.5;
-
-    // float cosine = dot(fragNormal, dirLight.pos) / length(fragNormal) / length(dirLight.pos);
-    // float bias = sqrt(1 - cosine * cosine) / cosine * 1e-3;
-    // float currentDepth = projCoords.z - bias;
-
-    // if (currentDepth > 1.0)
-    // {
-    //     return 0.0f;
-    // }
-    // vec2 texSize = textureSize(dirLight.SATTexture, 0);
-    // float kernelSize = 0.1;
-    // vec2 halfKernel = vec2(kernelSize) * 0.5;
-    // // 计算搜索区域的 UV 坐标
-    // vec2 uvMin = projCoords.xy - halfKernel;
-    // vec2 uvMax = projCoords.xy + halfKernel;
-
-    // // 2. 使用 SAT 查询深度均值和深度平方均值
-    // float kernelArea = (uvMax.x - uvMin.x) * (uvMax.y - uvMin.y) * texSize.x * texSize.y;
-
-    // // 获取深度总和，然后计算均值
-    // float sumZ = SATLookUp(dirLight.SATTexture, uvMin, uvMax);
-    // float depthAvg = sumZ / kernelArea;
-
-    // // 获取深度平方总和，然后计算均值
-    // float sumZ2 = SATLookUpSquare(dirLight.SATTexture, uvMin, uvMax);
-    // float depthSquareAvg = sumZ2 / kernelArea;
-
-    // vec4 moments = texture(dirLight.VSMTexture, projCoords.xy);
-    // float depthAvgVSM = moments.r;
-    // float depthSquareAvgVSM = moments.g;
-
-    // if (currentDepth <= depthAvg)
-    // {
-    //     return 0.f; // 当前深度 <= 平均深度，没有遮挡
-    // }
-
-    // const float MIN_VAR = 1e-10;
-    // float variance = depthSquareAvgVSM - depthAvgVSM * depthAvgVSM;
-    // variance = max(variance, MIN_VAR);
-
-    // float d = currentDepth - depthAvgVSM;
-    // float Pmax = variance / (variance + d * d);
-    // return 1 - Pmax;
     if (DirShadow == 0)
     {
         return 0.f;
@@ -112,7 +59,7 @@ float computeDirLightShadowVSSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLi
     projCoords = projCoords * 0.5 + 0.5;
 
     float cosine = dot(fragNormal, dirLight.pos) / length(fragNormal) / length(dirLight.pos);
-    float bias = sqrt(1 - cosine * cosine) / cosine * 1e-6;
+    float bias = sqrt(1 - cosine * cosine) / cosine * 1e-4;
     float currentDepth = projCoords.z - bias;
     // float currentDepth = projCoords.z;
 
@@ -125,7 +72,7 @@ float computeDirLightShadowVSSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLi
     // float depthSquareAvg = moments.g;
 
     vec2 texSize = textureSize(dirLight.SATTexture, 0);
-    float kernelSize = 0.005;
+    float kernelSize = VSSMKernelSize;
     vec2 halfKernel = vec2(kernelSize) * 0.5;
     // 计算搜索区域的 UV 坐标
     vec2 uvMin = projCoords.xy - halfKernel;
@@ -135,25 +82,148 @@ float computeDirLightShadowVSSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLi
     float kernelArea = (uvMax.x - uvMin.x) * (uvMax.y - uvMin.y) * texSize.x * texSize.y;
 
     // 获取深度总和，然后计算均值
-    float sumZ = SATLookUp(dirLight.SATTexture, uvMin, uvMax);
+    float sumZ = SATLookUp(dirLight.SATTexture, uvMin, uvMax).r;
     float depthAvg = sumZ / kernelArea;
 
     // 获取深度平方总和，然后计算均值
-    float sumZ2 = SATLookUpSquare(dirLight.SATTexture, uvMin, uvMax);
+    float sumZ2 = SATLookUp(dirLight.SATTexture, uvMin, uvMax).g;
     float depthSquareAvg = sumZ2 / kernelArea;
 
+    // 还原深度偏移
+    if (useBias == 0)
+    {
+        depthAvg = depthAvg;
+        depthSquareAvg = depthSquareAvg;
+    }
+    else
+    {
+        depthAvg = reverseDepthBias(depthAvg);
+        depthSquareAvg = reverseDepthBias(depthSquareAvg);
+    }
+
+    if (depthAvg < 1e-7)
+    {
+        return 0.f; // 当前深度<平均深度,没有遮挡
+    }
     if (currentDepth <= depthAvg)
     {
         return 0.f; // 当前深度<平均深度,没有遮挡
     }
 
-    const float MIN_VAR = 1e-14;
+    const float MIN_VAR = 1e-9;
     float variance = depthSquareAvg - depthAvg * depthAvg;
     variance = max(variance, MIN_VAR);
 
     float d = currentDepth - depthAvg;
     float Pmax = variance / (variance + d * d);
     return 1 - Pmax;
+}
+
+// 求切比雪夫上界
+float chebyshev(vec2 moments, float currentDepth)
+{
+    const float MIN_VAR = 1e-5;
+    float variance = moments.y - moments.x * moments.x;
+    variance = max(variance, MIN_VAR);
+
+    float d = currentDepth - moments.x;
+    float Pmax = variance / (variance + d * d);
+    return Pmax;
+}
+vec2 getVSSMMoments(sampler2D satTex, vec2 uv, float kernelSize)
+{
+    vec2 stride = 1.0 / vec2(textureSize(satTex, 0));
+
+    float xmax = uv.x + kernelSize * stride.x;
+    float xmin = uv.x - kernelSize * stride.x;
+    float ymax = uv.y + kernelSize * stride.y;
+    float ymin = uv.y - kernelSize * stride.y;
+
+    vec4 A = texture(satTex, vec2(xmin, ymin));
+    vec4 B = texture(satTex, vec2(xmax, ymin));
+    vec4 C = texture(satTex, vec2(xmin, ymax));
+    vec4 D = texture(satTex, vec2(xmax, ymax));
+
+    float sPenumbra = 2.0 * kernelSize;
+
+    vec4 moments = (D + A - B - C) / float(sPenumbra * sPenumbra);
+    if (useBias == 1)
+    {
+        moments.x = reverseDepthBias(moments.x);
+        moments.y = reverseDepthBias(moments.y);
+    }
+    return moments.rg;
+}
+
+// 返回阴影系数
+float computeDirLightShadowVSSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLight)
+{
+    if (DirShadow == 0)
+    {
+        return 0.f;
+    }
+    vec4 fragPosLightSpace = dirLight.spaceMatrix * vec4(fragPos, 1.0f);
+    vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+
+    float cosine = dot(fragNormal, dirLight.pos) / length(fragNormal) / length(dirLight.pos);
+    float bias = sqrt(1 - cosine * cosine) / cosine * 1e-4;
+    float currentDepth = projCoords.z - bias;
+
+    float lightSize = VSSMKernelSize;
+
+    float searchSize = lightSize;
+    vec2 moments = getVSSMMoments(dirLight.SATTexture, projCoords.xy, searchSize);
+
+    if (currentDepth >= 0.99f)
+    {
+        return 0.f;
+    }
+    // Blocker Searching
+    float border = searchSize / textureSize(dirLight.SATTexture, 0).x;
+    // just cut out the no padding area according to the sarched area size
+    if (projCoords.x <= border || projCoords.x >= 0.99f - border)
+    {
+        return 0.0;
+    }
+    if (projCoords.y <= border || projCoords.y >= 0.99f - border)
+    {
+        return 0.0;
+    }
+
+    float alpha = chebyshev(moments, currentDepth);                         // 未遮挡比例
+    float dBlocker = (moments.x - alpha * (currentDepth)) / (1.0f - alpha); // 阻挡物体深度
+    if (dBlocker < 1e-8)
+    {
+        return 0.0f; // 阻挡物深度较小 认为没有遮挡
+    }
+    if (dBlocker > 1.0f) // 阻挡物深度大于1 认为没有遮挡
+    {
+        return 0.0f;
+    }
+    float wPenumbra = (currentDepth - dBlocker) * lightSize / dBlocker; // 半影大小计算
+    if (wPenumbra <= 0.0)                                               // 当前深度小于等于阻挡物深度 认为没有遮挡
+    {
+        return 0.0f;
+    }
+    moments = getVSSMMoments(dirLight.SATTexture, projCoords.xy, wPenumbra);
+
+    if (currentDepth > 1.0) // 当前深度大于1 认为没有遮挡
+    {
+        return 0.0f;
+    }
+    if (currentDepth <= moments.x)
+    {
+        return 0.f; // 当前深度小于平均深度,认为没有遮挡
+    }
+    if (currentDepth <= 1e-5)
+    {
+        return 0.f; // 深度<=0 认为没有遮挡
+    }
+
+    // CDF estimation
+    float shadow = chebyshev(moments, currentDepth);
+    return 1.f - shadow;
 }
 
 float computePointLightShadowVSM(vec3 fragPos, vec3 fragNorm, in PointLight pointLight)
@@ -286,13 +356,19 @@ float computeDirLightShadow(vec3 fragPos, vec3 fragNormal, in DirLight dirLight)
         vec3 projCoords = (samplePosLightSpace.xyz) / samplePosLightSpace.w;
         // transform to [0,1] range
         projCoords = projCoords * 0.5 + 0.5;
+        if (projCoords.x < 0.0 || projCoords.x > 1.0 ||
+            projCoords.y < 0.0 || projCoords.y > 1.0)
+        {
+            continue;
+        }
         // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
         float closestDepth = texture(dirLight.depthMap, projCoords.xy).r;
         // get depth of current fragment from light's perspective
         float currentDepth = projCoords.z;
+
         float cosine = dot(fragNormal, dirLight.pos) / length(fragNormal) / length(dirLight.pos);
         // float texel = 4e-5; // texel = (ortho_scale,farPlane)
-        float texel = dirLight.orthoScale * 5e-8;
+        float texel = dirLight.orthoScale * 5e-6;
 
         float bias = sqrt(1 - cosine * cosine) / cosine * texel;
         // check whether current frag pos is in shadow

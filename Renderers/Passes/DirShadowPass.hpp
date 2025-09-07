@@ -53,6 +53,11 @@ class DirShadowSATPass : public Pass
 {
 public:
     Texture SATRowTexture;
+    Texture momentsTex;
+    Texture SATCompInputTex;
+    Texture SATCompOutputTex;
+    ComputeShader SATComputeShader = ComputeShader("Shaders/ShadowMapping/SATCompute.comp");
+    ComputeShader momentComputeShader = ComputeShader("Shaders/ShadowMapping/MomentsCompute.comp");
 
 private:
     unsigned int FBOCol;
@@ -65,9 +70,13 @@ public:
     DirShadowSATPass(std::string _vs_path, std::string _fs_path);
     ~DirShadowSATPass() { cleanUpGLResources(); }
 
+    void reloadCurrentShaders() override;
+
     void contextSetup() override;
 
     void resize(int _width, int _height) override;
 
     void renderToSATTexture(const DirectionLight &light, int width, int height);
+
+    void computeSAT(const DirectionLight &light, int width, int height);
 };

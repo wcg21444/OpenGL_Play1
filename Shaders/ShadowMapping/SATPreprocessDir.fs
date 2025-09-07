@@ -18,8 +18,8 @@ void main()
         for (int i = 0; i <= x_coord; ++i)
         {
             float sample = texelFetch(InputTexture, ivec2(i, TexCoord.y * textureSize.y), 0).r;
-            sum += sample;
-            sumSquare += sample * sample;
+            sum += sample - 0.5f;
+            sumSquare += sample * sample - 0.5f;
         }
         Result = vec4(sum, sumSquare, 0.0f, 1.0f);
     }

@@ -1,6 +1,7 @@
 #include "LightSource.hpp"
 #include "../Shading/Texture.hpp"
 #include "Cubemap.hpp"
+#include "../../GUI.hpp"
 
 void LightSource::InitialzeShaderLightArray(Shader &shaders)
 {
