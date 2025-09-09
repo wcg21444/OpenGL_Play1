@@ -38,7 +38,7 @@ void PointShadowPass::attachDepthMap(const unsigned int _depthCubemap)
 // 输入光源的Tex对象,绑定Tex对象到FBO,结果输出到Tex.
 void PointShadowPass::renderToTexture(
     const PointLight &light,
-    std::vector<std::unique_ptr<Object>> &scene,
+    Scene &scene,
     glm::mat4 &model,
     int width,
     int height)

@@ -78,21 +78,21 @@ int main()
     glm::mat4 model = glm::mat4(1.0f);
     Camera cam(InitWidth, InitHeight, 14.f, 0.05f);
 
-    std::vector<std::unique_ptr<Object>> scene;
+    Scene scene;
     glm::mat4 plane_model = glm::translate(model, glm::vec3(0.f, 1.f, 0.f));
     glm::mat4 box_model = glm::translate(model, glm::vec3(3.f, 2.f, -4.f));
     glm::mat4 sphere_model = glm::translate(model, glm::vec3(6.f, 2.f, 2.f));
     glm::mat4 backPack_model = glm::translate(model, glm::vec3(0.f, 3.f, 4.f));
     glm::mat4 bass_model = glm::translate(model, glm::vec3(0.f, 4.f, 4.f));
 
-    scene.push_back(std::make_unique<Cube>(glm::vec3(1.f, 1.f, 1.f)));
-    scene.back()->setModelTransform(box_model);
+    auto currentID = scene.addObject(std::make_unique<Cube>(glm::vec3(1.f, 1.f, 1.f)));
+    scene.getObject(currentID).setModelTransform(box_model);
 
-    scene.push_back(std::make_unique<Sphere>(1.f));
-    scene.back()->setModelTransform(sphere_model);
+    currentID = scene.addObject(std::make_unique<Sphere>(1.f));
+    scene.getObject(currentID).setModelTransform(sphere_model);
 
-    scene.push_back(std::make_unique<Plane>(20.f, 20.f));
-    scene.back()->setModelTransform(plane_model);
+    currentID = scene.addObject(std::make_unique<Plane>(20.f, 20.f));
+    scene.getObject(currentID).setModelTransform(plane_model);
 
     Lights allLights;
     auto &[pointLights, dirLights] = allLights;
@@ -160,6 +160,8 @@ int main()
         ModelLoader::run(scene);
 
         renderManager.render(renderParameters);
+
+        scene.update();
 
         ImGui::Render();
 

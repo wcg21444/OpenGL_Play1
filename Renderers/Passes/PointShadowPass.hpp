@@ -28,7 +28,7 @@ public:
 
     void renderToTexture(
         const PointLight &light,
-        std::vector<std::unique_ptr<Object>> &scene,
+        Scene &scene,
         glm::mat4 &model,
         int width,
         int height);

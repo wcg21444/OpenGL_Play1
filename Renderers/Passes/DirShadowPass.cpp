@@ -36,7 +36,7 @@ void DirShadowPass::attachDepthMap(const unsigned int _depthMap)
 /// @brief 输入存在的Tex对象,绑定Tex对象到FBO,结果输出到Tex.
 void DirShadowPass::renderToTexture(
     const DirectionLight &light,
-    std::vector<std::unique_ptr<Object>> &scene,
+    Scene &scene,
     glm::mat4 &model,
     int width,
     int height)

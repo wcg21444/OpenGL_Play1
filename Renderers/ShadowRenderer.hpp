@@ -62,7 +62,7 @@ public:
         depthShader = Shader("Shaders/ShadowDepthTexture/shadow_depth.vs", "Shaders/ShadowDepthTexture/shadow_depth.fs", "Shaders/ShadowDepthTexture/shadow_depth.gs");
     }
 
-    void render(PointLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
+    void render(PointLight &light, Scene &scene, glm::mat4 &model)
     {
         static std::vector<glm::mat4> shadowTransforms;
         // 视图变换需要知道光源位置
@@ -105,7 +105,7 @@ public:
     // [in] depthCubemap,light, scene, model
     // [out] a new depthCubemap
     // [side effect] **change current viewport size**
-    void renderToTexture(unsigned int &_depthCubemap, PointLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
+    void renderToTexture(unsigned int &_depthCubemap, PointLight &light, Scene &scene, glm::mat4 &model)
     {
         // initialize
         if (_depthCubemap == 0)
@@ -148,7 +148,7 @@ public:
         glReadBuffer(GL_NONE);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
-    void render(PointLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix)
+    void render(PointLight &light, Scene &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix)
     {
         glClearColor(0.f, 0.f, 0.f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -183,7 +183,7 @@ public:
         glReadBuffer(GL_NONE);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
-    void renderToTexture(unsigned int &_depthMap, DirectionLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model)
+    void renderToTexture(unsigned int &_depthMap, DirectionLight &light, Scene &scene, glm::mat4 &model)
     {
         // initialize
         if (_depthMap == 0)

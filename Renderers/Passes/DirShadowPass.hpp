@@ -23,11 +23,11 @@ public:
 
     void resize(int _width, int _height) override;
 
-    void render(PointLight &light, std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix);
+    void render(PointLight &light, Scene &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix);
 
     void renderToTexture(
         const DirectionLight &light,
-        std::vector<std::unique_ptr<Object>> &scene,
+        Scene &scene,
         glm::mat4 &model,
         int width,
         int height);

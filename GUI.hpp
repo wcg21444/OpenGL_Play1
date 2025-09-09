@@ -412,7 +412,7 @@ namespace GUI
     static void displaySceneHierarchy(Scene &scene)
     {
 
-        // 列表显示所有对象
+/*                 // 列表显示所有对象
         for (int i = 0; i < scene.size(); ++i)
         {
             bool isSelected = (selectedIndex == i);
@@ -446,6 +446,42 @@ namespace GUI
             {
                 ObjectHandle(*scene[selectedIndex].get());
             }
+        } */
+        //将selectedIndex 遍历方法修改为ID方法
+        for (auto&& [id, obj] : scene)
+        {
+            bool isSelected = (selectedIndex == id);
+            if (ImGui::Selectable(obj->name.c_str(), isSelected))
+            {
+                if (selectedIndex != id)
+                {
+                    handleControl = HandleControl::ModelControl;
+                    selectedIndex = id;
+                }
+                else
+                {
+                    selectedIndex = -1;
+                }
+            }
+
+            // 右键菜单
+            if (ImGui::BeginPopupContextItem())
+            {
+                if (ImGui::MenuItem("Delete"))
+                {
+                    if (selectedIndex == id)
+                        selectedIndex = -1;
+                    scene.removeObject(id);
+                    ImGui::EndPopup();
+                    break;
+                }
+                ImGui::EndPopup();
+            }
+            if (selectedIndex == id
+                && handleControl == ModelControl)
+            {
+                ObjectHandle(*obj.get());
+            }
         }
     }
 
@@ -462,6 +498,7 @@ namespace GUI
                 {
                     ModelLoader::loadFile(std::string(path)); // UI只负责触发信号
                 }
+                fileSelector.ClearPaths(); 
             }
             ImGui::End();
         }

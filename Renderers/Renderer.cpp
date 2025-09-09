@@ -2,10 +2,10 @@
 #include "Renderer.hpp"
 
 // 绘制场景
-void Renderer::DrawScene(std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, Shader &shaders)
+void Renderer::DrawScene(Scene &scene, glm::mat4 &model, Shader &shaders)
 {
 
-    for (auto &&object : scene)
+    for (auto &&[id,object] : scene)
     {
         try
         {

@@ -18,7 +18,7 @@ class RenderParameters
 public:
     Lights &lights;
     Camera &cam;
-    std::vector<std::unique_ptr<Object>> &scene;
+    Scene &scene;
     glm::mat4 &model;
     GLFWwindow *window;
 };
@@ -27,7 +27,7 @@ class Renderer
 {
 public:
     // 绘制场景
-    static void DrawScene(std::vector<std::unique_ptr<Object>> &scene, glm::mat4 &model, Shader &shaders);
+    static void DrawScene(Scene &scene, glm::mat4 &model, Shader &shaders);
 
     // 生成Quad并注册到OpenGL. [out]quadVAO,quadVBO
     static void GenerateQuad(unsigned int &quadVAO, unsigned int &quadVBO);

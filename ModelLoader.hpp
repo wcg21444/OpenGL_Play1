@@ -124,32 +124,32 @@ private:
         return Mesh(vertices, indices, textures);
     }
 
-    /* [in]: scene : Obj file imported in memory
+    /* [in]: loadedScene : Obj file imported in memory
      *  [out]: ptr Model : Model object, which is loaded to OpenGL context
      *  [process]: OpenGL Object Binding needs synchrours operation
      */
-    inline static std::unique_ptr<Model> postProcess(const aiScene &scene,std::filesystem::path& file_name)
+    inline static std::unique_ptr<Model> postProcess(const aiScene &loadedScene,std::filesystem::path& file_name)
     {
-        DebugOutput::AddLog("nums of Children of Root Node:{}\n", scene.mRootNode->mNumChildren);
-        std::unique_ptr<Model> model = std::make_unique<Model>(file_name.string());
-        for (int i = 0; i < scene.mRootNode->mNumChildren; ++i)
+        DebugOutput::AddLog("nums of Children of Root Node:{}\n", loadedScene.mRootNode->mNumChildren);
+        std::unique_ptr<Model> model = std::make_unique<Model>(file_name.string());//TODO :使得物体名字唯一
+        for (int i = 0; i < loadedScene.mRootNode->mNumChildren; ++i)
         {
-            // DebugOutput::AddLog("nums of Children of Node{}:{}\n", i, scene.mRootNode->mChildren[i]->mNumChildren);
-            auto &node = *(scene.mRootNode->mChildren[i]);
+            // DebugOutput::AddLog("nums of Children of Node{}:{}\n", i, loadedScene.mRootNode->mChildren[i]->mNumChildren);
+            auto &node = *(loadedScene.mRootNode->mChildren[i]);
             // node.mNumMeshes
             DebugOutput::AddLog("nums of Meshes of Node{}:{}\n", i, node.mNumMeshes);
             auto &mesh_id = node.mMeshes[0];
-            auto &mesh = scene.mMeshes[mesh_id];
+            auto &mesh = loadedScene.mMeshes[mesh_id];
             // mesh->mName
             DebugOutput::AddLog("Name of Meshes of Node{}:{}\n", i, std::string(mesh->mName.C_Str()));
             auto &mat_id = mesh->mMaterialIndex;
-            auto &mat = scene.mMaterials[mat_id];
+            auto &mat = loadedScene.mMaterials[mat_id];
             DebugOutput::AddLog("Name of Materials of Node{}:{}\n", i, std::string(mat->GetName().C_Str()));
             DebugOutput::AddLog("Nums of DIFFUSE of Node{}:{}\n", i, mat->GetTextureCount(aiTextureType_DIFFUSE));
             DebugOutput::AddLog("Nums of AMBIENT of Node{}:{}\n", i, mat->GetTextureCount(aiTextureType_AMBIENT));
             DebugOutput::AddLog("Nums of SPECULAR of Node{}:{}\n", i, mat->GetTextureCount(aiTextureType_SPECULAR));
 
-            model->meshes.emplace_back(processMesh(mesh, &scene));
+            model->meshes.emplace_back(processMesh(mesh, &loadedScene));
         }
         return model;
     }
@@ -227,7 +227,7 @@ public:
             auto [raw_model, importer] = model_future.get();
             outputRawModelDebugInfos(raw_model);
             auto &&model = postProcess(*raw_model,file_name);
-            scene.push_back(std::move(model));
+            scene.addObject(std::move(model));
         }
         catch (std::exception &e)
         {
