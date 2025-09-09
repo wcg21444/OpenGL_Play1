@@ -3,13 +3,13 @@ out vec4 VSMResult;
 in vec2 TexCoord;
 uniform sampler2D depthMap;
 
+uniform int kernelSize;
+
 void main()
 {
     // 动态获取阴影贴图的纹素尺寸，以确保与实际纹理匹配
     vec2 texelSize = 1.0 / vec2(textureSize(depthMap, 0)) * 0.5f;
 
-    // 定义盒式滤波的核大小
-    int kernelSize = 4;
     // 循环的半个范围，即从中心点向两侧扩展的距离
     int halfKernel = kernelSize / 2;
 

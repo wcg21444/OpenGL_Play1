@@ -11,7 +11,7 @@ void main()
     float sumSquareDepth = 0.f;
     int sampleCount = 0;
 
-    float sampleRadius = 5e-3;
+    float sampleRadius = 2e-3;
     const int numOffsets = 8;
     vec3 offsets[numOffsets] = vec3[](
         vec3(1, 1, 1), vec3(1, -1, -1), vec3(-1, 1, -1), vec3(-1, -1, 1),

@@ -42,7 +42,7 @@ uniform sampler2D ssaoTex;
 const int MAX_POINT_LIGHTS = 10; // Maximum number of lights supported
 uniform int numPointLights;      // actual number of lights used
 uniform PointLight pointLightArray[MAX_POINT_LIGHTS];
-
+uniform int usePCSS;
 /*****************定向光源设置******************************************************************/
 const int MAX_DIR_LIGHTS = 5; // Maximum number of lights supported
 uniform int numDirLights;     // actual number of lights used
@@ -162,7 +162,13 @@ vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
         float litFactor = 0.0f;
         if (dirLightArray[i].useVSM == 0)
         {
-            litFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
+
+            if(usePCSS == 1){
+                litFactor = 1 - computeDirLightShadowPCSS(fragPos, n, dirLightArray[i]);
+            }
+            else{
+                litFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
+            }
         }
         else
         {
@@ -206,7 +212,14 @@ vec3 dirLightSpec(vec3 fragPos, vec3 n)
         }
         else
         {
-            litFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
+            if (useVSSM == 1)
+            {
+                litFactor = 1 - computeDirLightShadowVSSM(fragPos, n, dirLightArray[i]);
+            }
+            else
+            {
+                litFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
+            }
         }
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), 128);
 
@@ -232,16 +245,22 @@ vec3 pointLightDiffuse(vec3 fragPos, vec3 n)
         float rr = pow(dot(l, l), 0.6) * 10;
         l = normalize(l);
 
-        float shadow_factor = 0.0f;
+        float litfactor = 0.0f;
         if (pointLightArray[i].useVSM == 0)
         {
-            shadow_factor = 1 - computePointLightShadow(fragPos, n, pointLightArray[i]);
+            if (usePCSS == 1)
+            {
+                litfactor = 1 - computePointLightShadowPCSS(fragPos, n, pointLightArray[i]);
+            }
+            else{
+                litfactor = 1 - computePointLightShadowPCF(fragPos, n, pointLightArray[i]);
+            }
         }
         else
         {
-            shadow_factor = 1 - computePointLightShadowVSM(fragPos, n, pointLightArray[i]);
+            litfactor = 1 - computePointLightShadowVSM(fragPos, n, pointLightArray[i]);
         }
-        diffuse += pointLightArray[i].intensity / rr * max(0.f, dot(n, l)) * (shadow_factor);
+        diffuse += pointLightArray[i].intensity / rr * max(0.f, dot(n, l)) * (litfactor);
     }
     return diffuse;
 }
@@ -258,20 +277,26 @@ vec3 pointLightSpec(vec3 fragPos, vec3 n)
         float spec = 0.f;
         float specularStrength = 0.005f;
 
-        float shadow_factor = 0.0f;
+        float litfactor = 0.0f;
         if (pointLightArray[i].useVSM == 0)
         {
-            shadow_factor = 1 - computePointLightShadow(fragPos, n, pointLightArray[i]);
+            if (usePCSS == 1)
+            {
+                litfactor = 1 - computePointLightShadowPCSS(fragPos, n, pointLightArray[i]);
+            }
+            else{
+                litfactor = 1 - computePointLightShadowPCF(fragPos, n, pointLightArray[i]);
+            }
         }
         else
         {
-            shadow_factor = 1 - computePointLightShadowVSM(fragPos, n, pointLightArray[i]);
+            litfactor = 1 - computePointLightShadowVSM(fragPos, n, pointLightArray[i]);
         }
 
         vec3 viewDir = normalize(eyePos - fragPos);
         vec3 reflectDir = reflect(-l, n);
         spec = pow(max(dot(viewDir, reflectDir), 0.0), 64);
-        specular += specularStrength * spec * pointLightArray[i].intensity * shadow_factor;
+        specular += specularStrength * spec * pointLightArray[i].intensity * litfactor;
     }
     return specular;
 }

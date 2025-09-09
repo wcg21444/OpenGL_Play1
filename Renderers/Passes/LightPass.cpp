@@ -59,7 +59,7 @@ void LightPass::render(RenderParameters &renderParameters,
     auto &[allLights, cam, scene, model, window] = renderParameters;
     auto &[pointLights, dirLights] = allLights;
 
-    auto shadowKernel = Random::GenerateShadowKernel(128);
+    static auto shadowKernel = Random::GenerateShadowKernel(128);
 
     static const auto skyboxKernel = Random::GenerateSemiSphereKernel(32);
 
@@ -91,6 +91,7 @@ void LightPass::render(RenderParameters &renderParameters,
     {
         pointLights[i].setToShaderLightArray(shaders, i);
     }
+    shaders.setInt("usePCSS",GUI::DebugToggleUsePCSS());
     /****************************************方向光源输入**************************************************/
     shaders.setInt("numDirLights", static_cast<int>(dirLights.size()));
     for (size_t i = 0; i < dirLights.size(); ++i)
@@ -104,7 +105,7 @@ void LightPass::render(RenderParameters &renderParameters,
     }
     shaders.setInt("useVSSM", 0);
     if (GUI::DebugToggleUseVSSM())
-    {
+    {   
         shaders.setInt("useVSSM", 1);
     }
     shaders.setFloat("VSSMKernelSize", GUI::DebugVSSMKernelSize());

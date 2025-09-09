@@ -34,7 +34,7 @@ uniform vec3 eyeFront;
 uniform vec3 eyeUp;
 uniform float fov;
 
-float computePointLightShadow(vec3 fragPos, vec3 fragNorm, vec3 lightPos, samplerCube _depthMap)
+float computePointLightShadowPCSS(vec3 fragPos, vec3 fragNorm, vec3 lightPos, samplerCube _depthMap)
 {
     vec3 dir = fragPos - lightPos;
     float cloest_depth = texture(_depthMap, dir).r;
@@ -82,7 +82,7 @@ void main()
         vec3 specular = vec3(0.f, 0.f, 0.f);
         float specularStrength = 0.005f;
 
-        if (computePointLightShadow(FragPos, n, lightPos[i], pointLightArray[i].depthCubemap) == 0.0)
+        if (computePointLightShadowPCSS(FragPos, n, lightPos[i], pointLightArray[i].depthCubemap) == 0.0)
         {
             diffuse = lightIntensity[i] / rr * max(0.f, dot(n, l));
             // Specular Caculation

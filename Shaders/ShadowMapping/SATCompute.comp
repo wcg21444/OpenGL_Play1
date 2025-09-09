@@ -16,18 +16,18 @@ layout(rgba32f, binding = 1) writeonly uniform image2D output_image;
 
 void main(void)
 {
-	uint id = gl_LocalInvocationID.x;
+	uint id = gl_LocalInvocationID.x; // 当前线程ID  
 	uint rd_id;
 	uint wr_id;
 	uint mask;
-	ivec2 P = ivec2(id * 2, gl_WorkGroupID.x);
-	const uint steps = uint(log2(gl_WorkGroupSize.x)) + 1;
+	ivec2 P = ivec2(id * 2, gl_WorkGroupID.x);  //当前线程像素坐标 行 列
+	const uint steps = uint(log2(gl_WorkGroupSize.x)) + 1; // 当前线程需要步数. 二分
 	uint step = 0;
 	shared_data[id * 2] = imageLoad(input_image, P).rg;
 	shared_data[id * 2 + 1] = imageLoad(input_image, P + ivec2(1, 0)).rg;
-
+	//初始加载数据 , 每个线程取相邻2像素开始进行计算
 	barrier();
-	memoryBarrierShared();
+	memoryBarrierShared();//同步所有线程
 
 	for (step = 0; step < steps; step++)
 	{

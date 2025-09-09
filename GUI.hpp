@@ -34,7 +34,6 @@ namespace GUI
 
     // 状态管理变量
     inline static bool modelLoadView = false; // 控制显示状态
-    inline static int selectedIndex = -1;
 
     static void BindRenderApplication(
         std::shared_ptr<RenderParameters> _ptrRenderParameters,
@@ -201,6 +200,13 @@ namespace GUI
         }
     }
 
+    enum HandleControl
+    {
+        LightControl,
+        ModelControl
+    };
+    inline HandleControl handleControl = LightControl;
+
     static void LightHandle(LightSource &light_source)
     {
         auto &[lightColor, lightIntensity] = light_source.colorIntensity;
@@ -216,7 +222,15 @@ namespace GUI
         EditTransform(ptrRenderParameters->cam, translate);
         lightPosition = translate[3];
         light_source.setPosition(lightPosition);
+
+        if (ImGui::IsKeyPressed(ImGuiKey_T))
+            mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+        if (ImGui::IsKeyPressed(ImGuiKey_E))
+            mCurrentGizmoOperation = ImGuizmo::ROTATE;
+        if (ImGui::IsKeyPressed(ImGuiKey_R)) // r Key
+            mCurrentGizmoOperation = ImGuizmo::SCALE;
     }
+
     static void LightSourceManage(Lights &lights)
     {
         auto &[pointLights, dirLights] = lights;
@@ -235,7 +249,15 @@ namespace GUI
                     ImGui::TableNextColumn();
                     if (ImGui::Selectable(std::format("PL-{}", i).c_str(), selectedLight == &pointLight))
                     {
-                        selectedLight = &pointLight;
+                        if (selectedLight != &pointLight)
+                        {
+                            handleControl = HandleControl::LightControl;
+                            selectedLight = &pointLight;
+                        }
+                        else
+                        {
+                            selectedLight = nullptr;
+                        }
                     }
                     ++i;
                 }
@@ -246,7 +268,15 @@ namespace GUI
                     ImGui::TableNextColumn();
                     if (ImGui::Selectable(std::format("DL-{}", i).c_str(), selectedLight == &dirLight))
                     {
-                        selectedLight = &dirLight;
+                        if (selectedLight != &dirLight)
+                        {
+                            handleControl = HandleControl::LightControl;
+                            selectedLight = &dirLight;
+                        }
+                        else
+                        {
+                            selectedLight = nullptr;
+                        }
                     }
                     ++i;
                 }
@@ -257,7 +287,7 @@ namespace GUI
 
         ImGui::SameLine();
         ImGui::BeginGroup();
-        if (selectedLight)
+        if (selectedLight && handleControl == LightControl)
         {
             LightHandle(*selectedLight);
         }
@@ -334,7 +364,52 @@ namespace GUI
         }
     }
 
-    static void displaySceneHierarchy(Scene &scene, int &selectedIndex)
+    static void ObjectHandle(Object &object)
+    {
+        auto &camera = ptrRenderParameters->cam;
+        auto view = camera.getViewMatrix();
+        auto projection = camera.getPerspectiveMatrix();
+        float *cameraView = glm::value_ptr(view);
+        float *cameraProjection = glm::value_ptr(projection);
+        float *matrix = glm::value_ptr(object.modelMatrix);
+
+        ImVec2 size;
+        ImVec2 pos;
+        ImGui::Begin("Scene", 0);
+        {
+            ImGui::BeginChild("GameRender");
+            size = ImGui::GetWindowSize();
+            pos = ImGui::GetWindowPos();
+            ImGui::EndChild();
+        }
+        ImGui::End();
+        ImGui::SetNextWindowSize(size);
+        ImGui::SetNextWindowPos(pos);
+
+        ImGuiIO &io = ImGui::GetIO();
+        ImGui::Begin("Scene", 0);
+        {
+
+            ImGui::BeginChild("GameRender");
+            ImGuizmo::SetAlternativeWindow(ImGui::GetCurrentWindow());
+
+            float windowWidth = (float)ImGui::GetWindowWidth();
+            float windowHeight = (float)ImGui::GetWindowHeight();
+            ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
+            // ImGuizmo::SetRect(ImGui::GetMainViewport()->Pos.x, ImGui::GetMainViewport()->Pos.y, io.DisplaySize.x, io.DisplaySize.y);
+            ImGuizmo::Manipulate(cameraView, cameraProjection, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL, useSnap ? &snap[0] : NULL);
+            ImGui::EndChild();
+        }
+        ImGui::End();
+        if (ImGui::IsKeyPressed(ImGuiKey_T))
+            mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+        if (ImGui::IsKeyPressed(ImGuiKey_E))
+            mCurrentGizmoOperation = ImGuizmo::ROTATE;
+        if (ImGui::IsKeyPressed(ImGuiKey_R)) // r Key
+            mCurrentGizmoOperation = ImGuizmo::SCALE;
+    }
+    inline int selectedIndex = -1;
+    static void displaySceneHierarchy(Scene &scene)
     {
 
         // 列表显示所有对象
@@ -343,7 +418,15 @@ namespace GUI
             bool isSelected = (selectedIndex == i);
             if (ImGui::Selectable(scene[i]->name.c_str(), isSelected))
             {
-                selectedIndex = i;
+                if (selectedIndex != i)
+                {
+                    handleControl = HandleControl::ModelControl;
+                    selectedIndex = i;
+                }
+                else
+                {
+                    selectedIndex = -1;
+                }
             }
 
             // 右键菜单
@@ -358,6 +441,10 @@ namespace GUI
                     break;
                 }
                 ImGui::EndPopup();
+            }
+            if (selectedIndex >= 0 && handleControl == ModelControl)
+            {
+                ObjectHandle(*scene[selectedIndex].get());
             }
         }
     }
@@ -409,7 +496,7 @@ namespace GUI
         // 4. 场景层次结构
         if (ImGui::CollapsingHeader("Scene Hierarchy", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            GUI::displaySceneHierarchy(scene, GUI::selectedIndex);
+            GUI::displaySceneHierarchy(scene);
         }
 
         // 5. 着色器管理
@@ -534,7 +621,7 @@ namespace GUI
     }
     static float DebugVSSMKernelSize()
     {
-        static float VSSMKernelSize = 0.01f;
+        static float VSSMKernelSize = 1.0f;
         ImGui::Begin("Debug");
         {
             ImGui::DragFloat("VSSM Kernel Size", &VSSMKernelSize, 0.01f, 0.0f);
@@ -542,4 +629,26 @@ namespace GUI
         ImGui::End();
         return VSSMKernelSize;
     }
+    static int DebugVSMKernelSize()
+    {
+        static int VSMKernelSize = 8;
+        ImGui::Begin("Debug");
+        {
+            ImGui::DragInt("VSM Kernel Size", &VSMKernelSize, 2, 32);
+        }
+        ImGui::End();
+        return VSMKernelSize;
+    }
+    inline bool usePCSS = true;
+    static bool DebugToggleUsePCSS()
+    {
+        ImGui::Begin("Debug");
+        {
+            ImGui::Checkbox("UsePCSS", &usePCSS);
+
+            ImGui::End();
+        }
+        return usePCSS;
+    }
+
 }

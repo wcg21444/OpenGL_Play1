@@ -128,10 +128,10 @@ private:
      *  [out]: ptr Model : Model object, which is loaded to OpenGL context
      *  [process]: OpenGL Object Binding needs synchrours operation
      */
-    inline static std::unique_ptr<Model> postProcess(const aiScene &scene)
+    inline static std::unique_ptr<Model> postProcess(const aiScene &scene,std::filesystem::path& file_name)
     {
         DebugOutput::AddLog("nums of Children of Root Node:{}\n", scene.mRootNode->mNumChildren);
-        std::unique_ptr<Model> model = std::make_unique<Model>();
+        std::unique_ptr<Model> model = std::make_unique<Model>(file_name.string());
         for (int i = 0; i < scene.mRootNode->mNumChildren; ++i)
         {
             // DebugOutput::AddLog("nums of Children of Node{}:{}\n", i, scene.mRootNode->mChildren[i]->mNumChildren);
@@ -210,7 +210,8 @@ public:
             if (it->model_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
             {
                 current_file_path = std::filesystem::path(it->file_path);
-                LoadAndProcessModel(scene, it->model_future);
+                auto file_name = current_file_path.filename();
+                LoadAndProcessModel(scene, it->model_future, file_name);
                 it = importing_vec.erase(it);
             }
             else
@@ -219,13 +220,13 @@ public:
             }
         }
     }
-    inline static void LoadAndProcessModel(Scene &scene, ModelLoadFuture &model_future)
+    inline static void LoadAndProcessModel(Scene &scene, ModelLoadFuture &model_future, std::filesystem::path& file_name)
     {
         try
         {
             auto [raw_model, importer] = model_future.get();
             outputRawModelDebugInfos(raw_model);
-            auto &&model = postProcess(*raw_model);
+            auto &&model = postProcess(*raw_model,file_name);
             scene.push_back(std::move(model));
         }
         catch (std::exception &e)

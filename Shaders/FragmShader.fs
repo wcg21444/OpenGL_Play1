@@ -25,7 +25,7 @@ uniform vec3 eyePos;
 
 vec3 l = normalize(lightPos);
 
-float computePointLightShadow(vec4 fragPosLightSpace) {
+float computePointLightShadowPCSS(vec4 fragPosLightSpace) {
     // perform perspective divide
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     // transform to [0,1] range
@@ -50,10 +50,10 @@ void main() {
     float rr = dot(l,l);
     // l = normalize(l);
     // vec3 diffuse = 
-    // computePointLightShadow(FragPosLightSpace) == 0.0?
+    // computePointLightShadowPCSS(FragPosLightSpace) == 0.0?
     // lightIntensity/rr*max(0.f,dot(n,l)):vec3(0.f,0.f,0.f);
     vec3 diffuse = 
-    computePointLightShadow(FragPosLightSpace)*lightIntensity/rr*max(0.f,dot(n,l));
+    computePointLightShadowPCSS(FragPosLightSpace)*lightIntensity/rr*max(0.f,dot(n,l));
 
     //Specular Caculation
     float specularStrength = 0.01f;

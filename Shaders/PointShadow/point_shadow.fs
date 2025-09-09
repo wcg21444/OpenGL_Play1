@@ -20,7 +20,7 @@ uniform vec3 lightPos;
 uniform vec3 lightIntensity;
 uniform vec3 eyePos;
 
-float computePointLightShadow(vec3 fragPos,vec3 fragNorm) {
+float computePointLightShadowPCSS(vec3 fragPos,vec3 fragNorm) {
     vec3 dir = fragPos-lightPos;
     float cloest_depth = texture(depthMap,dir).r;
     cloest_depth*= farPlane;
@@ -39,7 +39,7 @@ void main() {
     float rr = dot(l,l);
     l = normalize(l);
     vec3 diffuse = 
-    computePointLightShadow(FragPos,n) == 0.0?
+    computePointLightShadowPCSS(FragPos,n) == 0.0?
     lightIntensity/rr*max(0.f,dot(n,l)):vec3(0.f,0.f,0.f);
     //Specular Caculation
     float specularStrength = 0.01f;

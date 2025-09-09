@@ -88,6 +88,7 @@ void DirShadowVSMPass::renderToVSMTexture(const DirectionLight &light, int width
 
     shaders.use();
     shaders.setTextureAuto(light.depthTexture->ID, GL_TEXTURE_2D, 0, "depthMap");
+    shaders.setUniform("kernelSize",GUI::DebugVSMKernelSize());
 
     Renderer::DrawQuad();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

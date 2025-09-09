@@ -191,10 +191,13 @@ private:
                     light.texResolution);
                 if (light.useVSM)
                 {
-                    dirShadowVSMPass.renderToVSMTexture(light, light.texResolution, light.texResolution);
                     if (GUI::useVSSM)
                     {
                         dirShadowSATPass.renderToSATTexture(light, light.texResolution, light.texResolution);
+                    }
+                    else
+                    {
+                        dirShadowVSMPass.renderToVSMTexture(light, light.texResolution, light.texResolution);
                     }
                 }
             }
