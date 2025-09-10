@@ -39,7 +39,7 @@ public:
         glEnable(GL_DEPTH_TEST); // 深度缓冲
         glViewport(0, 0, width, height);
         shaders.use();
-        shaders.setFloat("farPlane", cam.farPlane);
+        shaders.setFloat("farPlane", cam.getFarPlane());
         shaders.setUniform3fv("camPos", cam.getPosition());
 
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
@@ -49,8 +49,8 @@ public:
 
         // camera/view transformation
         cam.setViewMatrix(shaders);
-        cam.setPerspectiveMatrix(shaders, width, height);
-
+        cam.resize(width, height);
+        cam.setPerspectiveMatrix(shaders);
         Renderer::DrawScene(scene, model, shaders);
     }
 };

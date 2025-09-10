@@ -1,13 +1,15 @@
 #pragma once
 #include "Pass.hpp"
+class RenderTarget;
+class Texture;
 class GBufferPass : public Pass
 {
 private:
-    unsigned int gViewPositionID;
-    Texture gViewPosition;
-    Texture gPosition;
-    Texture gNormal;
-    Texture gAlbedoSpec;
+    std::shared_ptr<RenderTarget> renderTarget = nullptr;
+    std::shared_ptr<Texture> gViewPosition = nullptr;
+    std::shared_ptr<Texture> gPosition = nullptr;
+    std::shared_ptr<Texture> gNormal = nullptr;
+    std::shared_ptr<Texture> gAlbedoSpec = nullptr;
     unsigned int depthMap;
     void initializeGLResources();
     void cleanUpGLResources() override;
@@ -27,6 +29,6 @@ public:
 
     inline auto getTextures()
     {
-        return std::make_tuple(gPosition.ID, gNormal.ID, gAlbedoSpec.ID, gViewPosition.ID);
+        return std::make_tuple(gPosition->ID, gNormal->ID, gAlbedoSpec->ID, gViewPosition->ID);
     }
 };

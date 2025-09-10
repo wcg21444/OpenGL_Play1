@@ -1,6 +1,7 @@
 #include "BloomPass.hpp"
 #include "../../ShaderGUI.hpp"
 
+
 BloomPass::BloomPass(int _vp_width, int _vp_height, std::string _vs_path,
                      std::string _fs_path)
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path),

@@ -11,6 +11,7 @@
 #include "Objects/Object.hpp"
 #include "Objects/Plane.hpp"
 #include "Objects/Sphere.hpp"
+#include "Objects/FrustumWireframe.hpp"
 #include "Renderers/RendererManager.hpp"
 #include "Shader.hpp"
 #include "Utils/DebugOutput.hpp"
@@ -113,15 +114,17 @@ int main()
 
     // 应用初始化
     auto ptrRenderParameters = std::make_shared<RenderParameters>(
-        allLights, cam, scene, model, window);
+        allLights,
+        cam,
+        scene,
+        model,
+        window);
     auto ptrRenderManager = std::make_shared<RenderManager>();
 
     InputHandler::BindRenderApplication(ptrRenderParameters, ptrRenderManager);
 
     GUI::BindRenderApplication(ptrRenderParameters, ptrRenderManager);
 
-    auto &renderParameters = *ptrRenderParameters;
-    auto &renderManager = *ptrRenderManager;
     //  main render loop
     while (!glfwWindowShouldClose(window))
     {
@@ -151,7 +154,7 @@ int main()
             ImGui::EndMainMenuBar();
         }
 
-        GUI::ShowSidebarToolbar(scene, renderManager, allLights, model);
+        GUI::ShowSidebarToolbar(scene, *ptrRenderManager, allLights, model);
 
         if (GUI::modelLoadView)
         {
@@ -159,7 +162,7 @@ int main()
         }
         ModelLoader::run(scene);
 
-        renderManager.render(renderParameters);
+        ptrRenderManager->render(ptrRenderParameters);
 
         scene.update();
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "Pass.hpp"
+#include "../Shading/Texture.hpp"
 class SSAOShaderUI;
 
 class SSAOPass : public Pass

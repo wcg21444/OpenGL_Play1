@@ -1,5 +1,6 @@
 #pragma once
 #include "Pass.hpp"
+#include "../Shading/Texture.hpp"
 class LightShaderUI;
 
 class LightPass : public Pass

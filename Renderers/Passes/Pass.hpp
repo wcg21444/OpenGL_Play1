@@ -1,6 +1,5 @@
 #pragma once
 #include "../../Shading/Shader.hpp"
-#include "../../Shading/Texture.hpp"
 #include "../../Utils/Utils.hpp"
 #include "../Renderer.hpp"
 /* 1个Pass对应一个FBO , 一个Shader

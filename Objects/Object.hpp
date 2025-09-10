@@ -18,12 +18,11 @@ public:
 
 class Scene
 {
-private:
+public: // 方便调试 应该是private
     size_t m_nextObjectID = 0;
-public:
-    // std::vector<std::unique_ptr<Object>> objects;
     std::unordered_map<size_t, std::unique_ptr<Object>> m_objectMap;
-    std::vector<size_t> m_eraseVector;
+    std::unordered_set<size_t> m_eraseSet;
+    std::unordered_map<std::string, size_t> m_nameCountMap;
 
 public:
     Scene() = default;
@@ -56,16 +55,26 @@ public: // 迭代器方法
     }
 
 public:
-    //// @brief 添加对象,返回对象ID
+    //// @brief 添加对象,返回对象ID 避免对象重名
     size_t addObject(std::unique_ptr<Object> obj)
     {
+        if (m_nameCountMap.find(obj->name) != m_nameCountMap.end())
+        {
+            size_t &count = m_nameCountMap[obj->name];
+            obj->setName(obj->name + std::to_string(count));
+            count++;
+        }
+        else
+        {
+            m_nameCountMap[obj->name] = 1;
+        }
         size_t id = m_nextObjectID++;
         m_objectMap[id] = std::move(obj);
         return id;
     }
 
     /// @brief 通过ID获取对象引用
-    auto getObject(size_t id) -> Object&
+    auto getObject(size_t id) -> Object &
     {
         auto it = m_objectMap.find(id);
         if (it == m_objectMap.end())
@@ -76,22 +85,23 @@ public:
     /// @brief 通过ID删除对象
     void removeObject(size_t id)
     {
-        m_eraseVector.push_back(id);
+        m_eraseSet.insert(id);
         // m_objectMap.erase(id);
     }
 
-    void update(){
-        deferredErase();
+    void update()
+    {
+        deferredRemove();
     }
-    ///////////////内部方法
+    ///////////////内部方法////////////////
 private:
     /// @brief 延迟删除对象,在帧更新时调用
-    void deferredErase()
+    void deferredRemove()
     {
-        for (auto id : m_eraseVector)
+        for (auto id : m_eraseSet)
         {
             m_objectMap.erase(id);
         }
-        m_eraseVector.clear();
+        m_eraseSet.clear();
     }
 };

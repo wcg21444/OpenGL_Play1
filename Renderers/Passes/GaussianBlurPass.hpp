@@ -1,6 +1,6 @@
 #pragma once
 #include "Pass.hpp"
-
+#include "../Shading/Texture.hpp"
 class GaussianBlurPass : public Pass
 {
 private:

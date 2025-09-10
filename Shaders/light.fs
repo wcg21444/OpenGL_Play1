@@ -52,7 +52,7 @@ uniform int useBias; // 是否使用深度偏移
 uniform int useVSSM;
 uniform float VSSMKernelSize;
 /*****************阴影采样设置******************************************************************/
-vec2 noiseScale = vec2(width / 2.0, height / 2.0);
+vec2 noiseScale = vec2(width, height);
 uniform sampler2D shadowNoiseTex;
 uniform vec3 shadowSamples[128];
 uniform int n_samples;
@@ -163,10 +163,12 @@ vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
         if (dirLightArray[i].useVSM == 0)
         {
 
-            if(usePCSS == 1){
+            if (usePCSS == 1)
+            {
                 litFactor = 1 - computeDirLightShadowPCSS(fragPos, n, dirLightArray[i]);
             }
-            else{
+            else
+            {
                 litFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
             }
         }
@@ -252,7 +254,8 @@ vec3 pointLightDiffuse(vec3 fragPos, vec3 n)
             {
                 litfactor = 1 - computePointLightShadowPCSS(fragPos, n, pointLightArray[i]);
             }
-            else{
+            else
+            {
                 litfactor = 1 - computePointLightShadowPCF(fragPos, n, pointLightArray[i]);
             }
         }
@@ -284,7 +287,8 @@ vec3 pointLightSpec(vec3 fragPos, vec3 n)
             {
                 litfactor = 1 - computePointLightShadowPCSS(fragPos, n, pointLightArray[i]);
             }
-            else{
+            else
+            {
                 litfactor = 1 - computePointLightShadowPCF(fragPos, n, pointLightArray[i]);
             }
         }

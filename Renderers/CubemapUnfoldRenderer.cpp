@@ -6,6 +6,7 @@
 #include "../Utils/Random.hpp"
 #include "../Utils/TextureLoader.hpp"
 #include "../../Utils/Utils.hpp"
+#include "../RenderOutputManager.hpp"
 
 CubemapUnfoldRenderer::CubemapUnfoldRenderer(int _width, int _height)
     : unfoldPass(CubemapUnfoldPass(_width, _height, "Shaders/GBuffer/cubemap_unfold_debug.vs", "Shaders/GBuffer/cubemap_unfold_debug.fs", 256)),
@@ -47,5 +48,6 @@ void CubemapUnfoldRenderer::render(RenderParameters &renderParameters)
 
     unfoldPass.unfoldCubemap(skyboxCubemap);
     auto unfoldedCubemap = unfoldPass.getUnfoldedCubemap();
-    screenPass.render(unfoldedCubemap);
+    // screenPass.render(unfoldedCubemap);
+    RenderOutputManager::RenderToDockingWindow(unfoldedCubemap,"Scene");
 }

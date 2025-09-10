@@ -1,9 +1,11 @@
 #pragma once
 
 #include <iostream>
+#include <functional>
+#include <queue>
 
 #include "../Shading/Shader.hpp"
-#include "../Camera.hpp"
+#include "../Shading/Camera.hpp"
 #include "../InputHandler.hpp"
 #include "../LightSource/LightSource.hpp"
 

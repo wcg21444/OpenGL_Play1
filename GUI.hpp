@@ -11,6 +11,7 @@
 #include "Objects/Object.hpp"
 #include "LightSource/LightSource.hpp"
 #include "Renderers/RendererManager.hpp"
+#include "Renderers/Renderer.hpp"
 #include "Utils/DebugOutput.hpp"
 #include "ModelLoader.hpp"
 #include "FileBrowser.hpp"
@@ -90,9 +91,9 @@ namespace GUI
 
         ImVec2 size;
         ImVec2 pos;
-        ImGui::Begin("Scene", 0);
+        ImGui::Begin("Scene", 0);//窗口,子窗口名称必须和RendererOutuputManager中一致
         {
-            ImGui::BeginChild("GameRender");
+            ImGui::BeginChild("Output");
             size = ImGui::GetWindowSize();
             pos = ImGui::GetWindowPos();
             ImGui::EndChild();
@@ -105,7 +106,7 @@ namespace GUI
         ImGui::Begin("Scene", 0);
         {
 
-            ImGui::BeginChild("GameRender");
+            ImGui::BeginChild("Output");
             ImGuizmo::SetAlternativeWindow(ImGui::GetCurrentWindow());
 
             float windowWidth = (float)ImGui::GetWindowWidth();
@@ -377,7 +378,7 @@ namespace GUI
         ImVec2 pos;
         ImGui::Begin("Scene", 0);
         {
-            ImGui::BeginChild("GameRender");
+            ImGui::BeginChild("Output");
             size = ImGui::GetWindowSize();
             pos = ImGui::GetWindowPos();
             ImGui::EndChild();
@@ -390,7 +391,7 @@ namespace GUI
         ImGui::Begin("Scene", 0);
         {
 
-            ImGui::BeginChild("GameRender");
+            ImGui::BeginChild("Output");
             ImGuizmo::SetAlternativeWindow(ImGui::GetCurrentWindow());
 
             float windowWidth = (float)ImGui::GetWindowWidth();

@@ -304,7 +304,8 @@ private:
 
         // camera/view transformation
         cam.setViewMatrix(ps_shaders);
-        cam.setPerspectiveMatrix(ps_shaders, width, height);
+        cam.resize(width, height);
+        cam.setPerspectiveMatrix(ps_shaders);
 
         Renderer::DrawScene(scene, model, ps_shaders);
     }
@@ -346,8 +347,8 @@ private:
 
         // camera/view transformation
         cam.setViewMatrix(pls_shaders);
-        cam.setPerspectiveMatrix(pls_shaders, width, height);
-
+        cam.resize(width, height);
+        cam.setPerspectiveMatrix(pls_shaders);
         Renderer::DrawScene(scene, model, pls_shaders);
     }
 };

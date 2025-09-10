@@ -11,7 +11,7 @@
                 "-B",
                 "${workspaceFolder}/build",
                 "-DCMAKE_BUILD_TYPE=Debug",
-                "-j=8"
+                "-j=16"
             ],
             "group": "build",
             "problemMatcher": [

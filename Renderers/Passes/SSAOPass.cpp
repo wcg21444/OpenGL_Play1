@@ -50,7 +50,7 @@ void SSAOPass::render(RenderParameters &renderParameters,
 {
     auto &[allLights, cam, scene, model, window] = renderParameters;
 
-    auto ssaoKernel = Random::GenerateSSAOKernel();
+    static auto ssaoKernel = Random::GenerateSSAOKernel();
 
     auto ssaoNoise = Random::GenerateNoise();
     noiseTex.SetData(&ssaoNoise[0]);
@@ -85,9 +85,10 @@ void SSAOPass::render(RenderParameters &renderParameters,
     shaders.setTextureAuto(noiseTex.ID, GL_TEXTURE_2D, 0, "texNoise");
 
     shaders.setUniform3fv("eyePos", cam.getPosition());
-    shaders.setFloat("farPlane", cam.farPlane);
+    shaders.setFloat("farPlane", cam.getFarPlane());
 
-    cam.setPerspectiveMatrix(shaders, vp_width, vp_height);
+    cam.resize(vp_width, vp_height);
+    cam.setPerspectiveMatrix(shaders);
     cam.setViewMatrix(shaders);
 
     Renderer::DrawQuad();

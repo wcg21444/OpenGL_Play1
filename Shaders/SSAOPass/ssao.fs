@@ -21,7 +21,7 @@ uniform vec3 eyePos;
 uniform float farPlane;
 
 uniform sampler2D texNoise;
-vec2 noiseScale = vec2(width/16.0,height/16.0);
+vec2 noiseScale = vec2(width/8.0,height/8.0);
 
 // vec3 fragPos   = texture(gPosition, TexCoord).xyz;
 vec4 fragPos4 = texture(gPosition, TexCoord);

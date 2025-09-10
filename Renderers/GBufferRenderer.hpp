@@ -2,6 +2,8 @@
 #include <tuple>
 
 #include "Renderer.hpp"
+#include "RenderOutputManager.hpp"
+
 #include "Passes/DirShadowPass.hpp"
 #include "Passes/PointShadowPass.hpp"
 #include "../Utils/Random.hpp"
@@ -44,10 +46,7 @@ private:
     GBufferPass gBufferPass;
     LightPass lightPass;
     ScreenPass screenPass;
-    SSAOPass ssaoPass;
-    SSAOBlurPass ssaoBlurPass;
-    PostProcessPass postProcessPass;
-    BloomPass bloomPass;
+
     CubemapUnfoldPass unfoldPass;
     SkyTexPass skyTexPass;
     TransmittanceLUTPass transmittanceLUTPass;
@@ -55,6 +54,11 @@ private:
     PointShadowVSMPass pointShadowVSMPass;
     SkyEnvmapPass skyEnvmapPass;
     DirShadowSATPass dirShadowSATPass;
+
+    SSAOPass ssaoPass;
+    SSAOBlurPass ssaoBlurPass;
+    PostProcessPass postProcessPass;
+    BloomPass bloomPass;
 
     GBufferRendererGUI rendererGUI;
 
@@ -281,10 +285,10 @@ private:
         unfoldPass.render(skyEnvmap);
         auto unfoldedTex = unfoldPass.getUnfoldedCubemap();
 
-        rendererGUI.renderPassInspector({dirLights[0].depthTexture->ID, dirLights[0].SATTexture->ID});
+        // rendererGUI.renderPassInspector({dirLights[0].depthTexture->ID, dirLights[0].SATTexture->ID});
         // rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
 
-        // rendererGUI.renderPassInspector({gPosition, ssaoBlurTex, lightPassTex});
+        rendererGUI.renderPassInspector(unfoldedTex);
         ImGui::Begin("RendererGUI");
         {
             ImGui::DragFloat("OrthoScale", &allLights.dirLights[0].orthoScale, 5.f, 1e3);
@@ -293,8 +297,7 @@ private:
             ImGui::End();
         }
 
-        auto renderWindowSize = rendererGUI.getRenderWindowSize();
+        auto renderWindowSize = RenderOutputManager::RenderToDockingWindow(postProcessPassTex, "Scene");
         resize(static_cast<int>(renderWindowSize.x), static_cast<int>(renderWindowSize.y));
-        rendererGUI.renderToDockingWindow(postProcessPassTex);
     }
 };

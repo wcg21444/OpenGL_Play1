@@ -1,6 +1,7 @@
 
 #pragma once
 #include "Pass.hpp"
+#include "../Shading/Texture.hpp"
 /*
 Feature:
 输入:Tex对象,Tex分辨率,dirLight

@@ -1,6 +1,6 @@
 #pragma once
 #include "Shader.hpp"
-
+#include "Frustum.hpp"
 class Camera
 {
 public:
@@ -15,9 +15,14 @@ public:
     }; // 每种枚举可以任意组合,总共15种状态
 
 private:
-    glm::vec3 cameraPos = glm::vec3(0.0f, 4.0f, 3.0f);
-    glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    Frustum camFrustum = Frustum(glm::vec3(0.0f, 4.0f, 3.0f),
+                                 glm::vec3(0.0f, 0.0f, -1.0f),
+                                 glm::vec3(0.0f, 1.0f, 0.0f),
+                                 0.1f,
+                                 1e6f,
+                                 60.f,
+                                 16.f / 9.f);
+
     float deltaTime = 0.0f; // Time between current frame and last frame
     float lastFrame = 0.0f; // Time of last frame
 
@@ -28,14 +33,8 @@ private:
     float cameraSpeed = 14.f;
     float sensitivity = 0.05f;
 
-public:
-    float fov = 60.f;
-    float nearPlane = 0.1f;
-    float farPlane = 1e6f;
-
     int width;
     int height;
-
 public:
     Camera(int width,
            int height,
@@ -79,8 +78,9 @@ public:
         direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
         direction.y = sin(glm::radians(pitch));
         direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-        cameraFront = glm::normalize(direction);
+        camFrustum.m_front = glm::normalize(direction);
     }
+    
     void genPositionfrom(GLFWwindow *window, int &movement)
     {
         float currentFrame = glfwGetTime();
@@ -90,80 +90,98 @@ public:
         if (movement & spirit)
             reletive_speed *= 1e3;
         if (movement & forward)
-            cameraPos += reletive_speed * cameraFront;
+            camFrustum.m_position += reletive_speed * camFrustum.m_front;
         if (movement & backward)
-            cameraPos -= reletive_speed * cameraFront;
+            camFrustum.m_position -= reletive_speed * camFrustum.m_front;
         if (movement & left)
-            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * reletive_speed;
+            camFrustum.m_position -= glm::normalize(glm::cross(camFrustum.m_front, camFrustum.m_up)) * reletive_speed;
         if (movement & right)
-            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * reletive_speed;
+            camFrustum.m_position += glm::normalize(glm::cross(camFrustum.m_front, camFrustum.m_up)) * reletive_speed;
 
-        // if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        //     cameraPos += reletive_speed * cameraFront;
-        // if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        //     cameraPos -= reletive_speed * cameraFront;
-        // if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        //     cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * reletive_speed;
-        // if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        //     cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * reletive_speed;
     }
+    
     void genZoomfrom(double yoffset)
     {
+        auto &fov = camFrustum.m_fov;
         fov -= (float)yoffset * 2;
         if (fov < 1.0f)
             fov = 1.0f;
     }
+    
     void setViewMatrix(Shader &shaders)
     {
-        glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-        float radius = 2.0f;
-        float camX = static_cast<float>(sin(glfwGetTime()) * radius);
-        float camZ = static_cast<float>(cos(glfwGetTime()) * radius);
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        auto view = camFrustum.getViewMatrix();
         shaders.setMat4("view", view);
-        shaders.setUniform3fv("eyePos", cameraPos);
+        shaders.setUniform3fv("eyePos", camFrustum.m_position);
     }
-    void setPerspectiveMatrix(Shader &shaders, int width, int height)
+    
+    void setPerspectiveMatrix(Shader &shaders)
+    {
+        auto projection = camFrustum.getProjectionMatrix();
+        shaders.setMat4("projection", projection);
+    }
+    
+    void resize(int width, int height)
     {
         this->width = width;
         this->height = height;
-        glm::mat4 projection = glm::perspective(glm::radians(fov),
-                                                (float)this->width / (float)this->height,
-                                                nearPlane,
-                                                farPlane);
-        shaders.setMat4("projection", projection);
+        camFrustum.m_aspect = (float)this->width / (float)this->height;
     }
 
     glm::mat4 getPerspectiveMatrix()
     {
-        this->width = width;
-        this->height = height;
-        glm::mat4 projection = glm::perspective(glm::radians(fov),
-                                                (float)this->width / (float)this->height,
-                                                nearPlane,
-                                                farPlane);
-        return projection;
+        return camFrustum.getProjectionMatrix();
     }
 
     glm::mat4 getViewMatrix()
     {
-        glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-        float radius = 2.0f;
-        float camX = static_cast<float>(sin(glfwGetTime()) * radius);
-        float camZ = static_cast<float>(cos(glfwGetTime()) * radius);
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        return view;
+        return camFrustum.getViewMatrix();
     }
     glm::vec3 getPosition() const
     {
-        return cameraPos;
+        return camFrustum.m_position;
     }
     glm::vec3 getFront() const
     {
-        return cameraFront;
+        return camFrustum.m_front;
     }
     glm::vec3 getUp() const
     {
-        return cameraUp;
+        return camFrustum.m_up;
+    }
+
+    float getFov() const
+    {
+        return camFrustum.m_fov;
+    }
+
+    float getNearPlane() const
+    {
+        return camFrustum.m_nearPlane;
+    }
+
+    float getFarPlane() const
+    {
+        return camFrustum.m_farPlane;
+    }
+
+    float getAspect() const
+    {
+        return camFrustum.m_aspect;
+    }   
+
+    void speedUp(float factor)
+    {
+        cameraSpeed *= factor;
+    }
+    
+    void speedDown(float factor)
+    {
+        cameraSpeed /= factor;
+    }
+
+    const Frustum& getFrustum() const
+    {
+        return camFrustum;
     }
 };

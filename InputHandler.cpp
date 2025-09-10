@@ -128,6 +128,14 @@ void InputHandler::ProcessInput(GLFWwindow *window, Camera &cam)
         movement |= Camera::Movement::right;
     if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)
         movement |= Camera::Movement::spirit;
+    
+    if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS) {
+        cam.speedUp(1.1f);
+    }
+    if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS) {
+        cam.speedDown(1.1f);
+    }
+
     cam.genPositionfrom(window, movement);
     movement = Camera::Movement::none;
 

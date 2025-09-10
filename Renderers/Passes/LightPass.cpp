@@ -116,9 +116,9 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setUniform3fv("eyePos", cam.getPosition());
     shaders.setUniform3fv("eyeFront", cam.getFront());
     shaders.setUniform3fv("eyeUp", cam.getUp());
-    shaders.setFloat("farPlane", cam.farPlane);
-    shaders.setFloat("nearPlane", cam.nearPlane);
-    shaders.setFloat("fov", cam.fov);
+    shaders.setFloat("farPlane", cam.getFarPlane());
+    shaders.setFloat("nearPlane", cam.getNearPlane());
+    shaders.setFloat("fov", cam.getFov());
     cam.setViewMatrix(shaders);
     /****************************************天空设置*****************************************************/
     shaders.setFloat("skyHeight", SkyGUI::skyHeight);

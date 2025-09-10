@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "../Shading/Frustum.hpp"
+
 // TODO 阴影开关功能
 // TODO 运行时类型切换
 class Texture; // fwd declaration
@@ -14,31 +16,30 @@ struct ColorIntensity
 {
     glm::vec3 color;
     float intensity;
+
+    inline static ColorIntensity Separate(glm::vec3 combined_intensity)
+    {
+        ColorIntensity result;
+
+        float max_intensity = glm::max(combined_intensity.x, glm::max(combined_intensity.y, combined_intensity.z));
+
+        if (max_intensity > 0.0f)
+        {
+            result.color = combined_intensity / max_intensity;
+            result.intensity = max_intensity;
+        }
+        else
+        {
+            result.color = glm::vec3(0.0f);
+            result.intensity = 0.1f; // 钳制数据
+        }
+        return result;
+    }
+    inline static glm::vec3 Combine(const ColorIntensity &separatedData)
+    {
+        return separatedData.color * separatedData.intensity;
+    }
 };
-
-inline ColorIntensity SeparateIntensity(glm::vec3 combined_intensity)
-{
-    ColorIntensity result;
-
-    float max_intensity = glm::max(combined_intensity.x, glm::max(combined_intensity.y, combined_intensity.z));
-
-    if (max_intensity > 0.0f)
-    {
-        result.color = combined_intensity / max_intensity;
-        result.intensity = max_intensity;
-    }
-    else
-    {
-        result.color = glm::vec3(0.0f);
-        result.intensity = 0.1f; // 钳制数据
-    }
-    return result;
-}
-
-inline glm::vec3 CombineIntensity(const ColorIntensity &separatedData)
-{
-    return separatedData.color * separatedData.intensity;
-}
 
 enum class LightType
 {
@@ -117,9 +118,18 @@ public:
     void setToShaderLightArray(Shader &shaders, size_t index) override;
     void setPosition(glm::vec3 &_position) override;
     glm::vec3 getPosition() const override;
+    glm::mat4 getlightProjection() const
+    {
+        return lightProjection;
+    }
+    glm::mat4 getlightView() const
+    {
+        return lightView;
+    }
 
     void generateShadowTexResource();
 };
+
 struct Lights
 {
     std::vector<PointLight> pointLights;

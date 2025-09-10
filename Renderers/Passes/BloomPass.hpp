@@ -1,6 +1,7 @@
 #pragma once
 #include "Pass.hpp"
 #include "GaussianBlurPass.hpp"
+#include "../Shading/Texture.hpp"
 class BloomShaderUI;
 
 class BloomPass : public Pass

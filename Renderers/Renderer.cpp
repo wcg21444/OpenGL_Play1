@@ -1,11 +1,16 @@
 
 #include "Renderer.hpp"
 
+#include "../Objects/FrustumWireframe.hpp"
+#include "Passes/DebugObjectPass.hpp"
+
+#define STATICIMPL
+
 // 绘制场景
-void Renderer::DrawScene(Scene &scene, glm::mat4 &model, Shader &shaders)
+STATICIMPL void Renderer::DrawScene(Scene &scene, glm::mat4 &model, Shader &shaders)
 {
 
-    for (auto &&[id,object] : scene)
+    for (auto &&[id, object] : scene)
     {
         try
         {
@@ -20,7 +25,7 @@ void Renderer::DrawScene(Scene &scene, glm::mat4 &model, Shader &shaders)
 }
 
 // 生成Quad并注册到OpenGL. [out]quadVAO,quadVBO
-void Renderer::GenerateQuad(unsigned int &quadVAO, unsigned int &quadVBO)
+STATICIMPL void Renderer::GenerateQuad(unsigned int &quadVAO, unsigned int &quadVBO)
 {
     static float quadVertices[] = {
         // positions       // texCoords
@@ -45,7 +50,7 @@ void Renderer::GenerateQuad(unsigned int &quadVAO, unsigned int &quadVBO)
 
 // 绘制公共Quad .单一职责:不负责视口管理.
 // 使用screenQuad.vs 作为顶点着色器
-void Renderer::DrawQuad()
+STATICIMPL void Renderer::DrawQuad()
 {
     static float quadVertices[] = {
         // positions       // texCoords
@@ -75,7 +80,7 @@ void Renderer::DrawQuad()
 
 // 绘制公共球体. 用于生成cubemap或处理cubemap
 // 使用cubemapSphere.vs 作为顶点着色器
-void Renderer::DrawSphere()
+STATICIMPL void Renderer::DrawSphere()
 {
     // 静态变量，用于存储球体的VAO和顶点数量，确保只生成一次
     static unsigned int sphereVAO = 0;

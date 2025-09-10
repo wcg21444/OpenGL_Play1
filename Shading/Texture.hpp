@@ -9,12 +9,12 @@
 #include <vector>
 #include <string>
 #include <iostream>
-
+using TextureID = unsigned int;
 /// @brief 管理GL Texture资源
 class Texture
 {
 public:
-    unsigned int ID;       // 纹理对象的 ID，由 OpenGL 分配
+    TextureID ID;       // 纹理对象的 ID，由 OpenGL 分配
     GLenum Target;         // 纹理类型，如 GL_TEXTURE_2D、GL_TEXTURE_3D 等
     GLenum InternalFormat; // 纹理在 GPU 中存储的内部格式（例如：GL_RGBA8）
     GLenum Format;         // 纹理在 CPU 中存储的格式（例如：GL_RGBA）
@@ -98,7 +98,7 @@ private:
     GLenum WrapR;          // R 轴（深度）的纹理环绕方式，主要用于 3D 纹理
     bool Mipmapping;       // 是否启用多级渐远纹理（Mipmapping）
 public:
-    unsigned int ID; // 纹理对象的 ID，由 OpenGL 分配
+    TextureID ID; // 纹理对象的 ID，由 OpenGL 分配
 
     unsigned int Width;  // 正方形纹理的宽度（以像素为单位）
     unsigned int Height; // 正方形纹理的高度（以像素为单位）

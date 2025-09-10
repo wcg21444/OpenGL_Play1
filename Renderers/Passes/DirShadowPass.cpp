@@ -1,6 +1,8 @@
 #include "DirShadowPass.hpp"
 
 #include "../../GUI.hpp"
+#include "../../Objects/FrustumWireframe.hpp"
+#include "../DebugObjectRenderer.hpp"
 DirShadowPass::DirShadowPass(std::string _vs_path, std::string _fs_path)
     : Pass(0, 0, _vs_path, _fs_path)
 {
@@ -55,6 +57,14 @@ void DirShadowPass::renderToTexture(
 
     Renderer::DrawScene(scene, model, shaders);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    static FrustumWireframe frustumWireframe;
+    frustumWireframe.setFrustum(OrthoFrustum::GetCornersWorldSpace( light.getlightView(),light.getlightProjection()));
+    DebugObjectRenderer::AddDrawCall([&](Shader &shaders, glm::mat4 modelMatrix) {
+        glm::mat4 obj_model = modelMatrix * frustumWireframe.modelMatrix;
+        frustumWireframe.draw(obj_model, shaders);
+    });
+
 }
 
 DirShadowVSMPass::DirShadowVSMPass(std::string _vs_path, std::string _fs_path)

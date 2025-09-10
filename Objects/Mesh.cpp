@@ -30,12 +30,8 @@ void Mesh::draw(glm::mat4 modelMatrix, Shader &shaders)
         shaders.setInt("enable_tex", 1);
     }
     shaders.setMat4("model", modelMatrix);
-    
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
     shaders.setInt("enable_tex", 0);
     glBindVertexArray(0);
 }

@@ -1,4 +1,6 @@
 #include "RendererManager.hpp"
+#include "Renderer.hpp"
+#include "DebugObjectRenderer.hpp"
 
 #include "ShadowRenderer.hpp"
 #include "SimpleTextureRenderer.hpp"
@@ -15,6 +17,7 @@ RenderManager::RenderManager()
     depthPassRenderer = std::make_shared<DepthPassRenderer>();
     gbufferRenderer = std::make_shared<GBufferRenderer>();
     cubemapUnfoldRenderer = std::make_shared<CubemapUnfoldRenderer>();
+    DebugObjectRenderer::Initialize(); // camera will be set later
     switchMode(cubemap_unfold); // default
 }
 
@@ -53,6 +56,7 @@ void RenderManager::reloadCurrentShaders()
     if (currentRenderer)
     {
         currentRenderer->reloadCurrentShaders();
+        DebugObjectRenderer::ReloadCurrentShaders();
     }
 }
 
@@ -95,7 +99,7 @@ void RenderManager::switchContext()
     clearContext();
     if (currentRenderer)
     {
-        currentRenderer->resize(rendererWidth, rendererHeight); // äÖÈ¾Æ÷¿í¸ßÍ³Ò»
+        currentRenderer->resize(rendererWidth, rendererHeight);
 
         currentRenderer->contextSetup();
     }
@@ -105,7 +109,7 @@ void RenderManager::switchContext()
     }
 }
 
-void RenderManager::render(RenderParameters &renderParameters)
+void RenderManager::render(std::shared_ptr<RenderParameters> renderParameters)
 {
     if (rendererWidth == 0 || rendererHeight == 0)
     {
@@ -113,7 +117,8 @@ void RenderManager::render(RenderParameters &renderParameters)
     }
     if (currentRenderer)
     {
-        currentRenderer->render(renderParameters);
+        currentRenderer->render(*renderParameters);
+        DebugObjectRenderer::Render(renderParameters->cam);
     }
     else
     {
@@ -126,6 +131,7 @@ void RenderManager::resize(int _width, int _height)
     if (currentRenderer)
     {
         currentRenderer->resize(_width, _height);
+        DebugObjectRenderer::Resize(_width, _height);
         rendererWidth = _width;
         rendererHeight = _height;
     }
