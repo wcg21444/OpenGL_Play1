@@ -53,34 +53,6 @@ namespace GUI
         }
     }
 
-    static void ShadowRendererShaderManager(RenderManager &renderManager)
-    {
-        static char path_buf1[256]{"Shaders/VertShader.vs"};
-        static char path_buf2[256]{"Shaders/FragmShader.fs"};
-        static char path_buf3[256]{"Shaders/PointShadow/point_shadow.vs"};
-        static char path_buf4[256]{"Shaders/PointShadow/point_shadow.fs"};
-        // if (ImGui::InputText("VS Path", path_buf1, sizeof(path_buf1)))
-        // {
-        // }
-        // if (ImGui::InputText("FS Path", path_buf2, sizeof(path_buf2)))
-        // {
-        // }
-        if (ImGui::InputText("PointShadow VS Path", path_buf3, sizeof(path_buf3)))
-        {
-        }
-        if (ImGui::InputText("PointShadow FS Path", path_buf4, sizeof(path_buf4)))
-        {
-        }
-
-        if (ImGui::Button("Reload Shaders"))
-        {
-            renderManager.reloadShadowShaders(
-                Shader(path_buf1, path_buf2),
-                Shader(path_buf3, path_buf4));
-            DebugOutput::AddLog("Execute Shaders Reload\n");
-        }
-    }
-
     static void EditTransform(Camera &camera, glm::mat4 &_matrix)
     {
         auto view = camera.getViewMatrix();
@@ -353,7 +325,7 @@ namespace GUI
 
     static void RenderSwitchCombo(RenderManager &renderManager)
     {
-        static const char *modes[] = {"PointShadow", "ParrllelShadow", "DebugDepth", "Texture", "DepthPass", "GBuffer", "CubemapUnfold"};
+        static const char *modes[] = { "GBuffer", "CubemapUnfold" };
         static int current_mode = 0;
         static int prev_mode = current_mode;
         ImGui::Combo("Mode", &current_mode, modes, IM_ARRAYSIZE(modes));

@@ -2,23 +2,15 @@
 #include "Renderer.hpp"
 #include "DebugObjectRenderer.hpp"
 
-#include "ShadowRenderer.hpp"
-#include "SimpleTextureRenderer.hpp"
-#include "DepthPassRenderer.hpp"
 #include "GBufferRenderer.hpp"
-#include "DebugDepthRenderer.hpp"
 #include "CubemapUnfoldRenderer.hpp"
 
 RenderManager::RenderManager()
 {
-    debugDepthRenderer = std::make_shared<DebugDepthRenderer>();
-    shadowRenderer = std::make_shared<ShadowRenderer>();
-    simpleTextureRenderer = std::make_shared<SimpleTextureRenderer>();
-    depthPassRenderer = std::make_shared<DepthPassRenderer>();
     gbufferRenderer = std::make_shared<GBufferRenderer>();
     cubemapUnfoldRenderer = std::make_shared<CubemapUnfoldRenderer>();
     DebugObjectRenderer::Initialize(); // camera will be set later
-    switchMode(cubemap_unfold); // default
+    switchMode(gbuffer); // default
 }
 
 void RenderManager::clearContext()
@@ -39,18 +31,6 @@ void RenderManager::clearContext()
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void RenderManager::reloadShadowShaders(Shader &&mainShader, Shader &&pointShadowShader)
-{
-    if (currentRenderer == shadowRenderer)
-    {
-        shadowRenderer->reloadShaders(std::move(mainShader), std::move(pointShadowShader));
-    }
-    else
-    {
-        throw(std::exception("ShadowRenderer is not the current renderer."));
-    }
-}
-
 void RenderManager::reloadCurrentShaders()
 {
     if (currentRenderer)
@@ -64,23 +44,6 @@ void RenderManager::switchMode(Mode _mode)
 {
     switch (_mode)
     {
-    case point_shadow:
-        currentRenderer = shadowRenderer;
-        shadowRenderer->render_mode = ShadowRenderer::ShadowMode::point_shadow;
-        break;
-    case parallel_shadow:
-        currentRenderer = shadowRenderer;
-        shadowRenderer->render_mode = ShadowRenderer::ShadowMode::parallel_shadow;
-        break;
-    case debug_depth:
-        currentRenderer = debugDepthRenderer;
-        break;
-    case simple_texture:
-        currentRenderer = simpleTextureRenderer;
-        break;
-    case depth_pass:
-        currentRenderer = depthPassRenderer;
-        break;
     case gbuffer:
         currentRenderer = gbufferRenderer;
         break;
