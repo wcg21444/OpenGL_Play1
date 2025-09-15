@@ -18,7 +18,7 @@ void CubemapUnfoldPass::initializeGLResources()
 {
 
     glGenFramebuffers(1, &FBO);
-    unfoldedTex.Generate(CUBEMAP_FACE_SIZE * 4, CUBEMAP_FACE_SIZE * 3, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    unfoldedTex.generate(CUBEMAP_FACE_SIZE * 4, CUBEMAP_FACE_SIZE * 3, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
 
     Renderer::GenerateQuad(quadVAO, quadVBO);
 }

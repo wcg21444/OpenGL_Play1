@@ -4,7 +4,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "../Shading/Frustum.hpp"
+#include "../Math/Frustum.hpp"
+#include "Shadow.hpp"
 
 // TODO 阴影开关功能
 // TODO 运行时类型切换
@@ -69,6 +70,7 @@ public:
     virtual void setToShaderLightArray(Shader &shaders, size_t index) = 0;
     virtual void setPosition(glm::vec3 &_position) = 0;
     virtual glm::vec3 getPosition() const = 0;
+    virtual void update() = 0;
     virtual ~LightSource() = default;
 };
 
@@ -88,6 +90,8 @@ public:
     void setToShaderLightArray(Shader &shaders, size_t index) override;
     void setPosition(glm::vec3 &_position) override;
     glm::vec3 getPosition() const override;
+    void update() override;
+
     float getFarPlane() const;
 
     void generateShadowTexResource();
@@ -104,6 +108,7 @@ public:
     std::shared_ptr<Texture> depthTexture;
     std::shared_ptr<Texture> VSMTexture;
     std::shared_ptr<Texture> SATTexture;
+    DirShadowUnit shadowUnit;
     bool useVSM = false;
 
     float nearPlane;
@@ -118,6 +123,8 @@ public:
     void setToShaderLightArray(Shader &shaders, size_t index) override;
     void setPosition(glm::vec3 &_position) override;
     glm::vec3 getPosition() const override;
+    void update() override;
+
     glm::mat4 getlightProjection() const
     {
         return lightProjection;

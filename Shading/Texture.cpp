@@ -25,7 +25,7 @@ Texture::Texture()
 ///@param type 纹理源数据的每个颜色分量的数据类型（例如 GL_UNSIGNED_BYTE, GL_FLOAT）。
 ///@param data 指向纹理像素数据的指针。如果为 NULL，则只分配内存。
 /// 在initializeGLResources() 调用
-void Texture::Generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, void *data, bool mipMapping)
+void Texture::generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, void *data, bool mipMapping)
 {
     if (ID != 0)
     {
@@ -56,7 +56,7 @@ void Texture::Generate(unsigned int width, unsigned int height, GLenum internalF
     glBindTexture(Target, 0);
 }
 
-void Texture::GenerateComputeStorage(unsigned int width, unsigned int height, GLenum internalFormat)
+void Texture::generateComputeStorage(unsigned int width, unsigned int height, GLenum internalFormat)
 {
     if (ID != 0)
     {
@@ -82,7 +82,7 @@ void Texture::GenerateComputeStorage(unsigned int width, unsigned int height, GL
 
 /// @brief 设置纹理数据 在Generate()之后调用 通常是逐帧调用
 /// @param data 纹理数据指针 注意与纹理格式一致
-void Texture::SetData(void *data)
+void Texture::setData(void *data)
 {
     glBindTexture(Target, ID);
     glTexImage2D(Target, 0, InternalFormat, Width, Height, 0, Format, Type, data);
@@ -101,7 +101,7 @@ void Texture::SetData(void *data)
  * - GL_CLAMP_TO_EDGE: 延伸纹理边缘的颜色。
  * - GL_CLAMP_TO_BORDER: 延伸到用户自定义的边框颜色。
  */
-void Texture::SetWrapMode(GLenum wrapMode)
+void Texture::setWrapMode(GLenum wrapMode)
 {
     glBindTexture(Target, ID);
     if (Target == GL_TEXTURE_2D)
@@ -127,7 +127,7 @@ void Texture::SetWrapMode(GLenum wrapMode)
  * - GL_NEAREST_MIPMAP_LINEAR
  * - GL_LINEAR_MIPMAP_LINEAR
  */
-void Texture::SetFilterMin(GLenum filter)
+void Texture::setFilterMin(GLenum filter)
 {
     FilterMin = filter;
     glBindTexture(Target, ID);
@@ -143,7 +143,7 @@ void Texture::SetFilterMin(GLenum filter)
  * - GL_NEAREST: 像素化效果。
  * - GL_LINEAR: 平滑效果。
  */
-void Texture::SetFilterMax(GLenum filter)
+void Texture::setFilterMax(GLenum filter)
 {
     FilterMax = filter;
     glBindTexture(Target, ID);
@@ -151,7 +151,7 @@ void Texture::SetFilterMax(GLenum filter)
     glBindTexture(Target, 0);
 }
 
-void Texture::Resize(int ResizeWidth, int ResizeHeight)
+void Texture::resize(int ResizeWidth, int ResizeHeight)
 {
     ResizeWidth = (ResizeWidth <= 0) ? 1 : ResizeWidth;
     ResizeHeight = (ResizeHeight <= 0) ? 1 : ResizeHeight;
@@ -168,7 +168,7 @@ void Texture::Resize(int ResizeWidth, int ResizeHeight)
     glBindTexture(Target, 0);
 }
 
-void Texture::ResizeComputeStorage(int ResizeWidth, int ResizeHeight)
+void Texture::resizeComputeStorage(int ResizeWidth, int ResizeHeight)
 {
 
     ResizeWidth = (ResizeWidth <= 0) ? 1 : ResizeWidth;
@@ -177,7 +177,7 @@ void Texture::ResizeComputeStorage(int ResizeWidth, int ResizeHeight)
     Width = static_cast<unsigned int>(ResizeWidth);
     Height = static_cast<unsigned int>(ResizeHeight);
 
-    GenerateComputeStorage(Width, Height, InternalFormat);
+    generateComputeStorage(Width, Height, InternalFormat);
 }
 
 Texture::~Texture()
@@ -205,7 +205,7 @@ TextureCube::TextureCube()
 ///@param type 纹理源数据的每个颜色分量的数据类型（例如 GL_UNSIGNED_BYTE, GL_FLOAT）。
 ///@param filterMax 放大过滤模式
 ///@param filterMin 缩小过滤模式
-void TextureCube::Generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, GLenum filterMax, GLenum filterMin, bool mipmap)
+void TextureCube::generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, GLenum filterMax, GLenum filterMin, bool mipmap)
 {
     Width = width;
     Height = height;
@@ -238,21 +238,21 @@ void TextureCube::Generate(unsigned int width, unsigned int height, GLenum inter
         glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 }
 
-void TextureCube::SetFaceData(FaceEnum faceTarget, void *data)
+void TextureCube::setFaceData(FaceEnum faceTarget, void *data)
 {
     glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
     glTexImage2D(faceTarget,
                  0, InternalFormat, Width, Height, 0, Format, Type, data);
 }
 
-void TextureCube::SetFilterMin(GLenum filter)
+void TextureCube::setFilterMin(GLenum filter)
 {
     FilterMin = filter;
     glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, FilterMin);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
-void TextureCube::SetFilterMax(GLenum filter)
+void TextureCube::setFilterMax(GLenum filter)
 {
     FilterMax = filter;
     glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
@@ -260,7 +260,7 @@ void TextureCube::SetFilterMax(GLenum filter)
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 
-void TextureCube::Resize(int ResizeWidth, int ResizeHeight)
+void TextureCube::resize(int ResizeWidth, int ResizeHeight)
 {
     ResizeWidth = (ResizeWidth <= 0) ? 1 : ResizeWidth;
     ResizeHeight = (ResizeHeight <= 0) ? 1 : ResizeHeight;
@@ -278,7 +278,7 @@ void TextureCube::Resize(int ResizeWidth, int ResizeHeight)
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
-void TextureCube::SetWrapMode(GLenum wrapMode)
+void TextureCube::setWrapMode(GLenum wrapMode)
 {
     glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
     {

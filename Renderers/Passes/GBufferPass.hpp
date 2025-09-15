@@ -10,7 +10,7 @@ private:
     std::shared_ptr<Texture> gPosition = nullptr;
     std::shared_ptr<Texture> gNormal = nullptr;
     std::shared_ptr<Texture> gAlbedoSpec = nullptr;
-    unsigned int depthMap;
+    unsigned int depthRenderBuffer;
     void initializeGLResources();
     void cleanUpGLResources() override;
 

@@ -2,7 +2,7 @@
 #include "Pass.hpp"
 #include "GaussianBlurPass.hpp"
 #include "../Shading/Texture.hpp"
-class BloomShaderUI;
+class BloomShaderSetting;
 
 class BloomPass : public Pass
 {
@@ -19,7 +19,7 @@ private:
     GaussianBlurPass blurPass3; // 1 / 8 sz
     GaussianBlurPass blurPass4; // 1 / 16 sz
 
-    std::unique_ptr<BloomShaderUI> shaderUI;
+    std::unique_ptr<BloomShaderSetting> shaderSetting;
 
     void initializeGLResources() override;
     void cleanUpGLResources() override;

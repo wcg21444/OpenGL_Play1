@@ -71,7 +71,7 @@ STATICIMPL GLint ShaderBase::GetTextureUnitsLimits()
         return uniformLocationMap.at(name);
     }
     GLint location = glGetUniformLocation(programID, name.c_str());
-    if (location == -1)
+    if (location == -1 && !ignoreNotFoundWarning)
     {
         if (!warningMsgSet.contains(std::format("{}{}", name, programID)))
         {

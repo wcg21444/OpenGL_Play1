@@ -1,7 +1,7 @@
 #pragma once
 #include "Pass.hpp"
 #include "../Shading/Texture.hpp"
-class LightShaderUI;
+class LightShaderSetting;
 
 class LightPass : public Pass
 {
@@ -9,7 +9,7 @@ private:
     Texture lightPassTex;
     Texture shadowNoiseTex;
 
-    std::unique_ptr<LightShaderUI> shaderUI;
+    std::unique_ptr<LightShaderSetting> shaderSetting;
     void initializeGLResources();
     void cleanUpGLResources() override;
 

@@ -18,7 +18,7 @@ SkyTexPass::~SkyTexPass()
 inline void SkyTexPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
-    skyCubemapTex.Generate(cubemapSize, cubemapSize, GL_RGBA32F, GL_RGBA, GL_FLOAT, GL_LINEAR, GL_LINEAR, false);
+    skyCubemapTex.generate(cubemapSize, cubemapSize, GL_RGBA32F, GL_RGBA, GL_FLOAT, GL_LINEAR, GL_LINEAR, false);
 }
 
 void SkyTexPass::cleanUpGLResources()
@@ -54,25 +54,9 @@ void SkyTexPass::render(
     shaders.setUniform("width", cubemapSize);
     shaders.setUniform("height", cubemapSize);
     /****************************************摄像机设置**************************************************/
-    shaders.setUniform3fv("eyePos", cam.getPosition());
-    shaders.setUniform3fv("eyeFront", cam.getFront());
-    shaders.setUniform3fv("eyeUp", cam.getUp());
-    shaders.setFloat("farPlane", cam.getFarPlane());
-    shaders.setFloat("nearPlane", cam.getNearPlane());
-    shaders.setFloat("fov", cam.getFov());
+    cam.setToShader(shaders);
     /****************************************天空设置*****************************************************/
-    shaders.setFloat("skyHeight", SkyGUI::skyHeight);
-    shaders.setFloat("earthRadius", SkyGUI::earthRadius);
-    shaders.setFloat("skyIntensity", SkyGUI::skyIntensity);
-    shaders.setInt("maxStep", SkyGUI::maxStep);
-    shaders.setFloat("HRayleigh", SkyGUI::HRayleigh);
-    shaders.setFloat("HMie", SkyGUI::HMie);
-    shaders.setFloat("atmosphereDensity", SkyGUI::atmosphereDensity);
-    shaders.setFloat("MieDensity", SkyGUI::MieDensity);
-    shaders.setFloat("gMie", SkyGUI::gMie);
-    shaders.setFloat("absorbMie", SkyGUI::absorbMie);
-    shaders.setFloat("MieIntensity", SkyGUI::MieIntensity);
-    shaders.setUniform("betaMie", SkyGUI::betaMie);
+    SkySetting::SetShaderUniforms(shaders);
     /****************************************方向光源输入**************************************************/
     shaders.setTextureAuto(transmittanceLUT, GL_TEXTURE_2D, 0, "transmittanceLUT");
     allLights.dirLights[0].setToShader(shaders);
@@ -108,18 +92,7 @@ void TransmittanceLUTPass::render()
     shaders.setInt("width", vp_width);
     shaders.setInt("height", vp_height);
 
-    shaders.setFloat("skyHeight", SkyGUI::skyHeight);
-    shaders.setFloat("earthRadius", SkyGUI::earthRadius);
-    shaders.setFloat("skyIntensity", SkyGUI::skyIntensity);
-    shaders.setInt("maxStep", SkyGUI::maxStep);
-    shaders.setFloat("HRayleigh", SkyGUI::HRayleigh);
-    shaders.setFloat("HMie", SkyGUI::HMie);
-    shaders.setFloat("atmosphereDensity", SkyGUI::atmosphereDensity);
-    shaders.setFloat("MieDensity", SkyGUI::MieDensity);
-    shaders.setFloat("gMie", SkyGUI::gMie);
-    shaders.setFloat("absorbMie", SkyGUI::absorbMie);
-    shaders.setFloat("MieIntensity", SkyGUI::MieIntensity);
-    shaders.setUniform("betaMie", SkyGUI::betaMie);
+    SkySetting::SetShaderUniforms(shaders);
 
     Renderer::DrawQuad();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

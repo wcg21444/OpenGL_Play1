@@ -113,5 +113,5 @@ vec3 generateSunDisk(vec3 camPos, vec3 fragDir, vec3 sunDir, vec3 sunIntensity, 
     float sunSmoothstep = smoothstep(sunSizeOuter, sunSizeInner, sunDot);
 
     // 返回太阳亮度，与透射率相乘
-    return sunIntensity * 1e3 * pow(sunSmoothstep, exponent) * sunlightDecay;
+    return sunIntensity * 1e4 * pow(sunSmoothstep, exponent) * pow(sunlightDecay, vec3(2.f));
 }

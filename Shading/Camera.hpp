@@ -1,6 +1,6 @@
 #pragma once
 #include "Shader.hpp"
-#include "Frustum.hpp"
+#include "../Math/Frustum.hpp"
 class Camera
 {
 public:
@@ -35,6 +35,7 @@ private:
 
     int width;
     int height;
+
 public:
     Camera(int width,
            int height,
@@ -80,7 +81,7 @@ public:
         direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
         camFrustum.m_front = glm::normalize(direction);
     }
-    
+
     void genPositionfrom(GLFWwindow *window, int &movement)
     {
         float currentFrame = glfwGetTime();
@@ -97,9 +98,8 @@ public:
             camFrustum.m_position -= glm::normalize(glm::cross(camFrustum.m_front, camFrustum.m_up)) * reletive_speed;
         if (movement & right)
             camFrustum.m_position += glm::normalize(glm::cross(camFrustum.m_front, camFrustum.m_up)) * reletive_speed;
-
     }
-    
+
     void genZoomfrom(double yoffset)
     {
         auto &fov = camFrustum.m_fov;
@@ -107,20 +107,34 @@ public:
         if (fov < 1.0f)
             fov = 1.0f;
     }
-    
+
     void setViewMatrix(Shader &shaders)
     {
         auto view = camFrustum.getViewMatrix();
         shaders.setMat4("view", view);
         shaders.setUniform3fv("eyePos", camFrustum.m_position);
     }
-    
+
     void setPerspectiveMatrix(Shader &shaders)
     {
         auto projection = camFrustum.getProjectionMatrix();
         shaders.setMat4("projection", projection);
     }
-    
+
+    void setToShader(Shader &shaders)
+    {
+        shaders.toggleIgnoreNotFoundWarning();
+        setViewMatrix(shaders);
+        setPerspectiveMatrix(shaders);
+        shaders.setUniform3fv("eyePos", camFrustum.m_position);
+        shaders.setUniform3fv("eyeFront", camFrustum.m_front);
+        shaders.setUniform3fv("eyeUp", camFrustum.m_up);
+        shaders.setFloat("farPlane", camFrustum.m_farPlane);
+        shaders.setFloat("nearPlane", camFrustum.m_nearPlane);
+        shaders.setFloat("fov", camFrustum.m_fov);
+        shaders.toggleIgnoreNotFoundWarning();
+    }
+
     void resize(int width, int height)
     {
         this->width = width;
@@ -168,19 +182,19 @@ public:
     float getAspect() const
     {
         return camFrustum.m_aspect;
-    }   
+    }
 
     void speedUp(float factor)
     {
         cameraSpeed *= factor;
     }
-    
+
     void speedDown(float factor)
     {
         cameraSpeed /= factor;
     }
 
-    const Frustum& getFrustum() const
+    const Frustum &getFrustum() const
     {
         return camFrustum;
     }

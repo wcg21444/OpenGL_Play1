@@ -16,9 +16,9 @@ DebugObjectPass::DebugObjectPass(int _vp_width, int _vp_height, std::string _vs_
 }
 void DebugObjectPass::initializeGLResources()
 {
-    debugObjectPassTex->SetFilterMin(GL_NEAREST);
-    debugObjectPassTex->SetFilterMax(GL_NEAREST);
-    debugObjectPassTex->Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL, false);
+    debugObjectPassTex->setFilterMin(GL_NEAREST);
+    debugObjectPassTex->setFilterMax(GL_NEAREST);
+    debugObjectPassTex->generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL, false);
 }
 
 void DebugObjectPass::cleanUpGLResources()
@@ -39,7 +39,7 @@ void DebugObjectPass::resize(int _width, int _height)
 
     renderTarget->resize(vp_width, vp_height);
 
-    debugObjectPassTex->Resize(vp_width, vp_height);
+    debugObjectPassTex->resize(vp_width, vp_height);
 
     contextSetup();
 }
@@ -49,13 +49,14 @@ void DebugObjectPass::render(std::queue<DebugObjectDrawCall> &drawQueue, Camera 
     renderTarget->setViewport();
     renderTarget->clearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, glm::vec4(0.0f));
     shaders.use();
-    cam.setViewMatrix(shaders);
+
     cam.resize(vp_width, vp_height);
-    cam.setPerspectiveMatrix(shaders);
+    cam.setToShader(shaders);
+    
     while (!drawQueue.empty())
     {
         auto &drawCall = drawQueue.front();
-        drawCall(shaders, glm::identity<glm::mat4>());
+        drawCall(shaders);
         drawQueue.pop();
     }
     renderTarget->unbind();

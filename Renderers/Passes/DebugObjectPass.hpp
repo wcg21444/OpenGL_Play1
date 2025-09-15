@@ -1,7 +1,7 @@
 #pragma once
 #include "Pass.hpp"
 
-using DebugObjectDrawCall = std::function<void(Shader &shaders, glm::mat4 modelMatrix)>;
+using DebugObjectDrawCall = std::function<void(Shader &debugObjectShaders)>;
 
 class RenderTarget;
 class Texture;

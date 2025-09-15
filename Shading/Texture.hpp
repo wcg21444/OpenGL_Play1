@@ -30,19 +30,19 @@ public:
     unsigned int Height; // 纹理的高度（以像素为单位）
 
     Texture();
-    void Generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, void *data, bool mipMapping = true);
-    void GenerateComputeStorage(unsigned int width, unsigned int height, GLenum internalFormat);
+    void generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, void *data, bool mipMapping = true);
+    void generateComputeStorage(unsigned int width, unsigned int height, GLenum internalFormat);
 
-    void SetData(void *data);
+    void setData(void *data);
 
-    void SetFilterMin(GLenum filter);
+    void setFilterMin(GLenum filter);
 
-    void SetFilterMax(GLenum filter);
+    void setFilterMax(GLenum filter);
 
-    void Resize(int ResizeWidth, int ResizeHeight);
-    void ResizeComputeStorage(int ResizeWidth, int ResizeHeight);
+    void resize(int ResizeWidth, int ResizeHeight);
+    void resizeComputeStorage(int ResizeWidth, int ResizeHeight);
 
-    void SetWrapMode(GLenum wrapMode);
+    void setWrapMode(GLenum wrapMode);
 
     ~Texture();
 };
@@ -105,17 +105,17 @@ public:
 
     TextureCube();
 
-    void Generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, GLenum filterMax, GLenum filterMin, bool mipmap);
+    void generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, GLenum filterMax, GLenum filterMin, bool mipmap);
 
-    void SetFaceData(FaceEnum faceTarget, void *data);
+    void setFaceData(FaceEnum faceTarget, void *data);
 
-    void SetFilterMin(GLenum filter);
+    void setFilterMin(GLenum filter);
 
-    void SetFilterMax(GLenum filter);
+    void setFilterMax(GLenum filter);
 
-    void Resize(int ResizeWidth, int ResizeHeight);
+    void resize(int ResizeWidth, int ResizeHeight);
 
-    void SetWrapMode(GLenum wrapMode);
+    void setWrapMode(GLenum wrapMode);
 
     ~TextureCube();
 };

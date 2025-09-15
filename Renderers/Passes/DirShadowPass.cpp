@@ -59,12 +59,12 @@ void DirShadowPass::renderToTexture(
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     static FrustumWireframe frustumWireframe;
-    frustumWireframe.setFrustum(OrthoFrustum::GetCornersWorldSpace( light.getlightView(),light.getlightProjection()));
-    DebugObjectRenderer::AddDrawCall([&](Shader &shaders, glm::mat4 modelMatrix) {
-        glm::mat4 obj_model = modelMatrix * frustumWireframe.modelMatrix;
-        frustumWireframe.draw(obj_model, shaders);
-    });
-
+    if (GUI::DebugToggleDrawFrustum())
+    {
+        frustumWireframe.setFrustum(OrthoFrustum::GetCornersWorldSpace(light.getlightView(), light.getlightProjection()));
+        DebugObjectRenderer::AddDrawCall([&](Shader &debugObjectShaders)
+                                         { frustumWireframe.draw(frustumWireframe.modelMatrix, debugObjectShaders); });
+    }
 }
 
 DirShadowVSMPass::DirShadowVSMPass(std::string _vs_path, std::string _fs_path)
@@ -98,7 +98,7 @@ void DirShadowVSMPass::renderToVSMTexture(const DirectionLight &light, int width
 
     shaders.use();
     shaders.setTextureAuto(light.depthTexture->ID, GL_TEXTURE_2D, 0, "depthMap");
-    shaders.setUniform("kernelSize",GUI::DebugVSMKernelSize());
+    shaders.setUniform("kernelSize", GUI::DebugVSMKernelSize());
 
     Renderer::DrawQuad();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -116,13 +116,13 @@ void DirShadowSATPass::initializeGLResources()
     glGenFramebuffers(1, &FBOCol);
     glGenFramebuffers(1, &FBORow);
 
-    SATRowTexture.SetFilterMax(GL_LINEAR);
-    SATRowTexture.SetFilterMin(GL_LINEAR);
-    SATRowTexture.SetWrapMode(GL_CLAMP_TO_EDGE);
-    SATRowTexture.Generate(0, 0, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL, false);
+    SATRowTexture.setFilterMax(GL_LINEAR);
+    SATRowTexture.setFilterMin(GL_LINEAR);
+    SATRowTexture.setWrapMode(GL_CLAMP_TO_EDGE);
+    SATRowTexture.generate(0, 0, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL, false);
 
-    SATCompInputTex.GenerateComputeStorage(0, 0, GL_RGBA32F);
-    SATCompOutputTex.GenerateComputeStorage(0, 0, GL_RGBA32F);
+    SATCompInputTex.generateComputeStorage(0, 0, GL_RGBA32F);
+    SATCompOutputTex.generateComputeStorage(0, 0, GL_RGBA32F);
 }
 
 void DirShadowSATPass::cleanUpGLResources()
@@ -159,7 +159,7 @@ void DirShadowSATPass::renderToSATTexture(const DirectionLight &light, int width
     }
     else
     {
-        SATRowTexture.Resize(width, height);
+        SATRowTexture.resize(width, height);
 
         glBindFramebuffer(GL_FRAMEBUFFER, FBORow);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SATRowTexture.ID, 0); // 输出目标绑定
@@ -190,20 +190,20 @@ void DirShadowSATPass::computeSAT(const DirectionLight &light, int width, int he
 
     const float borderColor[] = {0.0f, 0.0f, 0.0f, 0.0f};
 
-    momentsTex.SetWrapMode(GL_CLAMP_TO_BORDER);
+    momentsTex.setWrapMode(GL_CLAMP_TO_BORDER);
     glBindTexture(GL_TEXTURE_2D, momentsTex.ID);
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-    momentsTex.GenerateComputeStorage(width, height, GL_RGBA32F);
+    momentsTex.generateComputeStorage(width, height, GL_RGBA32F);
 
-    SATCompInputTex.SetWrapMode(GL_CLAMP_TO_BORDER);
+    SATCompInputTex.setWrapMode(GL_CLAMP_TO_BORDER);
     glBindTexture(GL_TEXTURE_2D, SATCompInputTex.ID);
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-    SATCompInputTex.GenerateComputeStorage(width, height, GL_RGBA32F);
+    SATCompInputTex.generateComputeStorage(width, height, GL_RGBA32F);
 
-    SATCompOutputTex.SetWrapMode(GL_CLAMP_TO_BORDER);
+    SATCompOutputTex.setWrapMode(GL_CLAMP_TO_BORDER);
     glBindTexture(GL_TEXTURE_2D, SATCompOutputTex.ID);
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-    SATCompOutputTex.GenerateComputeStorage(width, height, GL_RGBA32F);
+    SATCompOutputTex.generateComputeStorage(width, height, GL_RGBA32F);
     // 用depth计算Moments
     momentComputeShader.use();
     glBindImageTexture(0, momentsTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);

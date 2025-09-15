@@ -10,7 +10,7 @@ private:
     void initializeGLResources() override
     {
         glGenFramebuffers(1, &FBO);
-        downSampleTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+        downSampleTex.generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
     }
     void cleanUpGLResources() override
     {
@@ -42,7 +42,7 @@ public:
     {
         vp_width = _width;
         vp_height = _height;
-        downSampleTex.Resize(_width, _height);
+        downSampleTex.resize(_width, _height);
         contextSetup();
     }
     unsigned int getTextures() { return downSampleTex.ID; }

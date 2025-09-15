@@ -25,6 +25,7 @@ public:
     bool used = false;
     std::unordered_map<std::string, int> uniformLocationMap;
     std::unordered_set<std::string> warningMsgSet;
+    bool ignoreNotFoundWarning = false;
 
 public:
     static GLenum GetTextureUnitEnum(int textureLocation);
@@ -54,6 +55,12 @@ public:
         glUseProgram(programID);
         used = true;
     }
+
+    void toggleIgnoreNotFoundWarning()
+    {
+        ignoreNotFoundWarning = !ignoreNotFoundWarning;
+    }
+
     void setUniform4fv(const std::string &name, GLsizei count, const float *value);
     void setUniform4fv(const std::string &name, const glm::vec4 &vec4);
     void setUniform3fv(const std::string &name, const glm::vec3 &vec3);

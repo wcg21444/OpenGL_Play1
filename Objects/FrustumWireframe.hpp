@@ -1,6 +1,6 @@
 #pragma once
 #include "Object.hpp"
-#include "../Shading/Frustum.hpp"
+#include "../Math/Frustum.hpp"
 
 class FrustumWireframe : public Object
 {

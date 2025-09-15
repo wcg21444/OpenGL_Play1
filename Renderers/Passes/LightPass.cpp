@@ -7,7 +7,7 @@
 
 LightPass::LightPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path),
-      shaderUI(std::make_unique<LightShaderUI>())
+      shaderSetting(std::make_unique<LightShaderSetting>())
 {
     initializeGLResources();
     contextSetup();
@@ -20,8 +20,8 @@ void LightPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
 
-    lightPassTex.Generate(vp_width, vp_height, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
-    shadowNoiseTex.Generate(8, 8, GL_RGBA16F, GL_RGB, GL_FLOAT, NULL);
+    lightPassTex.generate(vp_width, vp_height, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
+    shadowNoiseTex.generate(8, 8, GL_RGBA16F, GL_RGB, GL_FLOAT, NULL);
 }
 void LightPass::cleanUpGLResources()
 {
@@ -42,7 +42,7 @@ void LightPass::resize(int _width, int _height)
     vp_width = _width;
     vp_height = _height;
 
-    lightPassTex.Resize(vp_width, vp_height);
+    lightPassTex.resize(vp_width, vp_height);
     // shadowNoiseTex.Resize(_width, _height);
     // TODO non Texure Resize
     contextSetup();
@@ -64,9 +64,7 @@ void LightPass::render(RenderParameters &renderParameters,
     static const auto skyboxKernel = Random::GenerateSemiSphereKernel(32);
 
     auto noise = Random::GenerateNoise();
-    shadowNoiseTex.SetData(&noise[0]);
-
-    shaderUI->render();
+    shadowNoiseTex.setData(&noise[0]);
 
     glViewport(0, 0, vp_width, vp_height);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
@@ -91,7 +89,7 @@ void LightPass::render(RenderParameters &renderParameters,
     {
         pointLights[i].setToShaderLightArray(shaders, i);
     }
-    shaders.setInt("usePCSS",GUI::DebugToggleUsePCSS());
+    shaders.setInt("usePCSS", GUI::DebugToggleUsePCSS());
     /****************************************方向光源输入**************************************************/
     shaders.setInt("numDirLights", static_cast<int>(dirLights.size()));
     for (size_t i = 0; i < dirLights.size(); ++i)
@@ -105,7 +103,7 @@ void LightPass::render(RenderParameters &renderParameters,
     }
     shaders.setInt("useVSSM", 0);
     if (GUI::DebugToggleUseVSSM())
-    {   
+    {
         shaders.setInt("useVSSM", 1);
     }
     shaders.setFloat("VSSMKernelSize", GUI::DebugVSSMKernelSize());
@@ -113,29 +111,11 @@ void LightPass::render(RenderParameters &renderParameters,
     shaders.setInt("width", vp_width);
     shaders.setInt("height", vp_height);
     /****************************************摄像机设置**************************************************/
-    shaders.setUniform3fv("eyePos", cam.getPosition());
-    shaders.setUniform3fv("eyeFront", cam.getFront());
-    shaders.setUniform3fv("eyeUp", cam.getUp());
-    shaders.setFloat("farPlane", cam.getFarPlane());
-    shaders.setFloat("nearPlane", cam.getNearPlane());
-    shaders.setFloat("fov", cam.getFov());
-    cam.setViewMatrix(shaders);
+    cam.setToShader(shaders);
     /****************************************天空设置*****************************************************/
-    shaders.setFloat("skyHeight", SkyGUI::skyHeight);
-    shaders.setFloat("earthRadius", SkyGUI::earthRadius);
-    shaders.setFloat("skyIntensity", SkyGUI::skyIntensity);
-    shaders.setInt("maxStep", SkyGUI::maxStep);
-    shaders.setFloat("HRayleigh", SkyGUI::HRayleigh);
-    shaders.setFloat("HMie", SkyGUI::HMie);
-    shaders.setFloat("atmosphereDensity", SkyGUI::atmosphereDensity);
-    shaders.setFloat("MieDensity", SkyGUI::MieDensity);
-    shaders.setFloat("gMie", SkyGUI::gMie);
-    shaders.setFloat("absorbMie", SkyGUI::absorbMie);
-    shaders.setFloat("MieIntensity", SkyGUI::MieIntensity);
-    shaders.setUniform("betaMie", SkyGUI::betaMie);
     shaders.setTextureAuto(transmittanceLUT, GL_TEXTURE_2D, 0, "transmittanceLUT");
-
-    SkyGUI::render();
+    SkySetting::SetShaderUniforms(shaders);
+    SkySetting::RenderUI();
 
     /****************************************采样器设置**************************************************/
     for (unsigned int i = 0; i < shadowKernel.size(); ++i)
@@ -146,11 +126,8 @@ void LightPass::render(RenderParameters &renderParameters,
     {
         shaders.setUniform3fv(std::format("skyboxSamples[{}]", i), skyboxKernel[i]);
     }
-    /****************************************环境光设置**************************************************/
-    shaders.setUniform3fv("ambientLight", shaderUI->ambientLight);
-    /*****************************************阴影设置************************************************* */
-    shaders.setFloat("blurRadius", shaderUI->blurRadius);
-    shaders.setInt("n_samples", shaderUI->samplesNumber);
+    shaderSetting->setShaderUniforms(shaders);
+    shaderSetting->renderUI();
     /*****************************************RayMarching设置************************************************* */
 
     Renderer::DrawQuad();

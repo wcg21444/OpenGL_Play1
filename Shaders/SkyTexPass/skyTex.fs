@@ -5,18 +5,21 @@ out vec4 SkyResult;
 in vec3 Dir;
 in vec4 FragPos;
 
-uniform int maxStep;
-uniform float atmosphereDensity; // 大气密度
-uniform float MieDensity;
-uniform float gMie;
-uniform float absorbMie;
-uniform float MieIntensity;
-uniform float skyHeight;
-uniform float earthRadius;
-uniform float skyIntensity;
-uniform float HRayleigh;
-uniform float HMie;
-uniform vec4 betaMie = vec4(21e-6, 21e-6, 21e-6, 1.0f);
+// uniform int maxStep;
+// uniform float atmosphereDensity; // 大气密度
+// uniform float MieDensity;
+// uniform float gMie;
+// uniform float absorbMie;
+// uniform float MieIntensity;
+// uniform float skyHeight;
+// uniform float earthRadius;
+// uniform float skyIntensity;
+// uniform float HRayleigh;
+// uniform float HMie;
+// uniform vec4 betaMieAbsorb;
+// uniform vec4 betaOzoneAbsorb;
+// uniform vec4 betaMie;
+#include "skyUniforms.glsl"
 uniform sampler2D transmittanceLUT;
 
 // 视口大小

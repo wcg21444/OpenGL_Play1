@@ -1,13 +1,13 @@
 #pragma once
 #include "Pass.hpp"
 #include "../Shading/Texture.hpp"
-class PostProcessShaderUI;
+class PostProcessShaderSetting;
 
 class PostProcessPass : public Pass
 {
 private:
     Texture postProcessPassTex;
-    std::unique_ptr<PostProcessShaderUI> shaderUI;
+    std::unique_ptr<PostProcessShaderSetting> shaderSetting;
 
 private:
     void initializeGLResources() override;

@@ -57,6 +57,12 @@ public:
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, textureID, 0);
     }
 
+    void attachDepthRenderBuffer(unsigned int depthRenderBufferID, GLenum format = GL_DEPTH_COMPONENT)
+    {
+        bind();
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBufferID);
+    }
+
     void disableDrawColor()
     {
         bind();

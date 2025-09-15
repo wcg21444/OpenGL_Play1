@@ -1,7 +1,7 @@
 #pragma once
 #include "Pass.hpp"
 #include "../Shading/Texture.hpp"
-class SSAOShaderUI;
+class SSAOShaderSetting;
 
 class SSAOPass : public Pass
 {
@@ -9,7 +9,7 @@ private:
     Texture SSAOPassTex;
     Texture noiseTex;
 
-    std::unique_ptr<SSAOShaderUI> shaderUI;
+    std::unique_ptr<SSAOShaderSetting> shaderSetting;
     void initializeGLResources();
     void cleanUpGLResources() override;
 

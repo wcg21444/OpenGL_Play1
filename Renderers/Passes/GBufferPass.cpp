@@ -2,13 +2,15 @@
 #include "../../Shading/Shader.hpp"
 #include "../../Shading/RenderTarget.hpp"
 #include "../../Shading/Texture.hpp"
-
+#include "../DebugObjectRenderer.hpp"
 #include "GBufferPass.hpp"
-#include "../../Shading/Frustum.hpp"
+#include "../../Math/Frustum.hpp"
+
+#include "../../GUI.hpp"
 GBufferPass::GBufferPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path)
 {
-    renderTarget = std::make_shared<RenderTarget>(_vp_width,_vp_height);
+    renderTarget = std::make_shared<RenderTarget>(_vp_width, _vp_height);
     gViewPosition = std::make_shared<Texture>();
     gPosition = std::make_shared<Texture>();
     gNormal = std::make_shared<Texture>();
@@ -20,41 +22,42 @@ void GBufferPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
 
-    gPosition->SetFilterMin(GL_NEAREST);
-    gPosition->SetFilterMax(GL_NEAREST);
-    gPosition->Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL, false);
+    gPosition->setFilterMin(GL_NEAREST);
+    gPosition->setFilterMax(GL_NEAREST);
+    gPosition->generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL, false);
 
-    gNormal->SetFilterMin(GL_NEAREST);
-    gNormal->SetFilterMax(GL_NEAREST);
-    gNormal->Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL, false);
+    gNormal->setFilterMin(GL_NEAREST);
+    gNormal->setFilterMax(GL_NEAREST);
+    gNormal->generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL, false);
 
-    gAlbedoSpec->SetFilterMin(GL_NEAREST);
-    gAlbedoSpec->SetFilterMax(GL_NEAREST);
-    gAlbedoSpec->Generate(vp_width, vp_height, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, NULL, false);
+    gAlbedoSpec->setFilterMin(GL_NEAREST);
+    gAlbedoSpec->setFilterMax(GL_NEAREST);
+    gAlbedoSpec->generate(vp_width, vp_height, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, NULL, false);
 
-    gViewPosition->SetFilterMin(GL_NEAREST);
-    gViewPosition->SetFilterMax(GL_NEAREST);
-    gViewPosition->Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL, false);
+    gViewPosition->setFilterMin(GL_NEAREST);
+    gViewPosition->setFilterMax(GL_NEAREST);
+    gViewPosition->generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL, false);
 
-    glGenRenderbuffers(1, &depthMap);
+    glGenRenderbuffers(1, &depthRenderBuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthRenderBuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, vp_width, vp_height);
 }
 
 void GBufferPass::cleanUpGLResources()
 {
     glDeleteFramebuffers(1, &FBO);
+    glDeleteRenderbuffers(1, &depthRenderBuffer);
 }
 
 void GBufferPass::contextSetup()
 {
     renderTarget->bind();
-    renderTarget->attachColorTexture2D(gPosition->ID,GL_COLOR_ATTACHMENT0);
-    renderTarget->attachColorTexture2D(gNormal->ID,GL_COLOR_ATTACHMENT1);
-    renderTarget->attachColorTexture2D(gAlbedoSpec->ID,GL_COLOR_ATTACHMENT2);
-    renderTarget->attachColorTexture2D(gViewPosition->ID,GL_COLOR_ATTACHMENT3);
+    renderTarget->attachColorTexture2D(gPosition->ID, GL_COLOR_ATTACHMENT0);
+    renderTarget->attachColorTexture2D(gNormal->ID, GL_COLOR_ATTACHMENT1);
+    renderTarget->attachColorTexture2D(gAlbedoSpec->ID, GL_COLOR_ATTACHMENT2);
+    renderTarget->attachColorTexture2D(gViewPosition->ID, GL_COLOR_ATTACHMENT3);
     renderTarget->enableColorAttachments();
-    glBindRenderbuffer(GL_RENDERBUFFER, depthMap);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, vp_width, vp_height);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthMap);
+    renderTarget->attachDepthRenderBuffer(depthRenderBuffer, GL_DEPTH_ATTACHMENT);
     renderTarget->unbind();
 }
 void GBufferPass::resize(int _width, int _height)
@@ -64,10 +67,10 @@ void GBufferPass::resize(int _width, int _height)
 
     renderTarget->resize(vp_width, vp_height);
 
-    gPosition->Resize(vp_width, vp_height);
-    gNormal->Resize(vp_width, vp_height);
-    gAlbedoSpec->Resize(vp_width, vp_height);
-    gViewPosition->Resize(vp_width, vp_height);
+    gPosition->resize(vp_width, vp_height);
+    gNormal->resize(vp_width, vp_height);
+    gAlbedoSpec->resize(vp_width, vp_height);
+    gViewPosition->resize(vp_width, vp_height);
 
     contextSetup();
 }
@@ -75,16 +78,10 @@ void GBufferPass::render(RenderParameters &renderParameters)
 {
     auto &[allLights, cam, scene, model, window] = renderParameters;
 
-
     renderTarget->bind();
 
     renderTarget->setViewport();
     renderTarget->clearBuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    // glViewport(0, 0, vp_width, vp_height);
-    // glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-
-    // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     shaders.use();
 
@@ -92,10 +89,21 @@ void GBufferPass::render(RenderParameters &renderParameters)
     shaders.setInt("width", vp_width);
     shaders.setInt("height", vp_height);
 
-    cam.setViewMatrix(shaders);
     cam.resize(vp_width, vp_height);
-    cam.setPerspectiveMatrix(shaders);
-    Renderer::DrawScene(scene, model, shaders);
+    cam.setToShader(shaders);
+
+    if (GUI::DebugToggleDrawWireframe())
+    {
+        DebugObjectRenderer::AddDrawCall([&](Shader &debugObjectShaders)
+                                         {
+                                    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                                    Renderer::DrawScene(scene, model, debugObjectShaders);
+                                    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); });
+    }
+    else
+    {
+        Renderer::DrawScene(scene, model, shaders);
+    }
 
     // glBindFramebuffer(GL_FRAMEBUFFER, 0);
     renderTarget->unbind();

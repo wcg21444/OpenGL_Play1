@@ -30,8 +30,7 @@ float rhoMie(float h)
 }
 float rhoOzone(float h)
 {
-    const float ozoneCenterHeight = 2.5e4;
-    const float ozoneWidth = 1.0e4;
+
     if (h < 0.0f)
     {
         h = 0.0f;
@@ -58,9 +57,7 @@ vec4 scatterCoefficientMie(vec3 p)
 vec4 transmittance(vec3 ori, vec3 end, float scale)
 {
     vec4 t; // 透射率
-    // const vec4 betaMieAbsorb = vec4(2.5e-5, 4e-5, 1e-5, 1.0f); // Hacking 让地平线呈现微妙紫色
-    const vec4 betaMieAbsorb = vec4(2.5e-5, 4e-5, 1e-5, 1.0f); // Hacking 让地平线呈现微妙紫色
-    const vec4 betaOzoneAbsorb = vec4(0.650f, 1.881f, 0.085f, 1.0f) * 1e-6f;
+
     const float tMaxStep = 16;
 
     float dist = length(end - ori);
@@ -95,9 +92,6 @@ vec4 transmittance(vec3 ori, vec3 end, float scale)
 vec4 transmittanceOpticalDepth(vec3 ori, vec3 end, float scale)
 {
     vec4 t; // 透射率
-    // const vec4 betaMieAbsorb = vec4(2.5e-5, 4e-5, 1e-5, 1.0f); // Hacking 让地平线呈现微妙紫色
-    const vec4 betaMieAbsorb = vec4(2.5e-5, 4e-5, 1e-5, 1.0f); // Hacking 让地平线呈现微妙紫色
-    const vec4 betaOzoneAbsorb = vec4(0.650f, 1.881f, 0.085f, 1.0f) * 1e-6f;
     const float tMaxStep = 128; //
 
     float dist = length(end - ori);
@@ -125,9 +119,7 @@ vec4 transmittanceOpticalDepth(vec3 ori, vec3 end, float scale)
 
 void accumulateOpticalDepth(in out vec4 op, vec3 ori, vec3 end)
 {
-    // const vec4 betaMieAbsorb = vec4(2.5e-5, 4e-5, 1e-5, 1.0f); // Hacking 让地平线呈现微妙紫色
-    const vec4 betaMieAbsorb = vec4(2.5e-5, 4e-5, 1e-5, 1.0f); // Hacking 让地平线呈现微妙紫色
-    const vec4 betaOzoneAbsorb = vec4(0.650f, 1.881f, 0.085f, 1.0f) * 1e-6f;
+
     float tItvl = length(end - ori);
     int steps = 1;
     float subItvl = tItvl / steps;

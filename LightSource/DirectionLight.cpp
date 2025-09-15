@@ -9,6 +9,7 @@ DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_po
     VSMTexture = std::make_shared<Texture>();
     SATTexture = std::make_shared<Texture>();
     depthTexture = std::make_shared<Texture>();
+
     lightProjection = glm::ortho(-1.0f * orthoScale,
                                  1.0f * orthoScale,
                                  -1.0f * orthoScale,
@@ -17,6 +18,10 @@ DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_po
     lightView = glm::lookAt(position,
                             glm::vec3(0.0f, 0.0f, 0.0f),
                             glm::vec3(0.0f, 1.0f, 0.0f));
+    shadowUnit = DirShadowUnit(
+        _texResolution,
+        OrthoFrustum(lightView, lightProjection));
+
     lightSpaceMatrix = lightProjection * lightView;
 }
 
@@ -59,6 +64,16 @@ void DirectionLight::setToShaderLightArray(Shader &shaders, size_t index)
 void DirectionLight::setPosition(glm::vec3 &_position)
 {
     position = _position;
+    update();
+}
+
+glm::vec3 DirectionLight::getPosition() const
+{
+    return position;
+}
+
+void DirectionLight::update()
+{
     lightProjection = glm::ortho(-1.0f * orthoScale,
                                  1.0f * orthoScale,
                                  -1.0f * orthoScale,
@@ -70,32 +85,33 @@ void DirectionLight::setPosition(glm::vec3 &_position)
     lightSpaceMatrix = lightProjection * lightView;
 }
 
-glm::vec3 DirectionLight::getPosition() const
-{
-    return position;
-}
-
 void DirectionLight::generateShadowTexResource()
 {
     if (depthTexture->ID == 0)
     {
-        depthTexture->SetFilterMax(GL_NEAREST);
-        depthTexture->SetFilterMin(GL_NEAREST);
-        depthTexture->SetWrapMode(GL_CLAMP_TO_EDGE);
-        depthTexture->Generate(texResolution, texResolution, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, NULL, false);
+        depthTexture->setFilterMax(GL_NEAREST);
+        depthTexture->setFilterMin(GL_NEAREST);
+        depthTexture->setWrapMode(GL_CLAMP_TO_EDGE);
+        depthTexture->generate(texResolution, texResolution, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, NULL, false);
     }
+    shadowUnit.generateDepthTexture(GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT);
     if (useVSM && VSMTexture->ID == 0)
     {
-        VSMTexture->SetFilterMax(GL_LINEAR);
-        VSMTexture->SetFilterMin(GL_LINEAR);
-        VSMTexture->SetWrapMode(GL_CLAMP_TO_EDGE);
-        VSMTexture->Generate(texResolution, texResolution, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
+        VSMTexture->setFilterMax(GL_LINEAR);
+        VSMTexture->setFilterMin(GL_LINEAR);
+        VSMTexture->setWrapMode(GL_CLAMP_TO_EDGE);
+        VSMTexture->generate(texResolution, texResolution, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
 
-        SATTexture->SetFilterMax(GL_LINEAR);
-        SATTexture->SetFilterMin(GL_LINEAR);
-        SATTexture->SetWrapMode(GL_CLAMP_TO_BORDER);
+        SATTexture->setFilterMax(GL_LINEAR);
+        SATTexture->setFilterMin(GL_LINEAR);
+        SATTexture->setWrapMode(GL_CLAMP_TO_BORDER);
         const float borderColor[] = {0.0f, 0.0f, 0.0f, 0.0f};
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-        SATTexture->Generate(texResolution, texResolution, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
+        SATTexture->generate(texResolution, texResolution, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
+    }
+    if (useVSM)
+    {
+        shadowUnit.generateVSMTexture(GL_RGBA32F, GL_RGBA);
+        shadowUnit.generateSATTexture(GL_RGBA32F, GL_RGBA);
     }
 }

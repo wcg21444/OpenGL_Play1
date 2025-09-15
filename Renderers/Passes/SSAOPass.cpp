@@ -5,7 +5,7 @@
 #include "SSAOPass.hpp"
 
 SSAOPass::SSAOPass(int _vp_width, int _vp_height, std::string _vs_path, std::string _fs_path)
-    : Pass(_vp_width, _vp_height, _vs_path, _fs_path), shaderUI(std::make_unique<SSAOShaderUI>())
+    : Pass(_vp_width, _vp_height, _vs_path, _fs_path), shaderSetting(std::make_unique<SSAOShaderSetting>())
 {
     initializeGLResources();
     contextSetup();
@@ -15,8 +15,8 @@ SSAOPass::~SSAOPass() { cleanUpGLResources(); }
 void SSAOPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
-    SSAOPassTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
-    noiseTex.Generate(8, 8, GL_RGBA16F, GL_RGB, GL_FLOAT, NULL);
+    SSAOPassTex.generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    noiseTex.generate(8, 8, GL_RGBA16F, GL_RGB, GL_FLOAT, NULL);
 }
 void SSAOPass::cleanUpGLResources()
 {
@@ -34,7 +34,7 @@ void SSAOPass::resize(int _width, int _height)
 {
     vp_width = _width;
     vp_height = _height;
-    SSAOPassTex.Resize(_width, _height);
+    SSAOPassTex.resize(_width, _height);
     // noiseTex.Resize(_width, _height);
     contextSetup();
 }
@@ -53,9 +53,7 @@ void SSAOPass::render(RenderParameters &renderParameters,
     static auto ssaoKernel = Random::GenerateSSAOKernel();
 
     auto ssaoNoise = Random::GenerateNoise();
-    noiseTex.SetData(&ssaoNoise[0]);
-
-    shaderUI->render();
+    noiseTex.setData(&ssaoNoise[0]);
 
     glViewport(0, 0, vp_width, vp_height);
 
@@ -69,10 +67,8 @@ void SSAOPass::render(RenderParameters &renderParameters,
     shaders.setInt("width", vp_width);
     shaders.setInt("height", vp_height);
 
-    shaders.setInt("kernelSize", shaderUI->kernelSize);
-    shaders.setFloat("radius", shaderUI->radius);
-    shaders.setFloat("intensity", shaderUI->intensity);
-    shaders.setFloat("bias", shaderUI->bias);
+    shaderSetting->setShaderUniforms(shaders);
+    shaderSetting->renderUI();
 
     for (unsigned int i = 0; i < 64; ++i)
     {
@@ -84,12 +80,8 @@ void SSAOPass::render(RenderParameters &renderParameters,
     shaders.setTextureAuto(gViewPosition, GL_TEXTURE_2D, 0, "gViewPosition");
     shaders.setTextureAuto(noiseTex.ID, GL_TEXTURE_2D, 0, "texNoise");
 
-    shaders.setUniform3fv("eyePos", cam.getPosition());
-    shaders.setFloat("farPlane", cam.getFarPlane());
-
+    cam.setToShader(shaders);
     cam.resize(vp_width, vp_height);
-    cam.setPerspectiveMatrix(shaders);
-    cam.setViewMatrix(shaders);
 
     Renderer::DrawQuad();
 }
@@ -111,7 +103,7 @@ SSAOBlurPass::~SSAOBlurPass()
 void SSAOBlurPass::initializeGLResources()
 {
     glGenFramebuffers(1, &FBO);
-    blurPassTex.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    blurPassTex.generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
 }
 
 void SSAOBlurPass::cleanUpGLResources()
@@ -124,7 +116,7 @@ void SSAOBlurPass::resize(int _width, int _height)
     vp_width = _width;
     vp_height = _height;
 
-    blurPassTex.Resize(vp_width, vp_height);
+    blurPassTex.resize(vp_width, vp_height);
 
     contextSetup();
 }

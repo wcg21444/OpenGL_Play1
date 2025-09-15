@@ -166,6 +166,13 @@ int main()
 
         scene.update();
 
+        for(LightSource& light : allLights.dirLights){
+            light.update();
+        }
+        for(LightSource& light : allLights.pointLights){
+            light.update();
+        }
+
         ImGui::Render();
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

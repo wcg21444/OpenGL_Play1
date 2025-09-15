@@ -3,28 +3,8 @@
 out vec4 LightResult;
 in vec2 TexCoord;
 
-struct DirLight
-{
-    vec3 pos;
-    vec3 intensity;
-    mat4 spaceMatrix;
-    sampler2D depthMap;
-    float farPlane;
-    float orthoScale;
-    sampler2D VSMTexture;
-    int useVSM;
-    sampler2D SATTexture;
-};
+#include "lightSource.glsl"
 
-struct PointLight
-{
-    vec3 pos;
-    vec3 intensity;
-    samplerCube depthCubemap;
-    float farPlane;
-    samplerCube VSMCubemap;
-    int useVSM;
-};
 /*****************视口大小******************************************************************/
 uniform int width = 1600;
 uniform int height = 900;
@@ -90,18 +70,21 @@ uniform int Skybox;
 
 /*****************************天空大气计算********************************************************** */
 
-uniform vec4 betaMie = vec4(21e-6, 21e-6, 21e-6, 1.0f);
-uniform int maxStep;
-uniform float atmosphereDensity; // 大气密度
-uniform float MieDensity;
-uniform float gMie;
-uniform float absorbMie;
-uniform float MieIntensity;
-uniform float skyHeight;
-uniform float earthRadius;
-uniform float skyIntensity;
-uniform float HRayleigh;
-uniform float HMie;
+// uniform vec4 betaMie = vec4(21e-6, 21e-6, 21e-6, 1.0f);
+// uniform int maxStep;
+// uniform float atmosphereDensity; // 大气密度
+// uniform float MieDensity;
+// uniform float gMie;
+// uniform float absorbMie;
+// uniform float MieIntensity;
+// uniform float skyHeight;
+// uniform float earthRadius;
+// uniform float skyIntensity;
+// uniform float HRayleigh;
+// uniform float HMie;
+// uniform vec4 betaMieAbsorb;
+// uniform vec4 betaOzoneAbsorb;
+#include "SkyTexPass/skyUniforms.glsl"
 uniform sampler2D transmittanceLUT;
 
 #include "SkyTexPass/geometry.glsl"

@@ -49,25 +49,30 @@ void PointLight::generateShadowTexResource()
 {
     if (depthCubemap->ID == 0)
     {
-        depthCubemap->SetWrapMode(GL_CLAMP_TO_EDGE);
-        depthCubemap->Generate(texResolution, texResolution, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, GL_NEAREST, GL_NEAREST, false);
+        depthCubemap->setWrapMode(GL_CLAMP_TO_EDGE);
+        depthCubemap->generate(texResolution, texResolution, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, GL_NEAREST, GL_NEAREST, false);
     }
     if (VSMCubemap->ID == 0 && useVSM)
     {
-        VSMCubemap->SetWrapMode(GL_CLAMP_TO_EDGE);
-        VSMCubemap->Generate(texResolution, texResolution, GL_RGBA32F, GL_RGBA, GL_FLOAT, GL_NEAREST, GL_NEAREST, false);
+        VSMCubemap->setWrapMode(GL_CLAMP_TO_EDGE);
+        VSMCubemap->generate(texResolution, texResolution, GL_RGBA32F, GL_RGBA, GL_FLOAT, GL_NEAREST, GL_NEAREST, false);
     }
 }
 
 void PointLight::setPosition(glm::vec3 &_position)
 {
     position = _position;
-    cubemapParam->update(position);
+    update();
 }
 
 glm::vec3 PointLight::getPosition() const
 {
     return position;
+}
+void PointLight::update()
+{
+    cubemapParam->update(position);
+
 }
 float PointLight::getFarPlane() const
 {

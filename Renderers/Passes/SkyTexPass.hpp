@@ -20,9 +20,7 @@ public:
     SkyTexPass(std::string _vs_path, std::string _fs_path, /*  std::string _gs_path, */ int _cubemapSize);
     ~SkyTexPass();
     void contextSetup() override;
-
-    void render(PointLight &light, Scene &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix);
-
+    
     void resize(int _width, int _height) override;
 
     void render(
@@ -40,9 +38,9 @@ private:
     void initializeGLResources() override
     {
         glGenFramebuffers(1, &FBO);
-        lutTex.SetFilterMin(GL_LINEAR);
-        lutTex.SetWrapMode(GL_CLAMP_TO_EDGE);
-        lutTex.Generate(vp_width, vp_height, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL, false); // 使用32F,否则地平线出走样严重
+        lutTex.setFilterMin(GL_LINEAR);
+        lutTex.setWrapMode(GL_CLAMP_TO_EDGE);
+        lutTex.generate(vp_width, vp_height, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL, false); // 使用32F,否则地平线出走样严重
     }
     void cleanUpGLResources() override
     {
@@ -74,7 +72,7 @@ public:
     {
         vp_width = _width;
         vp_height = _height;
-        lutTex.Resize(_width, _height);
+        lutTex.resize(_width, _height);
         contextSetup();
     }
     unsigned int getTextures()
@@ -94,7 +92,7 @@ private:
     void initializeGLResources()
     {
         glGenFramebuffers(1, &FBO);
-        skyEnvmapTex.Generate(cubemapSize, cubemapSize, GL_RGBA16F, GL_RGBA, GL_FLOAT, GL_LINEAR, GL_LINEAR, false);
+        skyEnvmapTex.generate(cubemapSize, cubemapSize, GL_RGBA16F, GL_RGBA, GL_FLOAT, GL_LINEAR, GL_LINEAR, false);
     }
     void cleanUpGLResources() override { glDeleteFramebuffers(1, &FBO); }
 

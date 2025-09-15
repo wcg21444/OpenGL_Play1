@@ -134,6 +134,7 @@ public:
     float m_nearPlane;
     float m_farPlane;
 
+    OrthoFrustum(){}
     OrthoFrustum(const glm::vec3 &position, const glm::vec3 &front, const glm::vec3 &up,
                  float left, float right, float bottom, float top,
                  float nearPlane, float farPlane)

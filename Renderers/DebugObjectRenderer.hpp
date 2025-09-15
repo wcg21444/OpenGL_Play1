@@ -6,7 +6,7 @@
 #include <memory>
 class DebugObjectPass;
 class Camera;
-using DebugObjectDrawCall = std::function<void(Shader &shaders, glm::mat4 modelMatrix)>;
+using DebugObjectDrawCall = std::function<void(Shader &debugObjectShaders)>;
 
 // 辅助对象渲染器. 单独使用一条渲染管线
 // 不应该存储任何渲染参数状态,所有状态都应该在调用时传入

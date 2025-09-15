@@ -63,7 +63,7 @@ namespace GUI
 
         ImVec2 size;
         ImVec2 pos;
-        ImGui::Begin("Scene", 0);//窗口,子窗口名称必须和RendererOutuputManager中一致
+        ImGui::Begin("Scene", 0); // 窗口,子窗口名称必须和RendererOutuputManager中一致
         {
             ImGui::BeginChild("Output");
             size = ImGui::GetWindowSize();
@@ -325,7 +325,7 @@ namespace GUI
 
     static void RenderSwitchCombo(RenderManager &renderManager)
     {
-        static const char *modes[] = { "GBuffer", "CubemapUnfold" };
+        static const char *modes[] = {"GBuffer", "CubemapUnfold"};
         static int current_mode = 0;
         static int prev_mode = current_mode;
         ImGui::Combo("Mode", &current_mode, modes, IM_ARRAYSIZE(modes));
@@ -385,43 +385,43 @@ namespace GUI
     static void displaySceneHierarchy(Scene &scene)
     {
 
-/*                 // 列表显示所有对象
-        for (int i = 0; i < scene.size(); ++i)
-        {
-            bool isSelected = (selectedIndex == i);
-            if (ImGui::Selectable(scene[i]->name.c_str(), isSelected))
-            {
-                if (selectedIndex != i)
+        /*                 // 列表显示所有对象
+                for (int i = 0; i < scene.size(); ++i)
                 {
-                    handleControl = HandleControl::ModelControl;
-                    selectedIndex = i;
-                }
-                else
-                {
-                    selectedIndex = -1;
-                }
-            }
+                    bool isSelected = (selectedIndex == i);
+                    if (ImGui::Selectable(scene[i]->name.c_str(), isSelected))
+                    {
+                        if (selectedIndex != i)
+                        {
+                            handleControl = HandleControl::ModelControl;
+                            selectedIndex = i;
+                        }
+                        else
+                        {
+                            selectedIndex = -1;
+                        }
+                    }
 
-            // 右键菜单
-            if (ImGui::BeginPopupContextItem())
-            {
-                if (ImGui::MenuItem("Delete"))
-                {
-                    if (selectedIndex == i)
-                        selectedIndex = -1;
-                    scene.erase(scene.begin() + i);
-                    ImGui::EndPopup();
-                    break;
-                }
-                ImGui::EndPopup();
-            }
-            if (selectedIndex >= 0 && handleControl == ModelControl)
-            {
-                ObjectHandle(*scene[selectedIndex].get());
-            }
-        } */
-        //将selectedIndex 遍历方法修改为ID方法
-        for (auto&& [id, obj] : scene)
+                    // 右键菜单
+                    if (ImGui::BeginPopupContextItem())
+                    {
+                        if (ImGui::MenuItem("Delete"))
+                        {
+                            if (selectedIndex == i)
+                                selectedIndex = -1;
+                            scene.erase(scene.begin() + i);
+                            ImGui::EndPopup();
+                            break;
+                        }
+                        ImGui::EndPopup();
+                    }
+                    if (selectedIndex >= 0 && handleControl == ModelControl)
+                    {
+                        ObjectHandle(*scene[selectedIndex].get());
+                    }
+                } */
+        // 将selectedIndex 遍历方法修改为ID方法
+        for (auto &&[id, obj] : scene)
         {
             bool isSelected = (selectedIndex == id);
             if (ImGui::Selectable(obj->name.c_str(), isSelected))
@@ -450,8 +450,7 @@ namespace GUI
                 }
                 ImGui::EndPopup();
             }
-            if (selectedIndex == id
-                && handleControl == ModelControl)
+            if (selectedIndex == id && handleControl == ModelControl)
             {
                 ObjectHandle(*obj.get());
             }
@@ -471,7 +470,7 @@ namespace GUI
                 {
                     ModelLoader::loadFile(std::string(path)); // UI只负责触发信号
                 }
-                fileSelector.ClearPaths(); 
+                fileSelector.ClearPaths();
             }
             ImGui::End();
         }
@@ -599,7 +598,7 @@ namespace GUI
     inline bool useVSSM = false;
     static bool DebugToggleUseVSSM()
     {
-        ImGui::Begin("Debug");
+        ImGui::Begin("DebugShadow");
         {
             ImGui::Checkbox("UseVSSM", &useVSSM);
 
@@ -610,7 +609,7 @@ namespace GUI
     inline bool useBias = false;
     static bool DebugToggleUseBias()
     {
-        ImGui::Begin("Debug");
+        ImGui::Begin("DebugShadow");
         {
             ImGui::Checkbox("UseBias", &useBias);
 
@@ -621,7 +620,7 @@ namespace GUI
     inline bool useComputeShaderAccelerate = true;
     static bool DebugToggleUseComputeShaderAccelerate()
     {
-        ImGui::Begin("Debug");
+        ImGui::Begin("DebugShadow");
         {
             ImGui::Checkbox("UseCSAccelerate", &useComputeShaderAccelerate);
 
@@ -632,7 +631,7 @@ namespace GUI
     static float DebugVSSMKernelSize()
     {
         static float VSSMKernelSize = 1.0f;
-        ImGui::Begin("Debug");
+        ImGui::Begin("DebugShadow");
         {
             ImGui::DragFloat("VSSM Kernel Size", &VSSMKernelSize, 0.01f, 0.0f);
         }
@@ -642,7 +641,7 @@ namespace GUI
     static int DebugVSMKernelSize()
     {
         static int VSMKernelSize = 8;
-        ImGui::Begin("Debug");
+        ImGui::Begin("DebugShadow");
         {
             ImGui::DragInt("VSM Kernel Size", &VSMKernelSize, 2, 32);
         }
@@ -652,7 +651,7 @@ namespace GUI
     inline bool usePCSS = true;
     static bool DebugToggleUsePCSS()
     {
-        ImGui::Begin("Debug");
+        ImGui::Begin("DebugShadow");
         {
             ImGui::Checkbox("UsePCSS", &usePCSS);
 
@@ -661,4 +660,26 @@ namespace GUI
         return usePCSS;
     }
 
+    inline bool drawWireframe = false;
+    static bool DebugToggleDrawWireframe()
+    {
+        ImGui::Begin("DebugWireframe");
+        {
+            ImGui::Checkbox("DrawWireframe", &drawWireframe);
+
+            ImGui::End();
+        }
+        return drawWireframe;
+    }
+    inline bool drawCameraFrustumWireframe = false;
+    static bool DebugToggleDrawFrustum()
+    {
+        ImGui::Begin("DebugWireframe");
+        {
+            ImGui::Checkbox("DrawFrustum", &drawCameraFrustumWireframe);
+
+            ImGui::End();
+        }
+        return drawCameraFrustumWireframe;
+    }
 }

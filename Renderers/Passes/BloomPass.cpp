@@ -1,7 +1,6 @@
 #include "BloomPass.hpp"
 #include "../../ShaderGUI.hpp"
 
-
 BloomPass::BloomPass(int _vp_width, int _vp_height, std::string _vs_path,
                      std::string _fs_path)
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path),
@@ -10,7 +9,7 @@ BloomPass::BloomPass(int _vp_width, int _vp_height, std::string _vs_path,
       blurPass2(_vp_width / 4, _vp_height / 4, "Shaders/screenQuad.vs", "Shaders/PostProcess/gaussianBlur.fs"),
       blurPass3(_vp_width / 8, _vp_height / 8, "Shaders/screenQuad.vs", "Shaders/PostProcess/gaussianBlur.fs"),
       blurPass4(_vp_width / 16, _vp_height / 16, "Shaders/screenQuad.vs", "Shaders/PostProcess/gaussianBlur.fs"),
-      shaderUI(std::make_unique<BloomShaderUI>())
+      shaderSetting(std::make_unique<BloomShaderSetting>())
 
 {
     initializeGLResources();
@@ -27,20 +26,20 @@ void BloomPass::initializeGLResources()
     // 生成帧缓冲对象 (FBO)
     glGenFramebuffers(1, &FBO);
     // 生成用于 Bloom 预处理的浮点纹理，以支持 HDR
-    bloomPassTex0.SetFilterMin(GL_LINEAR);
-    bloomPassTex0.Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    bloomPassTex0.setFilterMin(GL_LINEAR);
+    bloomPassTex0.generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
 
-    bloomPassTex1.SetFilterMin(GL_LINEAR);
-    bloomPassTex1.Generate(vp_width / 2, vp_height / 2, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    bloomPassTex1.setFilterMin(GL_LINEAR);
+    bloomPassTex1.generate(vp_width / 2, vp_height / 2, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
 
-    bloomPassTex2.SetFilterMin(GL_LINEAR);
-    bloomPassTex2.Generate(vp_width / 4, vp_height / 4, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    bloomPassTex2.setFilterMin(GL_LINEAR);
+    bloomPassTex2.generate(vp_width / 4, vp_height / 4, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
 
-    bloomPassTex3.SetFilterMin(GL_LINEAR);
-    bloomPassTex3.Generate(vp_width / 8, vp_height / 8, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    bloomPassTex3.setFilterMin(GL_LINEAR);
+    bloomPassTex3.generate(vp_width / 8, vp_height / 8, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
 
-    bloomPassTex4.SetFilterMin(GL_LINEAR);
-    bloomPassTex4.Generate(vp_width / 16, vp_height / 16, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+    bloomPassTex4.setFilterMin(GL_LINEAR);
+    bloomPassTex4.generate(vp_width / 16, vp_height / 16, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
 }
 
 void BloomPass::cleanUpGLResources()
@@ -70,11 +69,11 @@ void BloomPass::resize(int _width, int _height)
     vp_width = _width;
     vp_height = _height;
 
-    bloomPassTex0.Resize(vp_width, vp_height);
-    bloomPassTex1.Resize(vp_width / 2, vp_height / 2);
-    bloomPassTex2.Resize(vp_width / 4, vp_height / 4);
-    bloomPassTex3.Resize(vp_width / 8, vp_height / 8);
-    bloomPassTex4.Resize(vp_width / 16, vp_height / 16);
+    bloomPassTex0.resize(vp_width, vp_height);
+    bloomPassTex1.resize(vp_width / 2, vp_height / 2);
+    bloomPassTex2.resize(vp_width / 4, vp_height / 4);
+    bloomPassTex3.resize(vp_width / 8, vp_height / 8);
+    bloomPassTex4.resize(vp_width / 16, vp_height / 16);
 
     contextSetup();
     blurPass.resize(vp_width, vp_height);
@@ -101,8 +100,6 @@ void BloomPass::reloadCurrentShaders()
 void BloomPass::render(unsigned int screenTex)
 {
 
-    shaderUI->render();
-
     // 渲染bloomPassTex0
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bloomPassTex0.ID, 0);
@@ -115,8 +112,8 @@ void BloomPass::render(unsigned int screenTex)
     shaders.setInt("width", vp_width);
     shaders.setInt("height", vp_height);
 
-    shaders.setUniform("threshold", shaderUI->threshold);
-    shaders.setUniform("bloomIntensity", shaderUI->bloomIntensity);
+    shaderSetting->renderUI();
+    shaderSetting->setShaderUniforms(shaders);
 
     shaders.setTextureAuto(screenTex, GL_TEXTURE_2D, 0, "screenTex");
 
@@ -124,15 +121,15 @@ void BloomPass::render(unsigned int screenTex)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // 多重降采样高斯模糊
-    blurPass1.render(bloomPassTex0.ID, shaderUI->blurAmount, shaderUI->radius);
+    blurPass1.render(bloomPassTex0.ID, shaderSetting->blurAmount, shaderSetting->radius);
     blit(blurPass1.getOutputFBO(), bloomPassTex1.ID, vp_width / 2, vp_height / 2); // 将模糊降采样后的结果输出到下一级纹理
 
-    blurPass2.render(bloomPassTex1.ID, shaderUI->blurAmount, shaderUI->radius); // 1/2sz  -down sample-> 1/4sz
+    blurPass2.render(bloomPassTex1.ID, shaderSetting->blurAmount, shaderSetting->radius); // 1/2sz  -down sample-> 1/4sz
     blit(blurPass2.getOutputFBO(), bloomPassTex2.ID, vp_width / 4, vp_height / 4);
 
-    blurPass3.render(bloomPassTex2.ID, shaderUI->blurAmount, shaderUI->radius);
+    blurPass3.render(bloomPassTex2.ID, shaderSetting->blurAmount, shaderSetting->radius);
     blit(blurPass3.getOutputFBO(), bloomPassTex3.ID, vp_width / 8, vp_height / 8);
 
-    blurPass4.render(bloomPassTex3.ID, shaderUI->blurAmount, shaderUI->radius);
+    blurPass4.render(bloomPassTex3.ID, shaderSetting->blurAmount, shaderSetting->radius);
     blit(blurPass4.getOutputFBO(), bloomPassTex4.ID, vp_width / 16, vp_height / 16);
 }

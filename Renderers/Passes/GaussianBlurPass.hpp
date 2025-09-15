@@ -11,8 +11,8 @@ private:
     void initializeGLResources() override
     {
         glGenFramebuffers(2, pingpongFBO);
-        pingpongTex[0].Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
-        pingpongTex[1].Generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+        pingpongTex[0].generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
+        pingpongTex[1].generate(vp_width, vp_height, GL_RGBA16F, GL_RGBA, GL_FLOAT, NULL);
     }
     void cleanUpGLResources() override
     {
@@ -40,9 +40,9 @@ public:
 
             glFramebufferTexture2D(
                 GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongTex[i].ID, 0);
-            pingpongTex[i].SetFilterMax(GL_LINEAR);
-            pingpongTex[i].SetFilterMin(GL_LINEAR);
-            pingpongTex[i].SetWrapMode(GL_CLAMP_TO_EDGE);
+            pingpongTex[i].setFilterMax(GL_LINEAR);
+            pingpongTex[i].setFilterMin(GL_LINEAR);
+            pingpongTex[i].setWrapMode(GL_CLAMP_TO_EDGE);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
     }
@@ -56,8 +56,8 @@ public:
         }
         vp_width = _width;
         vp_height = _height;
-        pingpongTex[0].Resize(vp_width, vp_height);
-        pingpongTex[1].Resize(vp_width, vp_height);
+        pingpongTex[0].resize(vp_width, vp_height);
+        pingpongTex[1].resize(vp_width, vp_height);
 
         contextSetup();
     }

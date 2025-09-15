@@ -132,7 +132,7 @@ float computeDirLightShadowVSMSAT(vec3 fragPos, vec3 fragNormal, in DirLight dir
 // 求切比雪夫上界
 float chebyshev(vec2 moments, float currentDepth)
 {
-    const float MIN_VAR = 1e-11;
+    const float MIN_VAR = 1e-5;
     float variance = moments.y - moments.x * moments.x;
     variance = max(variance, MIN_VAR);
 
@@ -222,11 +222,11 @@ float computeDirLightShadowVSSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLi
     {
         return 0.0f;
     }
-    if (currentDepth <= moments.x)
+    if (currentDepth - moments.x <= 1e-3f)
     {
-        return 0.f; // 当前深度小于平均深度,认为没有遮挡
+        return 0.0f; // 当前深度小于平均深度,认为没有遮挡
     }
-    if (currentDepth <= 1e-5)
+    if (currentDepth <= 1e-6)
     {
         return 0.f; // 深度<=0 认为没有遮挡
     }
@@ -334,29 +334,23 @@ float computeDirLightShadowPCSS(vec3 fragPos, vec3 fragNormal, in DirLight dirLi
         // get depth of current fragment from light's perspective
         float currentDepth = projCoords.z;
 
-        float bias = 0.00003f;
+        float bias = dirLight.farPlane * dirLight.orthoScale * 1e-12;
 
         if (currentDepth - closestDepth - bias > 0)
         {
             occlusion_times++;
-            d += (currentDepth - closestDepth) * 2000; // 深度值换算与光源farplane数值有关
+            d += (currentDepth - closestDepth)* dirLight.farPlane; // 深度值换算与光源farplane数值有关
         }
     }
     d = d / occlusion_times;
-    // PCF Only
     float factor = 0.f;
     for (int j = 0; j < n_samples; ++j)
     {
         vec4 sampleOffset = dirLight.spaceMatrix * vec4(
                                                        TBN *
                                                            shadowSamples[j] *
-                                                           blurRadius * 20 * pow(d, 2),
+                                                           blurRadius * pow(d, 2),
                                                        0.0f);
-        // vec4 sampleOffset = dirLight.spaceMatrix * vec4(
-        //                                                TBN *
-        //                                                    shadowSamples[j] *
-        //                                                    blurRadius * 5.f,
-        //                                                0.0f);
         vec4 samplePosLightSpace = lightSpaceFragPos + sampleOffset; // Dir Light View Space
         vec3 projCoords = (samplePosLightSpace.xyz) / samplePosLightSpace.w;
         // transform to [0,1] range
@@ -373,9 +367,9 @@ float computeDirLightShadowPCSS(vec3 fragPos, vec3 fragNormal, in DirLight dirLi
 
         float cosine = dot(fragNormal, dirLight.pos) / length(fragNormal) / length(dirLight.pos);
         // float texel = 4e-5; // texel = (ortho_scale,farPlane)
-        float texel = dirLight.orthoScale * 5e-6;
+        float texel =1e-1/dirLight.farPlane;
 
-        float bias = 0.000003f;
+        float bias =  sqrt(1 - cosine * cosine) / cosine * texel;
         // check whether current frag pos is in shadow
         factor += currentDepth - closestDepth - bias > 0 ? 1.0f : 0.0f;
     }
