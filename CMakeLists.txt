@@ -24,7 +24,8 @@ Renderers
 Shading
 Renderers/Passes
 LightSource
-Utils)
+Utils
+Math)
 
 
 file(GLOB_RECURSE IMGUI_SRC 
@@ -58,6 +59,9 @@ file(GLOB SHADING_SRC
 file(GLOB LIGHT_SRC
     LightSource/*.cpp
 )
+file(GLOB MATH_SRC
+    Math/*.cpp
+)
 add_executable(${PROJECT_NAME}
  "main.cpp" 
  "LightSource/LightSource.cpp" 
@@ -69,6 +73,7 @@ ${UTILS_SRC}
 ${SHADING_SRC} 
 ${IMGUIZMO_SRC}
 ${LIGHT_SRC}
+${MATH_SRC}
 )
 
 

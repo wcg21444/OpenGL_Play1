@@ -81,6 +81,15 @@ public:
             throw std::runtime_error("Object with ID " + std::to_string(id) + " not found.");
         return *(it->second);
     }
+    auto getObject(const std::string &name) -> Object &
+    {
+        for (auto &[id, obj] : m_objectMap)
+        {
+            if (obj->name == name)
+                return *obj;
+        }
+        throw std::runtime_error("Object with name " + name + " not found.");
+    }
 
     /// @brief 通过ID删除对象
     void removeObject(size_t id)

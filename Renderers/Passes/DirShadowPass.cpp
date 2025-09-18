@@ -3,6 +3,7 @@
 #include "../../GUI.hpp"
 #include "../../Objects/FrustumWireframe.hpp"
 #include "../DebugObjectRenderer.hpp"
+#include "../../Utils/Random.hpp"
 DirShadowPass::DirShadowPass(std::string _vs_path, std::string _fs_path)
     : Pass(0, 0, _vs_path, _fs_path)
 {
@@ -58,13 +59,13 @@ void DirShadowPass::renderToTexture(
     Renderer::DrawScene(scene, model, shaders);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    if (GUI::DebugToggleDrawFrustum())
-    {
-        DebugObjectRenderer::AddDrawCall([&](Shader &debugObjectShaders)
-                                         { DebugObjectRenderer::DrawFrustum(
-                                               OrthoFrustum(light.getlightView(), light.getlightProjection()),
-                                               shaders); });
-    }
+    // if (GUI::drawCameraFrustumWireframe)
+    // {
+    //     DebugObjectRenderer::AddDrawCall([&](Shader &debugObjectShaders)
+    //                                      { DebugObjectRenderer::DrawFrustum(
+    //                                            OrthoFrustum(light.getlightView(), light.getlightProjection()),
+    //                                            shaders); });
+    // }
 }
 
 void DirShadowPass::render(DirShadowUnit &shadowUnit, Scene &scene, glm::mat4 &model)
@@ -84,10 +85,19 @@ void DirShadowPass::render(DirShadowUnit &shadowUnit, Scene &scene, glm::mat4 &m
     Renderer::DrawScene(scene, model, shaders);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    if (GUI::DebugToggleDrawFrustum())
+
+    // if (GUI::drawCameraFrustumWireframe)
+    // {
+    //     DebugObjectRenderer::AddDrawCall([&](Shader &debugObjectShaders)
+    //                                      { DebugObjectRenderer::DrawFrustum(shadowUnit.frustum, debugObjectShaders); });
+    // }
+}
+
+void DirShadowPass::render(CascadedShadowComponent &CSMComponent, Scene &scene, glm::mat4 &model)
+{
+    for (auto &unit : CSMComponent.shadowUnits)
     {
-        DebugObjectRenderer::AddDrawCall([&](Shader &debugObjectShaders)
-                                         { DebugObjectRenderer::DrawFrustum(shadowUnit.frustum, debugObjectShaders); });
+        render(unit, scene, model);
     }
 }
 

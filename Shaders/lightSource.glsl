@@ -1,22 +1,4 @@
-
-struct DirShadowUnit
-{
-    mat4 spaceMatrix;
-    sampler2D depthMap;
-    sampler2D VSMTexture;
-    sampler2D SATTexture;
-    float farPlane;
-    float nearPlane;
-    float orthoScale;
-};
-
-struct PointShadowUnit
-{
-    samplerCube depthCubemap;
-    samplerCube VSMCubemap;
-    float farPlane;
-    float nearPlane;
-};
+#include "ShadowMapping/shadowUnit.glsl"
 
 struct DirLight
 {

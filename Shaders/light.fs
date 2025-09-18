@@ -94,6 +94,8 @@ uniform sampler2D transmittanceLUT;
 #include "Raymarching/raymarching.glsl"
 /*******************************Lighting******************************************************/
 #include "ShadowMapping/shadow.glsl"
+#include "ShadowMapping/cascadedShadow.glsl"
+uniform CSMComponent CSM;
 
 vec3 fragViewSpaceDir(vec2 uv)
 {
@@ -143,29 +145,32 @@ vec3 dirLightDiffuse(vec3 fragPos, vec3 n)
         vec3 l = normalize(dirLightArray[i].pos);
         float rr = dot(l, l);
         float litFactor = 0.0f;
-        if (dirLightArray[i].useVSM == 0)
-        {
+        // if (dirLightArray[i].useVSM == 0)
+        // {
 
-            if (usePCSS == 1)
-            {
-                litFactor = 1 - computeDirLightShadowPCSS(fragPos, n, dirLightArray[i]);
-            }
-            else
-            {
-                litFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
-            }
-        }
-        else
-        {
-            if (useVSSM == 1)
-            {
-                litFactor = 1 - computeDirLightShadowVSSM(fragPos, n, dirLightArray[i]);
-            }
-            else
-            {
-                litFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
-            }
-        }
+        //     if (usePCSS == 1)
+        //     {
+        //         litFactor = 1 - computeDirLightShadowPCSS(fragPos, n, dirLightArray[i]);
+        //     }
+        //     else
+        //     {
+        //         litFactor = 1 - computeDirLightShadow(fragPos, n, dirLightArray[i]);
+        //     }
+        // }
+        // else
+        // {
+        //     if (useVSSM == 1)
+        //     {
+        //         litFactor = 1 - computeDirLightShadowVSSM(fragPos, n, dirLightArray[i]);
+        //     }
+        //     else
+        //     {
+        //         litFactor = 1 - computeDirLightShadowVSM(fragPos, n, dirLightArray[i]);
+        //     }
+        // }
+        
+        litFactor = 1-CSMShadow(fragPos, n, CSM, view);
+        
         if (i == 0) // 太阳光处理
         {
             diffuse += (litFactor)*dirLightArray[i].intensity / rr * max(0.f, dot(n, l)) * sunlightDecay;

@@ -11,6 +11,7 @@
 #include "Objects/Object.hpp"
 #include "Objects/Plane.hpp"
 #include "Objects/Sphere.hpp"
+#include "Objects/Arrow.hpp"
 #include "Objects/FrustumWireframe.hpp"
 #include "Renderers/RendererManager.hpp"
 #include "Shader.hpp"
@@ -166,10 +167,12 @@ int main()
 
         scene.update();
 
-        for(LightSource& light : allLights.dirLights){
+        for (LightSource &light : allLights.dirLights)
+        {
             light.update();
         }
-        for(LightSource& light : allLights.pointLights){
+        for (LightSource &light : allLights.pointLights)
+        {
             light.update();
         }
 

@@ -30,4 +30,5 @@ public:
     static void CheckInitialized();
     static void DrawFrustum(const FrustumBase &frustum, Shader &shaders, glm::vec4 color = glm::vec4(1.0f), glm::mat4 modelMatrix = glm::identity<glm::mat4>());
     static void DrawCube(Shader &shaders, glm::vec4 color = glm::vec4(1.0f), glm::mat4 modelMatrix = glm::identity<glm::mat4>());
+    static void DrawArrow(Shader &shaders, glm::vec3 start, glm::vec3 end, float thickness, glm::vec4 color = glm::vec4(1.0f), glm::mat4 modelMatrix = glm::identity<glm::mat4>());
 };

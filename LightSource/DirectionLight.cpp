@@ -22,13 +22,15 @@ DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_po
         _texResolution,
         OrthoFrustum(lightView, lightProjection));
 
+    CSMComponent = std::make_shared<CascadedShadowComponent>(6, _texResolution, useVSM);
+
     lightSpaceMatrix = lightProjection * lightView;
 }
 
 void DirectionLight::setSunlightToShader(Shader &shaders)
 {
-    //TODO 这一部分逻辑冗余.  单光源和多光源设置
-    // 为skyTex保留
+    // TODO 这一部分逻辑冗余.  单光源和多光源设置
+    //  为skyTex保留
     shaders.setUniform3fv("dirLightPos", position);
     shaders.setUniform3fv("dirLightIntensity", combIntensity);
 }
@@ -56,6 +58,7 @@ void DirectionLight::setToShaderLightArray(Shader &shaders, size_t index)
     shaders.setMat4(std::format("dirLightArray[{}].spaceMatrix", index), shadowUnit.frustum.getProjViewMatrix());
     shaders.setUniform(std::format("dirLightArray[{}].farPlane", index), shadowUnit.frustum.getFarPlane());
     shaders.setUniform(std::format("dirLightArray[{}].orthoScale", index), orthoScale);
+    CSMComponent->setToShader(shaders);
 }
 void DirectionLight::setPosition(glm::vec3 &_position)
 {
@@ -84,6 +87,9 @@ void DirectionLight::update()
 
 void DirectionLight::generateShadowTexResource()
 {
+    shadowUnit.generateDepthTexture(GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT);
+    CSMComponent->generateShadowResource();
+
     if (depthTexture->ID == 0)
     {
         depthTexture->setFilterMax(GL_NEAREST);
@@ -91,7 +97,7 @@ void DirectionLight::generateShadowTexResource()
         depthTexture->setWrapMode(GL_CLAMP_TO_EDGE);
         depthTexture->generate(texResolution, texResolution, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, NULL, false);
     }
-    shadowUnit.generateDepthTexture(GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT);
+
     if (useVSM && VSMTexture->ID == 0)
     {
         VSMTexture->setFilterMax(GL_LINEAR);

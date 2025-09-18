@@ -69,4 +69,12 @@ namespace Random
         }
         return kernel;
     }
+    inline glm::vec3 GenerateRandomColor()
+    {
+        return glm::vec3(randomFloats(generator), randomFloats(generator), randomFloats(generator));
+    }
+    inline glm::vec4 GenerateRandomColor(float alpha)
+    {
+        return glm::vec4(randomFloats(generator), randomFloats(generator), randomFloats(generator), alpha);
+    }
 }

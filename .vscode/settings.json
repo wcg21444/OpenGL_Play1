@@ -100,7 +100,8 @@
         "coroutine": "cpp",
         "regex": "cpp",
         "source_location": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "*.inc": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"

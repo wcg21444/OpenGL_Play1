@@ -10,7 +10,7 @@ RenderManager::RenderManager()
     gbufferRenderer = std::make_shared<GBufferRenderer>();
     cubemapUnfoldRenderer = std::make_shared<CubemapUnfoldRenderer>();
     DebugObjectRenderer::Initialize(); // camera will be set later
-    switchMode(gbuffer); // default
+    switchMode(gbuffer);               // default
 }
 
 void RenderManager::clearContext()
@@ -81,6 +81,7 @@ void RenderManager::render(std::shared_ptr<RenderParameters> renderParameters)
     if (currentRenderer)
     {
         currentRenderer->render(*renderParameters);
+
         DebugObjectRenderer::Render(renderParameters->cam);
     }
     else

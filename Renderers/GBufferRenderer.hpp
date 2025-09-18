@@ -17,6 +17,8 @@
 #include "Passes/CubemapUnfoldPass.hpp"
 #include "Passes/SkyTexPass.hpp"
 #include "Passes/DownSamplePass.hpp"
+#include "Passes/Texture2DArrayTestPass.hpp"
+#include "Passes/TextureArrayUnfoldPass.hpp"
 
 #include "../../RendererGUI.hpp"
 
@@ -60,6 +62,10 @@ private:
     PostProcessPass postProcessPass;
     BloomPass bloomPass;
 
+    Texture2DArrayTestPass texture2DArrayTestPass;
+
+    TextureArrayUnfoldPass textureArrayUnfoldPass;
+
     GBufferRendererGUI rendererGUI;
 
 public:
@@ -79,7 +85,9 @@ public:
           dirShadowVSMPass(DirShadowVSMPass("Shaders/screenQuad.vs", "Shaders/ShadowMapping/VSMPreprocessDir.fs")),
           pointShadowVSMPass(PointShadowVSMPass("Shaders/cubemapSphere.vs", "Shaders/ShadowMapping/VSMPreprocessPoint.fs")),
           skyEnvmapPass(SkyEnvmapPass("Shaders/cubemapSphere.vs", "Shaders/SkyTexPass/skyEnvmap.fs", 16)),
-          dirShadowSATPass(DirShadowSATPass("Shaders/screenQuad.vs", "Shaders/ShadowMapping/SATPreprocessDir.fs"))
+          dirShadowSATPass(DirShadowSATPass("Shaders/screenQuad.vs", "Shaders/ShadowMapping/SATPreprocessDir.fs")),
+          texture2DArrayTestPass(Texture2DArrayTestPass(512, 512, "Shaders/screenQuad.vs", "Shaders/Texture2DArray/read.fs")),
+          textureArrayUnfoldPass(TextureArrayUnfoldPass(512, 512, "Shaders/screenQuad.vs", "Shaders/Texture2DArray/unfoldPass.fs"))
     {
     }
     void reloadCurrentShaders() override
@@ -100,6 +108,8 @@ public:
         pointShadowVSMPass.reloadCurrentShaders();
         skyEnvmapPass.reloadCurrentShaders();
         dirShadowSATPass.reloadCurrentShaders();
+        texture2DArrayTestPass.reloadCurrentShaders();
+        textureArrayUnfoldPass.reloadCurrentShaders();
         contextSetup();
     }
 
@@ -175,6 +185,7 @@ private:
             }
         }
 
+        GUI::DebugToggleDrawFrustum();
         // 平行光源阴影贴图
         for (auto &light : dirLights)
         {
@@ -193,16 +204,44 @@ private:
                 //     model,
                 //     light.texResolution,
                 //     light.texResolution);
+
+                Camera camTmp(1600, 900, 1.0f, 1.0f);
+                auto camFrustum = camTmp.getFrustum();
+                if (light.CSMComponent)
+                {
+                    // light.CSMComponent->update(-glm::normalize(light.getPosition()), camFrustum);
+                    light.CSMComponent->update(-glm::normalize(light.getPosition()), cam.getFrustum());
+                }
+                dirShadowPass.render(*light.CSMComponent, scene, model);
+
+                std::vector<GLuint> shadowTexIDs;
+
+                for (int i = 0; i <4; ++i)
+                {
+                    shadowTexIDs.push_back(light.CSMComponent->shadowUnits[i].depthTexture->ID);
+                    if (GUI::drawCameraFrustumWireframe)
+                    {
+                        DebugObjectRenderer::AddDrawCall([i,light](Shader &debugObjectShaders)
+                                                         { DebugObjectRenderer::DrawFrustum(light.CSMComponent->shadowUnits[i].frustum, debugObjectShaders, glm::vec4(1.0f-i*0.2f, i * 0.2f, i * 0.2f, 0.8f)); });
+                    }
+                }
+                rendererGUI.renderPassInspector(shadowTexIDs);
+
                 dirShadowPass.render(light.shadowUnit, scene, model);
 
-                Camera camTmp(1600,900,1.0f,1.0f);
-                auto camFrustum = camTmp.getFrustum();
-                auto subCamFrustum = camTmp.getFrustum().getSubFrustum(camFrustum.getNearPlane(), 10.f);
-                auto tightOrtho = OrthoFrustum::GenTightFtustum(subCamFrustum.getCorners(), light.shadowUnit.frustum);
-                DebugObjectRenderer::AddDrawCall([camTmp,tightOrtho,subCamFrustum](Shader &debugObjectShaders) -> void {
-                    DebugObjectRenderer::DrawFrustum(tightOrtho,debugObjectShaders);
-                    DebugObjectRenderer::DrawFrustum(subCamFrustum,debugObjectShaders);
-                });
+                // Camera camTmp(1600, 900, 1.0f, 1.0f);
+                // auto camFrustum = camTmp.getFrustum();
+                // auto subCamFrustum = camTmp.getFrustum().getSubFrustum(camFrustum.getNearPlane(), 100.f);
+                // auto tightOrtho = OrthoFrustum::GenTightFtustum(
+                //     subCamFrustum.getCorners(),
+                //     light.shadowUnit.frustum.getFront(),
+                //     light.shadowUnit.frustum.getUp());
+                // DebugObjectRenderer::AddDrawCall(
+                //     [camTmp, tightOrtho, subCamFrustum](Shader &debugObjectShaders) -> void
+                //     {
+                //         DebugObjectRenderer::DrawFrustum(tightOrtho, debugObjectShaders);
+                //         DebugObjectRenderer::DrawFrustum(subCamFrustum, debugObjectShaders);
+                //     });
                 if (light.useVSM)
                 {
                     if (GUI::useVSSM)
@@ -300,8 +339,17 @@ private:
         // rendererGUI.renderPassInspector({dirLights[0].depthTexture->ID, dirLights[0].SATTexture->ID});
         // rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
 
-        rendererGUI.renderPassInspector({dirLights[0].shadowUnit.depthTexture->ID,
-                                         dirLights[0].depthTexture->ID});
+        // rendererGUI.renderPassInspector({dirLights[0].shadowUnit.depthTexture->ID,
+        //                                  dirLights[0].depthTexture->ID});
+
+        // texture2DArrayTestPass.render();
+        // auto [ID, Depth] = texture2DArrayTestPass.getTextureArrayID();
+
+        // auto texture2DArray = texture2DArrayTestPass.getTextureArray();
+        // textureArrayUnfoldPass.render(*texture2DArray);
+        // auto unfoldTextures = textureArrayUnfoldPass.getTexturesID();
+        // rendererGUI.renderPassInspector(unfoldTextures);
+
         ImGui::Begin("RendererGUI");
         {
             ImGui::DragFloat("OrthoScale", &allLights.dirLights[0].orthoScale, 5.f, 1e3);

@@ -107,6 +107,7 @@ public:
     std::shared_ptr<Texture2D> VSMTexture;
     std::shared_ptr<Texture2D> SATTexture;
     DirShadowUnit shadowUnit;
+    std::shared_ptr<CascadedShadowComponent> CSMComponent;
     bool useVSM = false;
 
     float nearPlane;

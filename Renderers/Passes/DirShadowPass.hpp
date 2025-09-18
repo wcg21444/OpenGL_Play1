@@ -34,6 +34,7 @@ public:
         int height);
 
     void render(DirShadowUnit &shadowUnit, Scene &scene, glm::mat4 &model);
+    void render(CascadedShadowComponent &CSMComponent, Scene &scene, glm::mat4 &model);
 };
 
 class DirShadowVSMPass : public Pass
@@ -81,7 +82,7 @@ public:
     void resize(int _width, int _height) override;
 
     void renderToSATTexture(const DirectionLight &light, int width, int height);
-    void renderToSATTexture( DirShadowUnit &shadowUnit);
+    void renderToSATTexture(DirShadowUnit &shadowUnit);
 
     void computeSAT(const unsigned int depthTextureID, int width, int height);
 };

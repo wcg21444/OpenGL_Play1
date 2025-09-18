@@ -1,3 +1,5 @@
+#include "VSSMMath.glsl"
+
 float computeDirLightShadowVSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLight)
 {
     if (DirShadow == 0)
@@ -8,8 +10,8 @@ float computeDirLightShadowVSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLig
     vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
     projCoords = projCoords * 0.5 + 0.5;
 
-    if(projCoords.x < 0.0 || projCoords.x > 1.0 ||
-       projCoords.y < 0.0 || projCoords.y > 1.0)
+    if (projCoords.x < 0.0 || projCoords.x > 1.0 ||
+        projCoords.y < 0.0 || projCoords.y > 1.0)
     {
         return 0.0;
     }
@@ -39,20 +41,6 @@ float computeDirLightShadowVSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLig
     return 1 - Pmax;
 }
 
-vec2 SATLookUp(in sampler2D SAT, in vec2 uvMin, in vec2 uvMax)
-{
-    vec2 A = uvMin;
-    vec2 B = vec2(uvMax.x, uvMin.y);
-    vec2 C = vec2(uvMin.x, uvMax.y);
-    vec2 D = uvMax;
-    return texture(SAT, D).rg - texture(SAT, B).rg - texture(SAT, C).rg + texture(SAT, A).rg;
-}
-// 还原深度偏移
-float reverseDepthBias(float moment)
-{
-    return moment + 0.5f;
-}
-
 float computeDirLightShadowVSMSAT(vec3 fragPos, vec3 fragNormal, in DirLight dirLight)
 {
     if (DirShadow == 0)
@@ -63,8 +51,8 @@ float computeDirLightShadowVSMSAT(vec3 fragPos, vec3 fragNormal, in DirLight dir
     vec3 projCoords = (fragPosLightSpace.xyz) / fragPosLightSpace.w;
     projCoords = projCoords * 0.5 + 0.5;
 
-    if(projCoords.x < 0.0 || projCoords.x > 1.0 ||
-       projCoords.y < 0.0 || projCoords.y > 1.0)
+    if (projCoords.x < 0.0 || projCoords.x > 1.0 ||
+        projCoords.y < 0.0 || projCoords.y > 1.0)
     {
         return 0.0;
     }
@@ -73,7 +61,7 @@ float computeDirLightShadowVSMSAT(vec3 fragPos, vec3 fragNormal, in DirLight dir
     float currentDepth = projCoords.z - bias;
     // float currentDepth = projCoords.z;
 
-    if (currentDepth<0.0f||currentDepth > 1.0)
+    if (currentDepth < 0.0f || currentDepth > 1.0)
     {
         return 0.0f;
     }
@@ -129,42 +117,6 @@ float computeDirLightShadowVSMSAT(vec3 fragPos, vec3 fragNormal, in DirLight dir
     return 1 - Pmax;
 }
 
-// 求切比雪夫上界
-float chebyshev(vec2 moments, float currentDepth)
-{
-    const float MIN_VAR = 1e-5;
-    float variance = moments.y - moments.x * moments.x;
-    variance = max(variance, MIN_VAR);
-
-    float d = currentDepth - moments.x;
-    float Pmax = variance / (variance + d * d);
-    return Pmax;
-}
-vec2 getVSSMMoments(sampler2D satTex, vec2 uv, float kernelSize)
-{
-    vec2 stride = 1.0 / vec2(textureSize(satTex, 0));
-
-    float xmax = uv.x + kernelSize * stride.x;
-    float xmin = uv.x - kernelSize * stride.x;
-    float ymax = uv.y + kernelSize * stride.y;
-    float ymin = uv.y - kernelSize * stride.y;
-
-    vec4 A = texture(satTex, vec2(xmin, ymin));
-    vec4 B = texture(satTex, vec2(xmax, ymin));
-    vec4 C = texture(satTex, vec2(xmin, ymax));
-    vec4 D = texture(satTex, vec2(xmax, ymax));
-
-    float sPenumbra = 2.0 * kernelSize;
-
-    vec4 moments = (D + A - B - C) / float(sPenumbra * sPenumbra);
-    if (useBias == 1)
-    {
-        moments.x = reverseDepthBias(moments.x);
-        moments.y = reverseDepthBias(moments.y);
-    }
-    return moments.rg;
-}
-
 // 返回阴影系数
 float computeDirLightShadowVSSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLight)
 {
@@ -180,7 +132,7 @@ float computeDirLightShadowVSSM(vec3 fragPos, vec3 fragNormal, in DirLight dirLi
     float bias = sqrt(1 - cosine * cosine) / cosine * 1e-12;
     float currentDepth = projCoords.z - bias;
 
-    float lightSize = VSSMKernelSize*5.f;
+    float lightSize = VSSMKernelSize * 5.f;
 
     float searchSize = lightSize;
     vec2 moments = getVSSMMoments(dirLight.SATTexture, projCoords.xy, searchSize);
@@ -339,7 +291,7 @@ float computeDirLightShadowPCSS(vec3 fragPos, vec3 fragNormal, in DirLight dirLi
         if (currentDepth - closestDepth - bias > 0)
         {
             occlusion_times++;
-            d += (currentDepth - closestDepth)* dirLight.farPlane; // 深度值换算与光源farplane数值有关
+            d += (currentDepth - closestDepth) * dirLight.farPlane; // 深度值换算与光源farplane数值有关
         }
     }
     d = d / occlusion_times;
@@ -367,9 +319,9 @@ float computeDirLightShadowPCSS(vec3 fragPos, vec3 fragNormal, in DirLight dirLi
 
         float cosine = dot(fragNormal, dirLight.pos) / length(fragNormal) / length(dirLight.pos);
         // float texel = 4e-5; // texel = (ortho_scale,farPlane)
-        float texel =1e-1/dirLight.farPlane;
+        float texel = 1e-1 / dirLight.farPlane;
 
-        float bias =  sqrt(1 - cosine * cosine) / cosine * texel;
+        float bias = sqrt(1 - cosine * cosine) / cosine * texel;
         // check whether current frag pos is in shadow
         factor += currentDepth - closestDepth - bias > 0 ? 1.0f : 0.0f;
     }
@@ -377,7 +329,6 @@ float computeDirLightShadowPCSS(vec3 fragPos, vec3 fragNormal, in DirLight dirLi
     return factor / n_samples;
     // return dirLight.orthoScale * 1e-1 + 0.f;
 }
-
 
 float computePointLightShadowVSM(vec3 fragPos, vec3 fragNorm, in PointLight pointLight)
 {
@@ -458,7 +409,6 @@ float computePointLightShadowPCSS(vec3 fragPos, vec3 fragNorm, in PointLight poi
     return (factor) / n_samples; // return shadow
 }
 
-
 float computePointLightShadowPCF(vec3 fragPos, vec3 fragNorm, in PointLight pointLight)
 {
     if (PointShadow == 0)
@@ -474,7 +424,7 @@ float computePointLightShadowPCF(vec3 fragPos, vec3 fragNorm, in PointLight poin
     float factor = 0.f;
     for (int j = 0; j < n_samples; ++j)
     {
-        vec3 sampleOffset = TBN * shadowSamples[j]   / n_samples * 64;
+        vec3 sampleOffset = TBN * shadowSamples[j] / n_samples * 64;
         vec3 dir_sample = sampleOffset + fragPos - pointLight.pos;
         float curr_depth_sample = length(dir_sample);
         float cloest_depth_sample = texture(pointLight.depthCubemap, dir_sample).r;
@@ -484,9 +434,6 @@ float computePointLightShadowPCF(vec3 fragPos, vec3 fragNorm, in PointLight poin
     }
     return (factor) / n_samples; // return shadow
 }
-
-
-
 
 float bezier(float t, float p0, float p1, float p2, float p3)
 {

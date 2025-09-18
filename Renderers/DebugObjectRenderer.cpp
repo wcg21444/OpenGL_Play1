@@ -3,6 +3,7 @@
 #include "DebugObjectRenderer.hpp"
 #include "Passes/DebugObjectPass.hpp"
 #include "../Objects/FrustumWireframe.hpp"
+#include "../Objects/Arrow.hpp"
 
 #define STATICIMPL
 
@@ -33,6 +34,7 @@ void DebugObjectRenderer::AddDrawCall(const DebugObjectDrawCall &drawCall)
     drawQueue.push(drawCall);
 }
 
+//Idea : 顺序上色
 void DebugObjectRenderer::Render(Camera &camera)
 {
     CheckInitialized();
@@ -70,3 +72,10 @@ void DebugObjectRenderer::DrawCube(Shader &shaders, glm::vec4 color, glm::mat4 m
     cube.draw(modelMatrix, shaders);
 }
 
+void DebugObjectRenderer::DrawArrow(Shader &shaders, glm::vec3 start, glm::vec3 end, float thickness, glm::vec4 color,glm::mat4 modelMatrix)
+{
+    Arrow arrow(start, end, glm::vec3(1.0f, 1.0f, 1.0f), thickness);
+
+    shaders.setUniform("color", color);
+    arrow.draw(modelMatrix, shaders);
+}
