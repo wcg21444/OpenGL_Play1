@@ -13,9 +13,9 @@ struct DirShadowUnit
     int resolution;
     OrthoFrustum frustum;
     // Texture ptr == nullpt 意味着不使用 VSM
-    std::shared_ptr<Texture> depthTexture = nullptr;
-    std::shared_ptr<Texture> VSMTexture = nullptr;
-    std::shared_ptr<Texture> SATTexture = nullptr;
+    std::shared_ptr<Texture2D> depthTexture = nullptr;
+    std::shared_ptr<Texture2D> VSMTexture = nullptr;
+    std::shared_ptr<Texture2D> SATTexture = nullptr;
 
     DirShadowUnit() {}
     DirShadowUnit(int _resolution, const OrthoFrustum &_frustum)
@@ -24,7 +24,7 @@ struct DirShadowUnit
     {
         if (depthTexture == nullptr)
         {
-            depthTexture = std::make_shared<Texture>();
+            depthTexture = std::make_shared<Texture2D>();
             depthTexture->setFilterMin(GL_NEAREST);
             depthTexture->setFilterMax(GL_NEAREST);
             depthTexture->setWrapMode(GL_CLAMP_TO_EDGE);
@@ -36,7 +36,7 @@ struct DirShadowUnit
     {
         if (VSMTexture == nullptr)
         {
-            VSMTexture = std::make_shared<Texture>();
+            VSMTexture = std::make_shared<Texture2D>();
             VSMTexture->setFilterMax(GL_LINEAR);
             VSMTexture->setFilterMin(GL_LINEAR);
             VSMTexture->setWrapMode(GL_CLAMP_TO_EDGE);
@@ -47,7 +47,7 @@ struct DirShadowUnit
     {
         if (SATTexture == nullptr)
         {
-            SATTexture = std::make_shared<Texture>();
+            SATTexture = std::make_shared<Texture2D>();
             SATTexture->setFilterMax(GL_LINEAR);
             SATTexture->setFilterMin(GL_LINEAR);
             SATTexture->setWrapMode(GL_CLAMP_TO_BORDER);
@@ -55,5 +55,9 @@ struct DirShadowUnit
             glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
             SATTexture->generate(resolution, resolution, internalFormat, format, GL_FLOAT, NULL);
         }
+    }
+    void update(glm::mat4 &view, glm::mat4 &projeciton)
+    {
+        frustum = OrthoFrustum(view, projeciton);
     }
 };

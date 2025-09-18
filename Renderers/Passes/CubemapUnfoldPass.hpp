@@ -8,7 +8,7 @@ class CubemapUnfoldPass : public Pass
     unsigned int quadVAO;
     unsigned int quadVBO;
     const int CUBEMAP_FACE_SIZE;
-    Texture unfoldedTex;
+    Texture2D unfoldedTex;
 
 private:
     void initializeGLResources() override;

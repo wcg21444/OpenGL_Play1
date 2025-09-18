@@ -59,7 +59,7 @@ void SkyTexPass::render(
     SkySetting::SetShaderUniforms(shaders);
     /****************************************方向光源输入**************************************************/
     shaders.setTextureAuto(transmittanceLUT, GL_TEXTURE_2D, 0, "transmittanceLUT");
-    allLights.dirLights[0].setToShader(shaders);
+    allLights.dirLights[0].setSunlightToShader(shaders);
 
     cubemapParam->update(cam.getPosition());
     for (unsigned int i = 0; i < 6; ++i)

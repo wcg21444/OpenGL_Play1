@@ -11,10 +11,10 @@ GBufferPass::GBufferPass(int _vp_width, int _vp_height, std::string _vs_path, st
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path)
 {
     renderTarget = std::make_shared<RenderTarget>(_vp_width, _vp_height);
-    gViewPosition = std::make_shared<Texture>();
-    gPosition = std::make_shared<Texture>();
-    gNormal = std::make_shared<Texture>();
-    gAlbedoSpec = std::make_shared<Texture>();
+    gViewPosition = std::make_shared<Texture2D>();
+    gPosition = std::make_shared<Texture2D>();
+    gNormal = std::make_shared<Texture2D>();
+    gAlbedoSpec = std::make_shared<Texture2D>();
     initializeGLResources();
     contextSetup();
 }
@@ -71,6 +71,10 @@ void GBufferPass::resize(int _width, int _height)
     gNormal->resize(vp_width, vp_height);
     gAlbedoSpec->resize(vp_width, vp_height);
     gViewPosition->resize(vp_width, vp_height);
+
+    glGenRenderbuffers(1, &depthRenderBuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthRenderBuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, vp_width, vp_height);
 
     contextSetup();
 }

@@ -6,9 +6,9 @@
 DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution)
     : LightSource(_intensity, _position), orthoScale(100.f), nearPlane(0.1f), farPlane(10000.f), texResolution(_texResolution)
 {
-    VSMTexture = std::make_shared<Texture>();
-    SATTexture = std::make_shared<Texture>();
-    depthTexture = std::make_shared<Texture>();
+    VSMTexture = std::make_shared<Texture2D>();
+    SATTexture = std::make_shared<Texture2D>();
+    depthTexture = std::make_shared<Texture2D>();
 
     lightProjection = glm::ortho(-1.0f * orthoScale,
                                  1.0f * orthoScale,
@@ -25,29 +25,25 @@ DirectionLight::DirectionLight(const glm::vec3 &_intensity, const glm::vec3 &_po
     lightSpaceMatrix = lightProjection * lightView;
 }
 
-void DirectionLight::setToShader(Shader &shaders)
+void DirectionLight::setSunlightToShader(Shader &shaders)
 {
-    combIntensity = ColorIntensity::Combine(colorIntensity);
-
-    shaders.setTextureAuto(depthTexture->ID, GL_TEXTURE_2D, 0, "dirDepthMap");
-    if (useVSM)
-    {
-        shaders.setTextureAuto(VSMTexture->ID, GL_TEXTURE_2D, 0, "dirVSMTexture");
-        shaders.setUniform("useVSM", useVSM);
-    }
+    //TODO 这一部分逻辑冗余.  单光源和多光源设置
+    // 为skyTex保留
     shaders.setUniform3fv("dirLightPos", position);
     shaders.setUniform3fv("dirLightIntensity", combIntensity);
-    shaders.setMat4("dirLightSpaceMatrix", lightSpaceMatrix);
 }
 void DirectionLight::setToShaderLightArray(Shader &shaders, size_t index)
 {
     combIntensity = ColorIntensity::Combine(colorIntensity);
 
-    shaders.setTextureAuto(depthTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].depthMap", index));
+    // shaders.setTextureAuto(depthTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].depthMap", index));
+    shaders.setTextureAuto(shadowUnit.depthTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].depthMap", index));
     if (useVSM)
     {
-        shaders.setTextureAuto(VSMTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].VSMTexture", index));
-        shaders.setTextureAuto(SATTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].SATTexture", index));
+        // shaders.setTextureAuto(VSMTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].VSMTexture", index));
+        // shaders.setTextureAuto(SATTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].SATTexture", index));
+        shaders.setTextureAuto(shadowUnit.VSMTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].VSMTexture", index));
+        shaders.setTextureAuto(shadowUnit.SATTexture->ID, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].SATTexture", index));
     }
     else
     {
@@ -55,10 +51,10 @@ void DirectionLight::setToShaderLightArray(Shader &shaders, size_t index)
         shaders.setTextureAuto(0, GL_TEXTURE_2D, 0, std::format("dirLightArray[{}].SATTexture", index));
     }
     shaders.setUniform(std::format("dirLightArray[{}].useVSM", index), useVSM);
-    shaders.setUniform3fv(std::format("dirLightArray[{}].pos", index), position);
+    shaders.setUniform3fv(std::format("dirLightArray[{}].pos", index), shadowUnit.frustum.getPosition());
     shaders.setUniform3fv(std::format("dirLightArray[{}].intensity", index), combIntensity);
-    shaders.setMat4(std::format("dirLightArray[{}].spaceMatrix", index), lightSpaceMatrix);
-    shaders.setUniform(std::format("dirLightArray[{}].farPlane", index), farPlane);
+    shaders.setMat4(std::format("dirLightArray[{}].spaceMatrix", index), shadowUnit.frustum.getProjViewMatrix());
+    shaders.setUniform(std::format("dirLightArray[{}].farPlane", index), shadowUnit.frustum.getFarPlane());
     shaders.setUniform(std::format("dirLightArray[{}].orthoScale", index), orthoScale);
 }
 void DirectionLight::setPosition(glm::vec3 &_position)
@@ -83,6 +79,7 @@ void DirectionLight::update()
                             glm::vec3(0.0f, 0.0f, 0.0f),
                             glm::vec3(0.0f, 1.0f, 0.0f));
     lightSpaceMatrix = lightProjection * lightView;
+    shadowUnit.update(lightView, lightProjection);
 }
 
 void DirectionLight::generateShadowTexResource()

@@ -10,25 +10,6 @@ PointLight::PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, 
     cubemapParam = std::make_shared<CubemapParameters>(0.1f, _farPlane, _position);
 }
 
-void PointLight::setToShader(Shader &shaders)
-{
-    combIntensity = ColorIntensity::Combine(colorIntensity);
-    shaders.setUniform3fv("pointLightPos", position);
-    shaders.setUniform3fv("pointLightIntensity", combIntensity);
-    shaders.setUniform("pointLightFarPlane", cubemapParam->farPlane);
-    shaders.setUniform("pointLightUseVSM", useVSM);
-
-    if (depthCubemap->ID != 0)
-    {
-        shaders.setTextureAuto(depthCubemap->ID, GL_TEXTURE_CUBE_MAP, 0, "shadowCubeMaps");
-    }
-
-    if (VSMCubemap->ID != 0 && useVSM)
-    {
-        shaders.setTextureAuto(VSMCubemap->ID, GL_TEXTURE_CUBE_MAP, 0, "VSMCubemap");
-    }
-}
-
 void PointLight::setToShaderLightArray(Shader &shaders, size_t index)
 {
     combIntensity = ColorIntensity::Combine(colorIntensity);

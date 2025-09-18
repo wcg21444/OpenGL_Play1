@@ -187,21 +187,33 @@ private:
             if (rendererGUI.toggleDirShadow)
             {
 
-                dirShadowPass.renderToTexture(
-                    light,
-                    scene,
-                    model,
-                    light.texResolution,
-                    light.texResolution);
+                // dirShadowPass.renderToTexture(
+                //     light,
+                //     scene,
+                //     model,
+                //     light.texResolution,
+                //     light.texResolution);
+                dirShadowPass.render(light.shadowUnit, scene, model);
+
+                Camera camTmp(1600,900,1.0f,1.0f);
+                auto camFrustum = camTmp.getFrustum();
+                auto subCamFrustum = camTmp.getFrustum().getSubFrustum(camFrustum.getNearPlane(), 10.f);
+                auto tightOrtho = OrthoFrustum::GenTightFtustum(subCamFrustum.getCorners(), light.shadowUnit.frustum);
+                DebugObjectRenderer::AddDrawCall([camTmp,tightOrtho,subCamFrustum](Shader &debugObjectShaders) -> void {
+                    DebugObjectRenderer::DrawFrustum(tightOrtho,debugObjectShaders);
+                    DebugObjectRenderer::DrawFrustum(subCamFrustum,debugObjectShaders);
+                });
                 if (light.useVSM)
                 {
                     if (GUI::useVSSM)
                     {
-                        dirShadowSATPass.renderToSATTexture(light, light.texResolution, light.texResolution);
+                        // dirShadowSATPass.renderToSATTexture(light, light.texResolution, light.texResolution);
+                        dirShadowSATPass.renderToSATTexture(light.shadowUnit);
                     }
                     else
                     {
-                        dirShadowVSMPass.renderToVSMTexture(light, light.texResolution, light.texResolution);
+                        // dirShadowVSMPass.renderToVSMTexture(light, light.texResolution, light.texResolution);
+                        dirShadowVSMPass.renderToVSMTexture(light.shadowUnit);
                     }
                 }
             }
@@ -288,7 +300,8 @@ private:
         // rendererGUI.renderPassInspector({dirLights[0].depthTexture->ID, dirLights[0].SATTexture->ID});
         // rendererGUI.renderPassInspector(std::vector<GLuint>{bloomPassTex0, bloomPassTex1, bloomPassTex2, bloomPassTex3, bloomPassTex4});
 
-        rendererGUI.renderPassInspector(unfoldedTex);
+        rendererGUI.renderPassInspector({dirLights[0].shadowUnit.depthTexture->ID,
+                                         dirLights[0].depthTexture->ID});
         ImGui::Begin("RendererGUI");
         {
             ImGui::DragFloat("OrthoScale", &allLights.dirLights[0].orthoScale, 5.f, 1e3);

@@ -5,7 +5,7 @@ class GaussianBlurPass : public Pass
 {
 private:
     unsigned int pingpongFBO[2];
-    Texture pingpongTex[2];
+    Texture2D pingpongTex[2];
 
 private:
     void initializeGLResources() override

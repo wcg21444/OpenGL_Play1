@@ -16,12 +16,12 @@
 #include <functional>
 
 #include "../Utils/DebugOutput.hpp"
+#include "GLResource.hpp"
 
-class ShaderBase
+class ShaderBase : public GLResource
 {
-
 public:
-    unsigned int programID = 0;
+    unsigned int &programID = GLResource::ID;
     bool used = false;
     std::unordered_map<std::string, int> uniformLocationMap;
     std::unordered_set<std::string> warningMsgSet;
@@ -34,12 +34,19 @@ public:
     static void CompileShader(const char *shader_source, GLenum shader_type, unsigned int &shader_id, const char *path);
 
 public:
+    ShaderBase() {}
+    // 禁用拷贝构造和拷贝赋值
+    ShaderBase(const ShaderBase &) = delete;
+    ShaderBase &operator=(const ShaderBase &) = delete;
+
     virtual ~ShaderBase()
     {
         if (programID)
         {
             DebugOutput::AddLog("Shader Program ID:{} Was Deleted~\n", programID);
             glDeleteProgram(programID);
+            programID = 0;
+            used = false;
         }
     }
     virtual GLint getUniformLocationSafe(const std::string &name) = 0;                                                                              // 接口方法
@@ -78,7 +85,7 @@ public:
 class Shader : public ShaderBase
 {
 public:
-    // 增改成员变量记得在operator=()更新
+    // 增改成员变量记得在&operator=(&&)更新
     std::string vs_path;
     std::string fs_path;
     std::string gs_path;
@@ -94,6 +101,7 @@ private:
 public:
     Shader();
     Shader(const char *vs_path, const char *fs_path, const char *gs_path = nullptr);
+    Shader(Shader &&other) noexcept;
     Shader &operator=(Shader &&other) noexcept;
     void setTextureAuto(GLuint textureID, GLenum textureTarget, int shaderTextureLocation, const std::string &samplerUniformName);
 };

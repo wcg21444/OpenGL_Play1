@@ -7,11 +7,11 @@ class BloomShaderSetting;
 class BloomPass : public Pass
 {
 private:
-    Texture bloomPassTex0;
-    Texture bloomPassTex1; // 1 / 2 sz
-    Texture bloomPassTex2; // 1 / 4 sz
-    Texture bloomPassTex3; // 1 / 8 sz
-    Texture bloomPassTex4; // 1 / 16 sz
+    Texture2D bloomPassTex0;
+    Texture2D bloomPassTex1; // 1 / 2 sz
+    Texture2D bloomPassTex2; // 1 / 4 sz
+    Texture2D bloomPassTex3; // 1 / 8 sz
+    Texture2D bloomPassTex4; // 1 / 16 sz
 
     GaussianBlurPass blurPass;
     GaussianBlurPass blurPass1; // 1 / 2 sz

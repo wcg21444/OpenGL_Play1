@@ -6,8 +6,8 @@ class LightShaderSetting;
 class LightPass : public Pass
 {
 private:
-    Texture lightPassTex;
-    Texture shadowNoiseTex;
+    Texture2D lightPassTex;
+    Texture2D shadowNoiseTex;
 
     std::unique_ptr<LightShaderSetting> shaderSetting;
     void initializeGLResources();

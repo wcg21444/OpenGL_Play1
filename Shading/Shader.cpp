@@ -256,7 +256,12 @@ Shader::Shader(const char *vs_path, const char *fs_path, const char *gs_path) : 
     programID = linkShader(vertexShader, fragmentShader, geometryShader, hasGS);
 }
 
-// 移动赋值运算符
+Shader::Shader(Shader &&other) noexcept
+{
+    *this = std::move(other);
+}
+
+// 移动赋值运算符 用于热重载着色器
 Shader &Shader::operator=(Shader &&other) noexcept
 {
     if (this != &other)

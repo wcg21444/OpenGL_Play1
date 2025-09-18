@@ -9,7 +9,7 @@
 
 // TODO 阴影开关功能
 // TODO 运行时类型切换
-class Texture; // fwd declaration
+class Texture2D; // fwd declaration
 class TextureCube;
 class CubemapParameters;
 
@@ -66,7 +66,6 @@ public:
 
 public:
     LightSource(const glm::vec3 &_intensity, const glm::vec3 &_position);
-    virtual void setToShader(Shader &shaders) = 0;
     virtual void setToShaderLightArray(Shader &shaders, size_t index) = 0;
     virtual void setPosition(glm::vec3 &_position) = 0;
     virtual glm::vec3 getPosition() const = 0;
@@ -86,7 +85,6 @@ public:
 
 public:
     PointLight(const glm::vec3 &_intensity, const glm::vec3 &_position, int _texResolution, float _farPlane);
-    void setToShader(Shader &shaders) override;
     void setToShaderLightArray(Shader &shaders, size_t index) override;
     void setPosition(glm::vec3 &_position) override;
     glm::vec3 getPosition() const override;
@@ -105,9 +103,9 @@ private:
 
 public:
     int texResolution;
-    std::shared_ptr<Texture> depthTexture;
-    std::shared_ptr<Texture> VSMTexture;
-    std::shared_ptr<Texture> SATTexture;
+    std::shared_ptr<Texture2D> depthTexture;
+    std::shared_ptr<Texture2D> VSMTexture;
+    std::shared_ptr<Texture2D> SATTexture;
     DirShadowUnit shadowUnit;
     bool useVSM = false;
 
@@ -119,7 +117,7 @@ public:
 
     DirectionLight(const glm::vec3 &_intensity = glm::vec3(0.1f), const glm::vec3 &_position = glm::vec3(50.f, 20.f, 60.f), int _texResolution = 2048);
 
-    void setToShader(Shader &shaders) override;
+    void setSunlightToShader(Shader &shaders);
     void setToShaderLightArray(Shader &shaders, size_t index) override;
     void setPosition(glm::vec3 &_position) override;
     glm::vec3 getPosition() const override;

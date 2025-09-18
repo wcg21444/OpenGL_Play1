@@ -4,12 +4,12 @@
 using DebugObjectDrawCall = std::function<void(Shader &debugObjectShaders)>;
 
 class RenderTarget;
-class Texture;
+class Texture2D;
 class DebugObjectPass : public Pass
 {
 private:
     std::shared_ptr<RenderTarget> renderTarget = nullptr;
-    std::shared_ptr<Texture> debugObjectPassTex = nullptr;
+    std::shared_ptr<Texture2D> debugObjectPassTex = nullptr;
 
     void initializeGLResources() override;
     void cleanUpGLResources() override;

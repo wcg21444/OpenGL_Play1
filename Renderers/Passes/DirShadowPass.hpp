@@ -1,6 +1,7 @@
 
 #pragma once
 #include "Pass.hpp"
+#include "../LightSource/Shadow.hpp"
 
 #include "../Shading/Texture.hpp"
 /*
@@ -25,14 +26,14 @@ public:
 
     void resize(int _width, int _height) override;
 
-    void render(PointLight &light, Scene &scene, glm::mat4 &model, glm::mat4 &lightSpaceMatrix);
-
     void renderToTexture(
         const DirectionLight &light,
         Scene &scene,
         glm::mat4 &model,
         int width,
         int height);
+
+    void render(DirShadowUnit &shadowUnit, Scene &scene, glm::mat4 &model);
 };
 
 class DirShadowVSMPass : public Pass
@@ -49,15 +50,16 @@ public:
     void resize(int _width, int _height) override;
 
     void renderToVSMTexture(const DirectionLight &light, int width, int height);
+    void renderToVSMTexture(DirShadowUnit &shadowUnit);
 };
 
 class DirShadowSATPass : public Pass
 {
 public:
-    Texture SATRowTexture;
-    Texture momentsTex;
-    Texture SATCompInputTex;
-    Texture SATCompOutputTex;
+    Texture2D SATRowTexture;
+    Texture2D momentsTex;
+    Texture2D SATCompInputTex;
+    Texture2D SATCompOutputTex;
     ComputeShader SATComputeShader = ComputeShader("Shaders/ShadowMapping/SATCompute.comp");
     ComputeShader momentComputeShader = ComputeShader("Shaders/ShadowMapping/MomentsCompute.comp");
 
@@ -79,6 +81,7 @@ public:
     void resize(int _width, int _height) override;
 
     void renderToSATTexture(const DirectionLight &light, int width, int height);
+    void renderToSATTexture( DirShadowUnit &shadowUnit);
 
-    void computeSAT(const DirectionLight &light, int width, int height);
+    void computeSAT(const unsigned int depthTextureID, int width, int height);
 };

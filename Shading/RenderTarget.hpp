@@ -10,14 +10,15 @@
 #include <string>
 #include <iostream>
 
+#include "GLResource.hpp"
 #include "Texture.hpp"
 
 // FBO 封装
-class RenderTarget
+class RenderTarget : public GLResource
 {
 private:
-    unsigned int m_ID;
-    std::vector<GLenum> m_attachments;
+    unsigned int ID;
+    std::vector<GLenum> attachments;
     int width;
     int height;
 
@@ -25,16 +26,19 @@ public:
     RenderTarget(int _width, int _height)
         : width(_width), height(_height)
     {
-        glGenFramebuffers(1, &m_ID);
+        glGenFramebuffers(1, &ID);
     }
     ~RenderTarget()
     {
-        glDeleteFramebuffers(1, &m_ID);
+        if (ID)
+        {
+            glDeleteFramebuffers(1, &ID);
+            ID = 0;
+        }
     }
-
     void bind()
     {
-        glBindFramebuffer(GL_FRAMEBUFFER, m_ID);
+        glBindFramebuffer(GL_FRAMEBUFFER, ID);
     }
     void unbind()
     {
@@ -45,9 +49,9 @@ public:
     {
         bind();
         glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, textureID, 0);
-        if (std::find(m_attachments.begin(), m_attachments.end(), attachment) == m_attachments.end())
+        if (std::find(attachments.begin(), attachments.end(), attachment) == attachments.end())
         {
-            m_attachments.push_back(attachment);
+            attachments.push_back(attachment);
         }
     }
 
@@ -61,6 +65,23 @@ public:
     {
         bind();
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBufferID);
+    }
+
+    void attachDepthTexture2DArray(TextureID textureID, int layer)
+    {
+        bind();
+        glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, textureID, 0, layer);
+    }
+
+    void attachColorTexture2DArray(TextureID textureID, GLenum attachment, int layer)
+    {
+        bind();
+        glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment, textureID, 0, layer);
+
+        if (std::find(attachments.begin(), attachments.end(), attachment) == attachments.end())
+        {
+            attachments.push_back(attachment);
+        }
     }
 
     void disableDrawColor()
@@ -78,7 +99,7 @@ public:
     void enableColorAttachments()
     {
         bind();
-        glDrawBuffers(m_attachments.size(), m_attachments.data());
+        glDrawBuffers(static_cast<GLsizei>(attachments.size()), attachments.data());
     }
     void resize(int _width, int _height)
     {
@@ -88,14 +109,24 @@ public:
 
     /// @brief
     /// @param options GL_COLOR_BUFFER_BIT , GL_DEPTH_BUFFER_BIT
-    void clearBuffer(GLenum options,glm::vec4 clearColor = glm::vec4(0.0f,0.0f,0.0f,1.0f))
+    void clearBuffer(GLenum options, glm::vec4 clearColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f))
     {
         bind();
-        glClearColor(clearColor.r,clearColor.g,clearColor.b,clearColor.a);
+        glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
         glClear(options);
     }
     void setViewport()
     {
         glViewport(0, 0, width, height);
+    }
+
+    void checkStatus()
+    {
+        bind();
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        {
+            std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+        }
+        unbind();
     }
 };

@@ -10,7 +10,7 @@ DebugObjectPass::DebugObjectPass(int _vp_width, int _vp_height, std::string _vs_
     : Pass(_vp_width, _vp_height, _vs_path, _fs_path)
 {
     renderTarget = std::make_shared<RenderTarget>(_vp_width, _vp_height);
-    debugObjectPassTex = std::make_shared<Texture>();
+    debugObjectPassTex = std::make_shared<Texture2D>();
     initializeGLResources();
     contextSetup();
 }

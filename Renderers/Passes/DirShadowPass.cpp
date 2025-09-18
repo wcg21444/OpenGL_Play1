@@ -58,12 +58,36 @@ void DirShadowPass::renderToTexture(
     Renderer::DrawScene(scene, model, shaders);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    static FrustumWireframe frustumWireframe;
     if (GUI::DebugToggleDrawFrustum())
     {
-        frustumWireframe.setFrustum(OrthoFrustum::GetCornersWorldSpace(light.getlightView(), light.getlightProjection()));
         DebugObjectRenderer::AddDrawCall([&](Shader &debugObjectShaders)
-                                         { frustumWireframe.draw(frustumWireframe.modelMatrix, debugObjectShaders); });
+                                         { DebugObjectRenderer::DrawFrustum(
+                                               OrthoFrustum(light.getlightView(), light.getlightProjection()),
+                                               shaders); });
+    }
+}
+
+void DirShadowPass::render(DirShadowUnit &shadowUnit, Scene &scene, glm::mat4 &model)
+{
+    attachDepthMap(shadowUnit.depthTexture->ID);
+
+    glClearColor(0.f, 0.f, 0.f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    shaders.use();
+    shaders.setMat4("lightSpaceMatrix", shadowUnit.frustum.getProjViewMatrix());
+
+    glViewport(0, 0, shadowUnit.resolution, shadowUnit.resolution);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    Renderer::DrawScene(scene, model, shaders);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    if (GUI::DebugToggleDrawFrustum())
+    {
+        DebugObjectRenderer::AddDrawCall([&](Shader &debugObjectShaders)
+                                         { DebugObjectRenderer::DrawFrustum(shadowUnit.frustum, debugObjectShaders); });
     }
 }
 
@@ -98,6 +122,21 @@ void DirShadowVSMPass::renderToVSMTexture(const DirectionLight &light, int width
 
     shaders.use();
     shaders.setTextureAuto(light.depthTexture->ID, GL_TEXTURE_2D, 0, "depthMap");
+    shaders.setUniform("kernelSize", GUI::DebugVSMKernelSize());
+
+    Renderer::DrawQuad();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void DirShadowVSMPass::renderToVSMTexture(DirShadowUnit &shadowUnit)
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shadowUnit.VSMTexture->ID, 0);
+
+    glViewport(0, 0, shadowUnit.resolution, shadowUnit.resolution);
+
+    shaders.use();
+    shaders.setTextureAuto(shadowUnit.depthTexture->ID, GL_TEXTURE_2D, 0, "depthMap");
     shaders.setUniform("kernelSize", GUI::DebugVSMKernelSize());
 
     Renderer::DrawQuad();
@@ -150,7 +189,7 @@ void DirShadowSATPass::renderToSATTexture(const DirectionLight &light, int width
 {
     if (GUI::DebugToggleUseComputeShaderAccelerate())
     {
-        computeSAT(light, width, height);
+        computeSAT(light.depthTexture->ID, width, height);
         glCopyImageSubData(
             SATCompOutputTex.ID, GL_TEXTURE_2D, 0, 0, 0, 0,  // 源纹理信息 (ID, 目标, mipmap级, x, y, z)
             light.SATTexture->ID, GL_TEXTURE_2D, 0, 0, 0, 0, // 目标纹理信息 (ID, 目标, mipmap级, x, y, z)
@@ -184,7 +223,45 @@ void DirShadowSATPass::renderToSATTexture(const DirectionLight &light, int width
     }
 }
 
-void DirShadowSATPass::computeSAT(const DirectionLight &light, int width, int height)
+void DirShadowSATPass::renderToSATTexture(DirShadowUnit &shadowUnit)
+{
+    if (GUI::DebugToggleUseComputeShaderAccelerate())
+    {
+        computeSAT(shadowUnit.depthTexture->ID, shadowUnit.resolution, shadowUnit.resolution);
+        glCopyImageSubData(
+            SATCompOutputTex.ID, GL_TEXTURE_2D, 0, 0, 0, 0,       // 源纹理信息 (ID, 目标, mipmap级, x, y, z)
+            shadowUnit.SATTexture->ID, GL_TEXTURE_2D, 0, 0, 0, 0, // 目标纹理信息 (ID, 目标, mipmap级, x, y, z)
+            shadowUnit.resolution, shadowUnit.resolution, 1       // 复制区域的尺寸 (宽, 高, 深)
+        );
+    }
+    else
+    {
+        SATRowTexture.resize(shadowUnit.resolution, shadowUnit.resolution);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, FBORow);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SATRowTexture.ID, 0); // 输出目标绑定
+        glViewport(0, 0, shadowUnit.resolution, shadowUnit.resolution);
+
+        shaders.use();
+        shaders.setUniform("RowSummary", 1);
+        shaders.setTextureAuto(shadowUnit.depthTexture->ID, GL_TEXTURE_2D, 0, "InputTexture");
+        Renderer::DrawQuad();
+
+        glBindFramebuffer(GL_FRAMEBUFFER, FBOCol);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shadowUnit.SATTexture->ID, 0); // 输出目标绑定
+
+        glViewport(0, 0, shadowUnit.resolution, shadowUnit.resolution);
+
+        shaders.use();
+        shaders.setUniform("RowSummary", 0);
+        shaders.setTextureAuto(SATRowTexture.ID, GL_TEXTURE_2D, 0, "InputTexture");
+
+        Renderer::DrawQuad();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+}
+
+void DirShadowSATPass::computeSAT(const unsigned int depthTextureID, int width, int height)
 {
     const int g = ComputeShader::GetGroupSize(width);
 
@@ -209,7 +286,7 @@ void DirShadowSATPass::computeSAT(const DirectionLight &light, int width, int he
     glBindImageTexture(0, momentsTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, light.depthTexture->ID);
+    glBindTexture(GL_TEXTURE_2D, depthTextureID);
     momentComputeShader.setUniform("depthMap", 0); // 手动设置纹理
     if (GUI::useBias == true)
     {

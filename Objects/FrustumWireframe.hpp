@@ -43,9 +43,9 @@ public:
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
-    void setFrustum(const Frustum &frustum)
+    void setFrustum(const FrustumBase &frustum)
     {
-        auto corners = frustum.getCornersWorldSpace();
+        auto corners = frustum.getCorners();
         setFrustum(corners);
     }
     void setFrustum(const FrustumCorners &corners)

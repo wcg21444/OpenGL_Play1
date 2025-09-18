@@ -6,7 +6,7 @@ class PostProcessShaderSetting;
 class PostProcessPass : public Pass
 {
 private:
-    Texture postProcessPassTex;
+    Texture2D postProcessPassTex;
     std::unique_ptr<PostProcessShaderSetting> shaderSetting;
 
 private:

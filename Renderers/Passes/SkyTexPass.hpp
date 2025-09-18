@@ -32,7 +32,7 @@ public:
 class TransmittanceLUTPass : public Pass
 {
 private:
-    Texture lutTex;
+    Texture2D lutTex;
 
 private:
     void initializeGLResources() override

@@ -6,6 +6,8 @@
 #include <memory>
 class DebugObjectPass;
 class Camera;
+class FrustumBase;
+class Shader;
 using DebugObjectDrawCall = std::function<void(Shader &debugObjectShaders)>;
 
 // 辅助对象渲染器. 单独使用一条渲染管线
@@ -22,9 +24,10 @@ public:
     static void AddDrawCall(const DebugObjectDrawCall &drawCall);
     static void Initialize();
     static void Resize(int _width, int _height);
-    static void Render(Camera& camera);
+    static void Render(Camera &camera);
     static void ReloadCurrentShaders();
     static unsigned int GetRenderOutput();
     static void CheckInitialized();
-
+    static void DrawFrustum(const FrustumBase &frustum, Shader &shaders, glm::vec4 color = glm::vec4(1.0f), glm::mat4 modelMatrix = glm::identity<glm::mat4>());
+    static void DrawCube(Shader &shaders, glm::vec4 color = glm::vec4(1.0f), glm::mat4 modelMatrix = glm::identity<glm::mat4>());
 };

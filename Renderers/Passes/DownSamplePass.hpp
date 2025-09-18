@@ -4,7 +4,7 @@
 class DownSamplePass : public Pass
 {
 private:
-    Texture downSampleTex;
+    Texture2D downSampleTex;
 
 private:
     void initializeGLResources() override

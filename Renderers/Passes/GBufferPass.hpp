@@ -1,15 +1,15 @@
 #pragma once
 #include "Pass.hpp"
 class RenderTarget;
-class Texture;
+class Texture2D;
 class GBufferPass : public Pass
 {
 private:
     std::shared_ptr<RenderTarget> renderTarget = nullptr;
-    std::shared_ptr<Texture> gViewPosition = nullptr;
-    std::shared_ptr<Texture> gPosition = nullptr;
-    std::shared_ptr<Texture> gNormal = nullptr;
-    std::shared_ptr<Texture> gAlbedoSpec = nullptr;
+    std::shared_ptr<Texture2D> gViewPosition = nullptr;
+    std::shared_ptr<Texture2D> gPosition = nullptr;
+    std::shared_ptr<Texture2D> gNormal = nullptr;
+    std::shared_ptr<Texture2D> gAlbedoSpec = nullptr;
     unsigned int depthRenderBuffer;
     void initializeGLResources();
     void cleanUpGLResources() override;

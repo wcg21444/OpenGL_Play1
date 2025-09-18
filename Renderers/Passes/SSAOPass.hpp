@@ -6,8 +6,8 @@ class SSAOShaderSetting;
 class SSAOPass : public Pass
 {
 private:
-    Texture SSAOPassTex;
-    Texture noiseTex;
+    Texture2D SSAOPassTex;
+    Texture2D noiseTex;
 
     std::unique_ptr<SSAOShaderSetting> shaderSetting;
     void initializeGLResources();
@@ -35,7 +35,7 @@ class SSAOBlurPass : public Pass
 private:
     unsigned int FBO;
 
-    Texture blurPassTex;
+    Texture2D blurPassTex;
 
 private:
     void initializeGLResources() override;

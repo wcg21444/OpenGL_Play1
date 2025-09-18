@@ -9,12 +9,15 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <cassert>
+
+#include "GLResource.hpp"
+
 using TextureID = unsigned int;
 /// @brief 管理GL Texture资源
-class Texture
+class Texture2D : public GLResource
 {
 public:
-    TextureID ID;       // 纹理对象的 ID，由 OpenGL 分配
     GLenum Target;         // 纹理类型，如 GL_TEXTURE_2D、GL_TEXTURE_3D 等
     GLenum InternalFormat; // 纹理在 GPU 中存储的内部格式（例如：GL_RGBA8）
     GLenum Format;         // 纹理在 CPU 中存储的格式（例如：GL_RGBA）
@@ -29,7 +32,9 @@ public:
     unsigned int Width;  // 纹理的宽度（以像素为单位）
     unsigned int Height; // 纹理的高度（以像素为单位）
 
-    Texture();
+    Texture2D();
+    Texture2D(Texture2D &&) noexcept = default;
+    Texture2D &operator=(Texture2D &&) noexcept = default;
     void generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, void *data, bool mipMapping = true);
     void generateComputeStorage(unsigned int width, unsigned int height, GLenum internalFormat);
 
@@ -44,7 +49,7 @@ public:
 
     void setWrapMode(GLenum wrapMode);
 
-    ~Texture();
+    ~Texture2D();
 };
 
 // Texture是对Texture GL对象的封装
@@ -54,7 +59,7 @@ public:
 //       设置数据
 //       调整大小
 /// @brief 管理GL CubeTexture资源
-class TextureCube
+class TextureCube : public GLResource
 {
 public:
     enum FaceEnum
@@ -88,6 +93,7 @@ public:
     }
 
 private:
+    GLenum Target;         // 纹理类型
     GLenum InternalFormat; // 纹理在 GPU 中存储的内部格式（例如：GL_RGBA8）
     GLenum Format;         // 纹理在 CPU 中存储的格式（例如：GL_RGBA）
     GLenum Type;           // 纹素数据的数据类型（例如：GL_UNSIGNED_BYTE）
@@ -104,6 +110,8 @@ public:
     unsigned int Height; // 正方形纹理的高度（以像素为单位）
 
     TextureCube();
+    TextureCube(TextureCube &&) noexcept = default;
+    TextureCube &operator=(TextureCube &&) noexcept = default;
 
     void generate(unsigned int width, unsigned int height, GLenum internalFormat, GLenum format, GLenum type, GLenum filterMax, GLenum filterMin, bool mipmap);
 
@@ -118,4 +126,40 @@ public:
     void setWrapMode(GLenum wrapMode);
 
     ~TextureCube();
+};
+
+class Texture2DArray : public GLResource
+{
+public:
+    GLenum Target;         // 纹理类型，如 GL_TEXTURE_2D、GL_TEXTURE_3D 等
+    GLenum InternalFormat; // 纹理在 GPU 中存储的内部格式（例如：GL_RGBA8）
+    GLenum Format;         // 纹理在 CPU 中存储的格式（例如：GL_RGBA）
+    GLenum Type;           // 纹素数据的数据类型（例如：GL_UNSIGNED_BYTE）
+    GLenum FilterMin;      // 纹理缩小时使用的过滤方式
+    GLenum FilterMax;      // 纹理放大时使用的过滤方式
+    GLenum WrapS;          // S 轴（水平）的纹理环绕方式
+    GLenum WrapT;          // T 轴（垂直）的纹理环绕方式
+    GLenum WrapR;          // R 轴（深度）的纹理环绕方式，主要用于 3D 纹理
+    bool Mipmapping;       // 是否启用多级渐远纹理（Mipmapping）
+
+    unsigned int Width;  // 纹理的宽度（以像素为单位）
+    unsigned int Height; // 纹理的高度（以像素为单位）
+    unsigned int Depth;  // 纹理层数
+
+    Texture2DArray();
+    Texture2DArray(Texture2DArray &&) noexcept = default;
+    Texture2DArray &operator=(Texture2DArray &&) noexcept = default;
+    void generate(unsigned int width, unsigned int height, unsigned int depth, GLenum internalFormat, GLenum format, GLenum type, void *data, bool mipMapping = true);
+
+    void setData(void *data, unsigned int layer);
+
+    void setFilterMin(GLenum filter);
+
+    void setFilterMax(GLenum filter);
+
+    void resize(int ResizeWidth, int ResizeHeight);
+
+    void setWrapMode(GLenum wrapMode);
+
+    ~Texture2DArray();
 };
