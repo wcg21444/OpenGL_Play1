@@ -112,9 +112,11 @@ void DirectionLight::generateShadowTexResource()
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
         SATTexture->generate(texResolution, texResolution, GL_RGBA32F, GL_RGBA, GL_FLOAT, NULL);
     }
+    CSMComponent->useVSM = false;
     if (useVSM)
     {
         shadowUnit.generateVSMTexture(GL_RGBA32F, GL_RGBA);
         shadowUnit.generateSATTexture(GL_RGBA32F, GL_RGBA);
+        CSMComponent->useVSM = true;
     }
 }

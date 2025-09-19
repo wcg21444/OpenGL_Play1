@@ -52,6 +52,7 @@ public:
 
     void renderToVSMTexture(const DirectionLight &light, int width, int height);
     void renderToVSMTexture(DirShadowUnit &shadowUnit);
+    void renderToVSMTexture(CascadedShadowComponent &CSMComponent);
 };
 
 class DirShadowSATPass : public Pass

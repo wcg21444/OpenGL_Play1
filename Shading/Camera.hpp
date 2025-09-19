@@ -19,7 +19,7 @@ private:
                                  glm::vec3(0.0f, 0.0f, -1.0f),
                                  glm::vec3(0.0f, 1.0f, 0.0f),
                                  0.1f,
-                                 1e6f,
+                                 1e4f,
                                  60.f,
                                  16.f / 9.f);
 

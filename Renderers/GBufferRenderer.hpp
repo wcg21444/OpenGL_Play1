@@ -218,7 +218,7 @@ private:
 
                 for (int i = 0; i <4; ++i)
                 {
-                    shadowTexIDs.push_back(light.CSMComponent->shadowUnits[i].depthTexture->ID);
+                    shadowTexIDs.push_back(light.CSMComponent->shadowUnits[i].VSMTexture->ID);
                     if (GUI::drawCameraFrustumWireframe)
                     {
                         DebugObjectRenderer::AddDrawCall([i,light](Shader &debugObjectShaders)
@@ -252,7 +252,7 @@ private:
                     else
                     {
                         // dirShadowVSMPass.renderToVSMTexture(light, light.texResolution, light.texResolution);
-                        dirShadowVSMPass.renderToVSMTexture(light.shadowUnit);
+                        dirShadowVSMPass.renderToVSMTexture(*light.CSMComponent);
                     }
                 }
             }

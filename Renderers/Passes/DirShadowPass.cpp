@@ -85,7 +85,6 @@ void DirShadowPass::render(DirShadowUnit &shadowUnit, Scene &scene, glm::mat4 &m
     Renderer::DrawScene(scene, model, shaders);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-
     // if (GUI::drawCameraFrustumWireframe)
     // {
     //     DebugObjectRenderer::AddDrawCall([&](Shader &debugObjectShaders)
@@ -151,6 +150,14 @@ void DirShadowVSMPass::renderToVSMTexture(DirShadowUnit &shadowUnit)
 
     Renderer::DrawQuad();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void DirShadowVSMPass::renderToVSMTexture(CascadedShadowComponent &CSMComponent)
+{
+    for (auto &unit : CSMComponent.shadowUnits)
+    {
+        renderToVSMTexture(unit);
+    }
 }
 
 DirShadowSATPass::DirShadowSATPass(std::string _vs_path, std::string _fs_path)

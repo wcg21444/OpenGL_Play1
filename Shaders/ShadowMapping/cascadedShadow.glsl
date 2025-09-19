@@ -255,14 +255,14 @@ float CSMShadow(in vec3 fragPos, in vec3 fragNormal, in CSMComponent CSM, in mat
     int level = getCSMLevel(fragDepth);
     // 先得进行camera view 变换 将坐标转换成摄像机viewspace
     // 然后取z值
-    //  if (CSM.useVSSM==1)
-    //  {
-    //      return computeDirLightShadowUnitVSSM(fragPos, fragNormal, CSM.units[level]);
-    //  }
-    //  if (CSM.useVSM==1)
-    //  {
-    //      return computeDirLightShadowUnitVSM(fragPos, fragNormal, CSM.units[level]);
-    //  }
+    if (CSM.useVSSM == 1)
+    {
+        return computeDirLightShadowUnitVSSM(fragPos, fragNormal, CSM.units[level]);
+    }
+    if (CSM.useVSM == 1)
+    {
+        return computeDirLightShadowUnitVSM(fragPos, fragNormal, CSM.units[level]);
+    }
     return computeDirLightShadowUnit(fragPos, fragNormal, CSM.units[level]);
     // return 1.f / float(level + 1);
 }
